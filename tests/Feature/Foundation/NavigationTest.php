@@ -1,0 +1,102 @@
+<?php
+
+use App\Enums\Area;
+use App\Enums\Role;
+use App\Support\Navigation;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+
+uses(RefreshDatabase::class);
+
+function navTitles(array $groups): array
+{
+    return collect($groups)->flatMap(fn ($g) => collect($g['items'])->pluck('title'))->all();
+}
+
+it('shows super admin all 26 admin modules from REQ §25 when planned items are visible', function () {
+    config(['navigation.show_planned' => true]);
+
+    $titles = navTitles(app(Navigation::class)->for(Area::Admin, $this->userWithRole(Role::SuperAdmin)));
+
+    expect($titles)->toHaveCount(26)
+        ->and($titles[0])->toBe('Dashboard')
+        ->and($titles[25])->toBe('Security & Audit Logs');
+});
+
+/** A small fixed menu so these tests don't change as modules are built. */
+function fixtureMenu(): void
+{
+    config(['navigation.areas.admin' => [
+        ['label' => 'Group', 'items' => [
+            ['title' => 'Home', 'icon' => 'home', 'route' => 'admin.dashboard', 'permission' => 'dashboard.view', 'phase' => 1],
+            ['title' => 'Later', 'icon' => 'x', 'route' => null, 'permission' => null, 'phase' => 9],
+            ['title' => 'Parent', 'icon' => 'folder', 'children' => [
+                ['title' => 'Built child', 'route' => 'admin.users.index', 'permission' => 'users.view', 'phase' => 1],
+                ['title' => 'Planned child', 'route' => null, 'permission' => 'leads.view', 'phase' => 2],
+            ]],
+        ]],
+    ]]);
+}
+
+it('shows a sub-menu parent when any child is visible', function () {
+    fixtureMenu();
+    config(['navigation.show_planned' => true]);
+
+    // A lead manager can see the planned child (leads.view) but not users.view.
+    $parent = app(Navigation::class)->for(Area::Admin, $this->userWithRole(Role::LeadManager))[0]['items'][2];
+
+    expect($parent['title'])->toBe('Parent')
+        ->and(collect($parent['children'])->pluck('title')->all())->toBe(['Planned child'])
+        ->and($parent['planned'])->toBeTrue();
+});
+
+it('filters the admin menu by permission for a lead manager', function () {
+    config(['navigation.show_planned' => true]);
+
+    $titles = navTitles(app(Navigation::class)->for(Area::Admin, $this->userWithRole(Role::LeadManager)));
+
+    expect($titles)->toContain('Dashboard', 'Lead & User Management', 'Ticket & Contact')
+        ->not->toContain('Payment & Accounts', 'Roles & Permissions', 'System Settings');
+});
+
+it('hides modules that are not built yet when show_planned is off', function () {
+    fixtureMenu();
+    config(['navigation.show_planned' => false]);
+
+    $groups = app(Navigation::class)->for(Area::Admin, $this->userWithRole(Role::SuperAdmin));
+
+    expect(navTitles($groups))->toBe(['Home', 'Parent'])
+        ->and($groups[0]['items'][0]['href'])->toBe('/admin')
+        ->and(collect($groups[0]['items'][1]['children'])->pluck('title')->all())->toBe(['Built child']);
+});
+
+it('marks unbuilt modules as planned with no link', function () {
+    config(['navigation.show_planned' => true]);
+
+    $items = collect(app(Navigation::class)->for(Area::Counselor, $this->userWithRole(Role::Counselor)))
+        ->flatMap(fn ($g) => $g['items'])->keyBy('title');
+
+    expect($items['My Dashboard']['planned'])->toBeFalse()
+        ->and($items['My Leads']['planned'])->toBeFalse()
+        ->and($items['Visa Processing']['planned'])->toBeTrue()
+        ->and($items['Visa Processing']['href'])->toBeNull()
+        ->and($items['Visa Processing']['phase'])->toBe(6);
+});
+
+it('shares the sidebar of the current area with the page', function () {
+    config(['navigation.show_planned' => false]);
+
+    $this->actingAs($this->userWithRole(Role::Accounts))
+        ->get(route('accounts.dashboard'))
+        ->assertInertia(fn ($page) => $page
+            ->component('accounts/Dashboard')
+            ->where('area.key', 'accounts')
+            ->where('navigation.0.items.0.title', 'Accounts Dashboard')
+            ->where('auth.isSuperAdmin', false)
+        );
+});
+
+it('uses the home area sidebar on shared screens like profile settings', function () {
+    $this->actingAs($this->userWithRole(Role::Counselor))
+        ->get(route('profile.edit'))
+        ->assertInertia(fn ($page) => $page->where('area.key', 'counselor'));
+});

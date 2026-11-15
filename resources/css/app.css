@@ -1,0 +1,266 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+@import 'material-symbols/outlined.css';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Two token sets (REQ §31.2: the website and the admin panel follow
+ * different references and need not look identical):
+ *
+ *   Panel tokens   admin, counselor, accounts and student portal.
+ *                  Source: admin-demo.html (:root custom properties).
+ *   Site tokens    public website. Source: Figma file RTLIMMIG.
+ *                  Use the `site-*` colour utilities and `font-site`.
+ *
+ * The shadcn-style semantic names (primary, muted, accent...) map to the
+ * panel palette so the starter-kit UI primitives inherit it automatically.
+ */
+@theme inline {
+    --font-sans:
+        'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Manrope', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-site: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 4px);
+    --radius-sm: calc(var(--radius) - 6px);
+    --radius-xl: calc(var(--radius) + 2px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    /* Status tones used by StatusBadge, stat trends and alerts. */
+    --color-success: var(--success);
+    --color-success-soft: var(--success-soft);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+    --color-info: var(--info);
+    --color-info-soft: var(--info-soft);
+    --color-danger: var(--danger);
+    --color-danger-soft: var(--danger-soft);
+    --color-neutral: var(--neutral);
+    --color-neutral-soft: var(--neutral-soft);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* Public website (Figma). Light only, per roadmap Q9. */
+    --color-site-red: #d71920;
+    --color-site-red-dark: #b5141a;
+    --color-site-ink: #191b20;
+    --color-site-navy: #20242b;
+    --color-site-sand: #f6f3ee;
+    --color-site-surface: #f7f5f2;
+    --color-site-line: #e5e3e0;
+    --color-site-muted: #60636c;
+    --color-site-subtle: #d9dadd;
+    --color-site-field: #fafafa;
+    --color-site-field-border: #d9dce1;
+    --color-site-blush: #ff9ca5;
+    --color-site-on-dark: #d0d3d9;
+    --color-site-divider: #43464d;
+
+    --shadow-panel: 0 2px 7px rgb(20 30 50 / 0.015);
+    --shadow-float: 0 8px 30px rgb(25 32 48 / 0.07);
+}
+
+/* Panel, light: values from admin-demo.html */
+:root {
+    --background: #f7f8fa;
+    --foreground: #20232b;
+    --card: #ffffff;
+    --card-foreground: #20232b;
+    --popover: #ffffff;
+    --popover-foreground: #20232b;
+    --primary: #e80000;
+    --primary-foreground: #ffffff;
+    --secondary: #ffffff;
+    --secondary-foreground: #4f5662;
+    --muted: #fafbfc;
+    --muted-foreground: #727784;
+    --accent: #fff1f1;
+    --accent-foreground: #e80000;
+    --destructive: #c40000;
+    --destructive-foreground: #c40000;
+    --border: #eceef2;
+    --input: #eceef2;
+    --ring: #ee9999;
+
+    --success: #16865b;
+    --success-soft: #eef8f3;
+    --warning: #ad751b;
+    --warning-soft: #fff6e6;
+    --info: #3569c8;
+    --info-soft: #edf2fc;
+    --danger: #c40000;
+    --danger-soft: #fff1f1;
+    --neutral: #747b87;
+    --neutral-soft: #f1f2f5;
+
+    --chart-1: #e80000;
+    --chart-2: #3569c8;
+    --chart-3: #16865b;
+    --chart-4: #b7791f;
+    --chart-5: #727784;
+
+    --radius: 0.75rem;
+
+    --sidebar: #ffffff;
+    --sidebar-foreground: #555b67;
+    --sidebar-primary: #e80000;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #fff1f1;
+    --sidebar-accent-foreground: #e80000;
+    --sidebar-border: #eceef2;
+    --sidebar-ring: #ee9999;
+}
+
+/* Panel, dark: derived from the light palette (the demo has no dark mode) */
+.dark {
+    --background: #111318;
+    --foreground: #e9ebef;
+    --card: #191c22;
+    --card-foreground: #e9ebef;
+    --popover: #1d2027;
+    --popover-foreground: #e9ebef;
+    --primary: #ff3b3b;
+    --primary-foreground: #ffffff;
+    --secondary: #1d2027;
+    --secondary-foreground: #c9cdd5;
+    --muted: #1d2027;
+    --muted-foreground: #9aa0ab;
+    --accent: #2b1719;
+    --accent-foreground: #ff7070;
+    --destructive: #ff5c5c;
+    --destructive-foreground: #ff7070;
+    --border: #2a2e37;
+    --input: #2f343e;
+    --ring: #8a3333;
+
+    --success: #3ecf8e;
+    --success-soft: #11291f;
+    --warning: #f0b45a;
+    --warning-soft: #2c2213;
+    --info: #78a2f0;
+    --info-soft: #161f33;
+    --danger: #ff7070;
+    --danger-soft: #2b1719;
+    --neutral: #a3a9b4;
+    --neutral-soft: #23262e;
+
+    --chart-1: #ff5c5c;
+    --chart-2: #78a2f0;
+    --chart-3: #3ecf8e;
+    --chart-4: #f0b45a;
+    --chart-5: #9aa0ab;
+
+    --sidebar: #15171c;
+    --sidebar-foreground: #b4b9c3;
+    --sidebar-primary: #ff3b3b;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #2b1719;
+    --sidebar-accent-foreground: #ff7070;
+    --sidebar-border: #2a2e37;
+    --sidebar-ring: #8a3333;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    button:not(:disabled),
+    [role='button']:not(:disabled) {
+        cursor: pointer;
+    }
+}
+
+@layer components {
+    /* Material Symbols, tuned like admin-demo.html (.nav .ico) */
+    .icon {
+        font-family: 'Material Symbols Outlined';
+        font-weight: normal;
+        font-style: normal;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        white-space: nowrap;
+        direction: ltr;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-feature-settings: 'liga';
+        -webkit-font-smoothing: antialiased;
+        font-variation-settings:
+            'FILL' 0,
+            'wght' 450,
+            'GRAD' 0,
+            'opsz' 20;
+        user-select: none;
+    }
+
+    .icon-filled {
+        font-variation-settings:
+            'FILL' 1,
+            'wght' 450,
+            'GRAD' 0,
+            'opsz' 20;
+    }
+
+    /* Small bordered row action (demo .tiny) */
+    .tiny-action {
+        @apply inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1.5 text-[11px] whitespace-nowrap text-secondary-foreground hover:border-ring hover:text-accent-foreground;
+    }
+
+    /* Small uppercase label above page titles (demo .eyebrow) */
+    .eyebrow {
+        @apply text-[10px] font-bold tracking-[1.1px] text-muted-foreground uppercase;
+    }
+}
