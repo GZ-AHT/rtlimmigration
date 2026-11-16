@@ -1,11 +1,27 @@
 <script setup lang="ts">
-defineProps<{
+import { onMounted, onUnmounted } from 'vue';
+
+const props = defineProps<{
     show: boolean;
 }>();
 
 const emit = defineEmits<{
     (e: 'close'): void;
 }>();
+
+function handleKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && props.show) {
+        emit('close');
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('keydown', handleKeydown);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown);
+});
 </script>
 
 <template>
@@ -246,8 +262,8 @@ const emit = defineEmits<{
                     </p>
                 </div>
 
-                <!-- Bottom Progress Bar -->
-                <div class="w-full">
+                <!-- Bottom Progress Bar & Cancel Action -->
+                <div class="w-full space-y-2.5">
                     <div
                         class="relative h-1.5 w-full overflow-hidden rounded-full bg-slate-100"
                     >
@@ -256,7 +272,7 @@ const emit = defineEmits<{
                         />
                     </div>
                     <div
-                        class="mt-3 flex items-center justify-between text-[11px] font-medium text-slate-400"
+                        class="flex items-center justify-between text-[11px] font-medium text-slate-400"
                     >
                         <span class="flex items-center gap-1.5">
                             <span
@@ -265,6 +281,15 @@ const emit = defineEmits<{
                             RTL Immigration
                         </span>
                         <span>SSLCommerz Gateway</span>
+                    </div>
+                    <div class="pt-1 text-center">
+                        <button
+                            type="button"
+                            class="rounded px-2.5 py-1 text-[11px] font-medium text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+                            @click="emit('close')"
+                        >
+                            Cancel and return
+                        </button>
                     </div>
                 </div>
             </div>

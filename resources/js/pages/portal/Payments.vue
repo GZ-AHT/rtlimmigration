@@ -18,6 +18,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
+    cancelEasyCheckout,
     cleanupSslCommerzArtifacts,
     easyCheckoutSupported,
     loadEasyCheckout,
@@ -83,7 +84,7 @@ function cancelPaymentLoading(message?: string): void {
     stopWatchdog();
     gatewayLoading.value = false;
     startingOnlineId.value = null;
-    cleanupSslCommerzArtifacts();
+    cancelEasyCheckout();
     if (message) {
         toast.error(message);
     }

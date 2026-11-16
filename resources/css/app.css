@@ -265,24 +265,27 @@
         left: 47.3%;
     }
 
-    /* Prevent SSLCommerz lock icon and lingering loaders from staying visible when popup is closed */
-    body:not(:has(iframe[src*='sslcommerz'])) .icon-lock,
-    body:not(:has(.mobile_popup)) .icon-lock {
-        display: none !important;
-    }
-
-    /* Prevent SSLCommerz lock icon and lingering loaders from staying visible when popup is closed */
-    body:not(:has(iframe[src*="sslcommerz"])) .icon-lock,
-    body:not(:has(.mobile_popup)) .icon-lock {
-        display: none !important;
-    }
-
     .mobile_popup {
         height: 500px !important;
     }
 
     .h-100 {
         height: 100% !important;
+    }
+
+    /* Prevent SSLCommerz lock icon, backdrops, and modal headers from staying visible when popup is closed */
+    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
+        .icon-lock,
+    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
+        .mobile_popup,
+    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
+        .modal-backdrop,
+    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
+        .modal:not(#app *) {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 
     /* Small bordered row action (demo .tiny) */

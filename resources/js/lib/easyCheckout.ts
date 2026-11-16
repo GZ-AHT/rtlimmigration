@@ -26,6 +26,94 @@ export type EasyCheckoutCallbacks = {
 
 const BUTTON_ID = 'sslczPayBtn';
 let loading: Promise<boolean> | null = null;
+let currentSessionId = 0;
+let activeSessionId = 0;
+let activeObserver: MutationObserver | null = null;
+let guardianObserver: MutationObserver | null = null;
+let guardianTimeout: number | null = null;
+
+function stopCancellationGuardian(): void {
+    if (guardianObserver) {
+        guardianObserver.disconnect();
+        guardianObserver = null;
+    }
+    if (guardianTimeout !== null) {
+        window.clearTimeout(guardianTimeout);
+        guardianTimeout = null;
+    }
+}
+
+/**
+ * Temporary guardian observer that runs after cancellation:
+ * If SSLCommerz's in-flight network call resolves in the background and
+ * attempts to inject an iframe or lock icon into the DOM, this guardian
+ * destroys it immediately before it can render or execute.
+ */
+function startCancellationGuardian(): void {
+    stopCancellationGuardian();
+
+    if (
+        typeof document === 'undefined' ||
+        typeof MutationObserver === 'undefined'
+    ) {
+        return;
+    }
+
+    guardianObserver = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+            for (let i = 0; i < mutation.addedNodes.length; i++) {
+                const node = mutation.addedNodes[i];
+                if (!(node instanceof HTMLElement)) {
+                    continue;
+                }
+
+                // Destroy any lingering lock icon injected by SSLCommerz
+                if (
+                    node.classList.contains('icon-lock') ||
+                    node.querySelector('.icon-lock')
+                ) {
+                    node.remove();
+                }
+
+                // Destroy any iframe or popup injected by SSLCommerz
+                const isIframe = node.tagName === 'IFRAME';
+                const iframe = isIframe
+                    ? (node as HTMLIFrameElement)
+                    : (node.querySelector(
+                          'iframe',
+                      ) as HTMLIFrameElement | null);
+
+                if (iframe) {
+                    const src = (iframe.src || '').toLowerCase();
+                    if (
+                        src.includes('sslcommerz') ||
+                        src.includes('easycheckout') ||
+                        !src
+                    ) {
+                        try {
+                            iframe.src = 'about:blank';
+                        } catch {
+                            // ignore cross-origin error
+                        }
+                        node.remove();
+                        cleanupSslCommerzArtifacts();
+                    }
+                }
+
+                if (node.classList.contains('mobile_popup')) {
+                    node.remove();
+                }
+            }
+        }
+    });
+
+    guardianObserver.observe(document.body, { childList: true, subtree: true });
+
+    // Protect for 15 seconds (covers slow in-flight responses)
+    guardianTimeout = window.setTimeout(() => {
+        stopCancellationGuardian();
+    }, 15000);
+}
 
 function button(): EasyButton | null {
     return document.getElementById(BUTTON_ID) as EasyButton | null;
@@ -100,25 +188,116 @@ function injectStyles(): void {
 }
 
 /**
- * Removes any lingering .icon-lock, SSLCommerz loading wrappers, or
- * leftover modal frames from the DOM.
+ * Completely purges all SSLCommerz DOM artifacts (backdrops, modal containers,
+ * headers, iframes, lock icons, spinners) from the document.
  */
 export function cleanupSslCommerzArtifacts(): void {
     if (typeof document === 'undefined') {
         return;
     }
 
-    // Remove any lingering lock icons from SSLCommerz
-    document.querySelectorAll('.icon-lock').forEach((el) => el.remove());
+    const appRoot = document.getElementById('app');
+    const payBtn = document.getElementById(BUTTON_ID);
 
-    // Remove any lingering standalone loaders or wrappers
-    const standalone = document.getElementById('sslcz-standalone-backdrop');
-    if (standalone) {
-        standalone.remove();
+    const removeTopLevelAncestor = (el: Element | null): void => {
+        if (!el) {
+            return;
+        }
+        let top: Element = el;
+        while (top.parentElement && top.parentElement !== document.body) {
+            top = top.parentElement;
+        }
+        if (
+            top !== document.body &&
+            top !== appRoot &&
+            top !== payBtn &&
+            !top.contains(appRoot) &&
+            !top.contains(payBtn)
+        ) {
+            top.remove();
+        } else if (el !== appRoot && el !== payBtn && !el.contains(appRoot)) {
+            el.remove();
+        }
+    };
+
+    // 1. Terminate all network connections on SSLCommerz iframes and remove their top-level trees
+    const iframes = document.querySelectorAll<HTMLIFrameElement>(
+        'iframe[src*="sslcommerz"], iframe[src*="EasyCheckOut"], iframe[id*="sslcz"], iframe[name*="sslcz"]',
+    );
+    iframes.forEach((iframe) => {
+        try {
+            iframe.src = 'about:blank';
+        } catch {
+            // ignore
+        }
+        removeTopLevelAncestor(iframe);
+    });
+
+    // 2. Remove all modal, backdrop, and popup elements created by SSLCommerz
+    const selectors = [
+        '.modal-backdrop',
+        '.modal:not(#app *)',
+        '.modal-dialog:not(#app *)',
+        '.mobile_popup',
+        '.icon-lock',
+        '#sslcz-standalone-backdrop',
+        '[id*="sslcz-modal"]',
+        '[class*="sslcz-modal"]',
+        '[id*="sslcz_"]',
+    ];
+
+    selectors.forEach((sel) => {
+        document.querySelectorAll(sel).forEach((el) => {
+            removeTopLevelAncestor(el);
+        });
+    });
+
+    // 3. Catch any remaining orphaned logo headers or close buttons created by SSLCommerz
+    document.querySelectorAll('body > div').forEach((div) => {
+        if (div === appRoot || div.contains(appRoot) || div === payBtn) {
+            return;
+        }
+        const hasLogo = div.querySelector(
+            'img[src*="logo" i], img[src*="apple-touch" i], [alt="Logo" i]',
+        );
+        const hasClose = div.querySelector('.close, [data-dismiss="modal"]');
+        const hasLock = div.querySelector('.icon-lock');
+        const textHasLogo =
+            div.textContent?.includes('Logo') &&
+            div.querySelector('button, .close, a');
+
+        if (hasLock || (hasLogo && hasClose) || textHasLogo) {
+            div.remove();
+        }
+    });
+
+    if (document.body) {
+        document.body.style.overflow = '';
     }
 }
 
-function observeModal(callbacks?: EasyCheckoutCallbacks): void {
+/**
+ * Aborts any pending Easy Checkout attempt. If the user closes the loading
+ * modal while SSLCommerz is still negotiating in the background, this
+ * cancels the session, tears down observers, and starts a guardian observer
+ * that prevents any delayed popup from appearing.
+ */
+export function cancelEasyCheckout(): void {
+    activeSessionId = 0;
+
+    if (activeObserver) {
+        activeObserver.disconnect();
+        activeObserver = null;
+    }
+
+    cleanupSslCommerzArtifacts();
+    startCancellationGuardian();
+}
+
+function observeModal(
+    sessionId: number,
+    callbacks?: EasyCheckoutCallbacks,
+): void {
     if (
         typeof document === 'undefined' ||
         typeof MutationObserver === 'undefined'
@@ -126,21 +305,80 @@ function observeModal(callbacks?: EasyCheckoutCallbacks): void {
         return;
     }
 
+    stopCancellationGuardian();
     injectStyles();
 
     let modalElement: HTMLElement | null = null;
-    let observer: MutationObserver | null = null;
+
+    if (activeObserver) {
+        activeObserver.disconnect();
+        activeObserver = null;
+    }
 
     const cleanup = () => {
-        if (observer) {
-            observer.disconnect();
-            observer = null;
+        document.removeEventListener('click', handleGlobalClick, true);
+        window.removeEventListener('keydown', handleGlobalKeydown, true);
+
+        if (activeObserver) {
+            activeObserver.disconnect();
+            activeObserver = null;
         }
         cleanupSslCommerzArtifacts();
-        callbacks?.onClosed?.();
+        if (activeSessionId === sessionId) {
+            callbacks?.onClosed?.();
+        }
     };
 
-    observer = new MutationObserver((mutations) => {
+    const handleGlobalClick = (event: MouseEvent) => {
+        const target = event.target as HTMLElement | null;
+        if (!target) {
+            return;
+        }
+
+        // Close button click (e.g. '×' or .close)
+        const isCloseBtn = target.closest(
+            '.close, [data-dismiss="modal"], [aria-label*="Close" i], .close-button',
+        );
+        const isCloseChar =
+            target.textContent?.trim() === '×' ||
+            target.textContent?.trim() === '\u00d7' ||
+            target.textContent?.trim() === 'X';
+        const inSslModal = target.closest(
+            '.modal, .modal-dialog, .modal-content, .mobile_popup, [id*="sslcz"]',
+        );
+
+        if (isCloseBtn || (isCloseChar && inSslModal)) {
+            cleanup();
+            return;
+        }
+
+        // Backdrop click outside modal dialog
+        if (
+            target.classList.contains('modal-backdrop') ||
+            (target.classList.contains('modal') &&
+                !target.closest('.modal-dialog, .modal-content'))
+        ) {
+            cleanup();
+            return;
+        }
+    };
+
+    const handleGlobalKeydown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+            cleanup();
+        }
+    };
+
+    document.addEventListener('click', handleGlobalClick, true);
+    window.addEventListener('keydown', handleGlobalKeydown, true);
+
+    activeObserver = new MutationObserver((mutations) => {
+        // If this session has been cancelled, abort immediately and purge any nodes
+        if (activeSessionId !== sessionId) {
+            cleanup();
+            return;
+        }
+
         for (const mutation of mutations) {
             for (let i = 0; i < mutation.addedNodes.length; i++) {
                 const node = mutation.addedNodes[i];
@@ -156,17 +394,30 @@ function observeModal(callbacks?: EasyCheckoutCallbacks): void {
                           ) as HTMLIFrameElement | null);
 
                 if (iframe) {
+                    if (activeSessionId !== sessionId) {
+                        try {
+                            iframe.src = 'about:blank';
+                        } catch {
+                            // ignore
+                        }
+                        node.remove();
+                        cleanup();
+                        return;
+                    }
+
                     modalElement = node;
                     callbacks?.onOpened?.();
 
                     let hasLoaded = false;
                     const handleLoaded = () => {
-                        if (hasLoaded) {
+                        if (hasLoaded || activeSessionId !== sessionId) {
                             return;
                         }
                         hasLoaded = true;
                         window.setTimeout(() => {
-                            callbacks?.onLoaded?.();
+                            if (activeSessionId === sessionId) {
+                                callbacks?.onLoaded?.();
+                            }
                         }, 250);
                     };
 
@@ -196,7 +447,16 @@ function observeModal(callbacks?: EasyCheckoutCallbacks): void {
             if (modalElement) {
                 for (let i = 0; i < mutation.removedNodes.length; i++) {
                     const node = mutation.removedNodes[i];
-                    if (node === modalElement || node.contains(modalElement)) {
+                    const isIframeRemoved =
+                        node.tagName === 'IFRAME' ||
+                        (node instanceof HTMLElement &&
+                            node.querySelector('iframe'));
+                    if (
+                        node === modalElement ||
+                        node.contains(modalElement) ||
+                        modalElement.contains(node) ||
+                        isIframeRemoved
+                    ) {
                         modalElement = null;
                         cleanup();
                         return;
@@ -213,12 +473,12 @@ function observeModal(callbacks?: EasyCheckoutCallbacks): void {
         }
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    activeObserver.observe(document.body, { childList: true, subtree: true });
 
     window.setTimeout(() => {
-        if (observer) {
-            observer.disconnect();
-            observer = null;
+        if (activeObserver) {
+            activeObserver.disconnect();
+            activeObserver = null;
         }
         cleanupSslCommerzArtifacts();
     }, 300000);
@@ -283,7 +543,13 @@ export function openEasyCheckout(
         return false;
     }
 
-    observeModal(callbacks);
+    stopCancellationGuardian();
+    cleanupSslCommerzArtifacts();
+
+    const sessionId = ++currentSessionId;
+    activeSessionId = sessionId;
+
+    observeModal(sessionId, callbacks);
 
     el.postdata = { invoice: invoiceId };
     el.token = csrfToken;

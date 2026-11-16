@@ -111,27 +111,29 @@ class SslCommerzGateway implements PaymentGateway
 
     public function verify(GatewayTransaction $transaction, array $payload): GatewayVerification
     {
+        // 1. If payload carries a cryptographic signature (IPN/callback), verify it
+        if (isset($payload['verify_sign']) && ! $this->verifySignature($payload)) {
+            return new GatewayVerification(GatewayTransactionStatus::Invalid, 'SSLCommerz callback signature verification failed.');
+        }
+
         $claimed = strtoupper((string) ($payload['status'] ?? ''));
         $validationId = $payload['val_id'] ?? null;
 
         if (! is_string($validationId) || $validationId === '') {
-            // The gateway says the payer failed or backed out: no money moved.
-            if (in_array($claimed, ['FAILED', 'CANCELLED', 'UNATTEMPTED', 'EXPIRED'], true)) {
+            // Before accepting any failure or cancellation claim, check if SSLCommerz
+            // actually validated this transaction (guards against fake cancel/fail payloads).
+            $data = $this->findValidated($transaction);
+
+            if ($data !== null) {
+                $validationId = (string) ($data['val_id'] ?? '');
+            } elseif (in_array($claimed, ['FAILED', 'CANCELLED', 'UNATTEMPTED', 'EXPIRED'], true)) {
                 return new GatewayVerification(
                     $claimed === 'CANCELLED' ? GatewayTransactionStatus::Cancelled : GatewayTransactionStatus::Failed,
                     is_string($payload['error'] ?? null) ? mb_substr($payload['error'], 0, 250) : null,
                 );
-            }
-
-            // A return that names only our transaction (Easy Checkout sends
-            // the page back this way): ask the gateway what became of it.
-            $data = $this->findValidated($transaction);
-
-            if ($data === null) {
+            } else {
                 return GatewayVerification::unknown('SSLCommerz has no validated payment for this transaction yet.');
             }
-
-            $validationId = (string) ($data['val_id'] ?? '');
         } else {
             try {
                 $response = Http::timeout(20)->get($this->baseUrl().'/validator/api/validationserverAPI.php', [
@@ -167,13 +169,43 @@ class SslCommerzGateway implements PaymentGateway
             return new GatewayVerification(GatewayTransactionStatus::Invalid, 'The validated transaction ID does not match.', ...$details);
         }
 
-        // "currency_type" and "currency_amount" are what we asked for;
-        // "amount" is what was settled in BDT.
-        $currency = (string) ($data['currency_type'] ?? $data['currency'] ?? '');
-        $amount = (string) ($data['currency_amount'] ?? $data['amount'] ?? '');
+        // 2. Prevent replay attacks: validation_id cannot belong to another already-settled transaction
+        if (filled($validationId)) {
+            $alreadySettled = GatewayTransaction::query()
+                ->where('validation_id', $validationId)
+                ->where('id', '!=', $transaction->id)
+                ->whereIn('status', [GatewayTransactionStatus::Paid, GatewayTransactionStatus::Review])
+                ->exists();
 
-        if ($currency !== $transaction->currency || ! is_numeric($amount) || (int) round(((float) $amount) * 100) !== $transaction->amount) {
-            return new GatewayVerification(GatewayTransactionStatus::Invalid, 'The validated amount or currency does not match the invoice.', ...$details);
+            if ($alreadySettled) {
+                return new GatewayVerification(
+                    GatewayTransactionStatus::Invalid,
+                    'Replay attack detected: validation ID was already settled on another transaction.',
+                    ...$details
+                );
+            }
+        }
+
+        // 3. Strict Amount and Currency Verification
+        $currency = filled($data['currency_type'] ?? null) ? (string) $data['currency_type'] : (string) ($data['currency'] ?? '');
+        $amount = filled($data['currency_amount'] ?? null) ? (string) $data['currency_amount'] : (string) ($data['amount'] ?? '');
+
+        if (strcasecmp($currency, $transaction->currency) !== 0) {
+            return new GatewayVerification(GatewayTransactionStatus::Invalid, "The validated currency ({$currency}) does not match expected ({$transaction->currency}).", ...$details);
+        }
+
+        if (! is_numeric($amount)) {
+            return new GatewayVerification(GatewayTransactionStatus::Invalid, 'The validated amount is not numeric.', ...$details);
+        }
+
+        $paidCents = (int) round(((float) $amount) * 100);
+
+        if ($paidCents < $transaction->amount) {
+            return new GatewayVerification(GatewayTransactionStatus::Invalid, "Underpayment detected: expected {$transaction->amount} {$transaction->currency}, validated {$paidCents} {$currency}.", ...$details);
+        }
+
+        if ($paidCents !== $transaction->amount) {
+            return new GatewayVerification(GatewayTransactionStatus::Invalid, "Amount mismatch: expected {$transaction->amount} {$transaction->currency}, validated {$paidCents} {$currency}.", ...$details);
         }
 
         // risk_level 1: SSLCommerz advises holding the service until checked.
@@ -182,6 +214,56 @@ class SslCommerzGateway implements PaymentGateway
         }
 
         return new GatewayVerification(GatewayTransactionStatus::Paid, null, ...$details);
+    }
+
+    /**
+     * Verify the cryptographic signature of an IPN / callback payload (verify_sign / verify_key).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function verifySignature(array $payload): bool
+    {
+        $verifySign = $payload['verify_sign'] ?? null;
+        $verifyKey = $payload['verify_key'] ?? null;
+
+        if (! is_string($verifySign) || $verifySign === '' || ! is_string($verifyKey) || $verifyKey === '') {
+            return false;
+        }
+
+        $password = (string) ($this->config['store_password'] ?? '');
+        if ($password === '') {
+            return false;
+        }
+
+        $keys = array_filter(array_map('trim', explode(',', $verifyKey)));
+        $data = [];
+
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $payload)) {
+                $data[$key] = (string) $payload[$key];
+            }
+        }
+
+        $data['store_passwd'] = md5($password);
+        ksort($data);
+
+        $params = [];
+        foreach ($data as $key => $val) {
+            $params[] = $key.'='.$val;
+        }
+        $hashString = implode('&', $params);
+
+        $verifySignSha2 = $payload['verify_sign_sha2'] ?? null;
+        if (is_string($verifySignSha2) && $verifySignSha2 !== '') {
+            $computedSha2 = hash('sha256', $hashString);
+            if (hash_equals(strtolower($computedSha2), strtolower($verifySignSha2))) {
+                return true;
+            }
+        }
+
+        $computedMd5 = md5($hashString);
+
+        return hash_equals(strtolower($computedMd5), strtolower($verifySign));
     }
 
     /**
