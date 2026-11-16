@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
@@ -54,10 +55,24 @@ class GatewayController extends Controller
             $checkout = $payments->start($paymentRequest, $request->user());
         } catch (ValidationException $e) {
             return response()->json(['status' => 'fail', 'data' => null, 'message' => collect($e->errors())->flatten()->first()]);
+        } catch (\Throwable $e) {
+            Log::error('Gateway checkout exception', ['exception' => $e->getMessage()]);
+
+            return response()->json(['status' => 'fail', 'data' => null, 'message' => __('Unable to initiate payment session. Please try again.')]);
+        }
+
+        $logo = $checkout->logo;
+        if (blank($logo)) {
+            $iconPath = public_path('apple-touch-icon.png');
+            if (file_exists($iconPath)) {
+                $logo = 'data:image/png;base64,'.base64_encode((string) file_get_contents($iconPath));
+            } else {
+                $logo = asset('apple-touch-icon.png');
+            }
         }
 
         // Their popup always shows a logo; fall back to ours if the store has none.
-        return response()->json(['status' => 'success', 'data' => $checkout->redirectUrl, 'logo' => $checkout->logo ?? asset('apple-touch-icon.png')]);
+        return response()->json(['status' => 'success', 'data' => $checkout->redirectUrl, 'logo' => $logo]);
     }
 
     /** Server-to-server notification from the gateway. */

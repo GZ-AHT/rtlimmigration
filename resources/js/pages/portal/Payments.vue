@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { onMounted, ref } from 'vue';
+import { onMounted, onUnmounted, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
+import PaymentLoadingModal from '@/components/payments/PaymentLoadingModal.vue';
 import PaymentForm from '@/components/payments/PaymentForm.vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
@@ -17,6 +18,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
+    cleanupSslCommerzArtifacts,
     easyCheckoutSupported,
     loadEasyCheckout,
     openEasyCheckout,
@@ -60,12 +62,59 @@ defineOptions({
 
 const paying = ref<RequestItem | null>(null);
 const redirecting = ref(false);
+const startingOnlineId = ref<number | null>(null);
+const gatewayLoading = ref(false);
+let watchdogTimer: number | null = null;
+
+function stopWatchdog(): void {
+    if (watchdogTimer !== null) {
+        window.clearTimeout(watchdogTimer);
+        watchdogTimer = null;
+    }
+}
+
+function handleOffline(): void {
+    if (gatewayLoading.value || startingOnlineId.value !== null) {
+        cancelPaymentLoading('Internet connection lost. Payment cancelled.');
+    }
+}
+
+function cancelPaymentLoading(message?: string): void {
+    stopWatchdog();
+    gatewayLoading.value = false;
+    startingOnlineId.value = null;
+    cleanupSslCommerzArtifacts();
+    if (message) {
+        toast.error(message);
+    }
+}
+
+watch(gatewayLoading, (active) => {
+    if (typeof document !== 'undefined') {
+        document.body.style.overflow = active ? 'hidden' : '';
+    }
+});
+
+onUnmounted(() => {
+    if (typeof window !== 'undefined') {
+        window.removeEventListener('offline', handleOffline);
+    }
+    stopWatchdog();
+    cleanupSslCommerzArtifacts();
+    if (typeof document !== 'undefined') {
+        document.body.style.overflow = '';
+    }
+});
 
 // SSLCommerz Easy Checkout: the gateway opens in a popup over this page.
 // See lib/easyCheckout.ts for how their script has to be driven.
 const easyReady = ref(false);
 
 onMounted(async () => {
+    if (typeof window !== 'undefined') {
+        window.addEventListener('offline', handleOffline);
+    }
+
     const gateway = props.gateway;
 
     if (
@@ -86,16 +135,77 @@ onMounted(async () => {
  * available, otherwise on the gateway's own page. Either way, coming back
  * never marks anything paid: the gateway confirms to our server separately.
  */
-function payOnline(request: RequestItem): void {
-    if (
-        easyReady.value &&
-        props.gateway?.csrf &&
-        openEasyCheckout(request.id, props.gateway.csrf)
-    ) {
+async function payOnline(request: RequestItem): Promise<void> {
+    if (startingOnlineId.value !== null || redirecting.value) {
+        return;
+    }
+
+    // Check internet connection first
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        toast.error(
+            'No internet connection. Please check your network and try again.',
+        );
+        return;
+    }
+
+    startingOnlineId.value = request.id;
+
+    if (props.gateway?.mode === 'easy' && easyCheckoutSupported()) {
+        gatewayLoading.value = true;
+        stopWatchdog();
+
+        // 12-second watchdog timer: If gateway hangs or network drops, close popup & alert user
+        watchdogTimer = window.setTimeout(() => {
+            if (gatewayLoading.value) {
+                const isOffline =
+                    typeof navigator !== 'undefined' && !navigator.onLine;
+                cancelPaymentLoading(
+                    isOffline
+                        ? 'Internet connection lost. Please check your network.'
+                        : 'Payment gateway took too long to respond. Please try again.',
+                );
+            }
+        }, 12000);
+
+        if (
+            !easyReady.value &&
+            props.gateway.script &&
+            props.gateway.endpoint
+        ) {
+            easyReady.value = await loadEasyCheckout(
+                props.gateway.script,
+                props.gateway.endpoint,
+            );
+        }
+
+        if (easyReady.value && props.gateway?.csrf) {
+            const opened = openEasyCheckout(request.id, props.gateway.csrf, {
+                onOpened: () => {
+                    startingOnlineId.value = null;
+                },
+                onLoaded: () => {
+                    stopWatchdog();
+                    gatewayLoading.value = false;
+                    startingOnlineId.value = null;
+                },
+                onClosed: () => {
+                    cancelPaymentLoading();
+                },
+            });
+
+            if (opened) {
+                return;
+            }
+        }
+
+        cancelPaymentLoading(
+            'Unable to start payment gateway. Please try again.',
+        );
         return;
     }
 
     if (!request.online_url) {
+        cancelPaymentLoading();
         return;
     }
 
@@ -105,9 +215,15 @@ function payOnline(request: RequestItem): void {
         {
             preserveScroll: true,
             onStart: () => (redirecting.value = true),
+            onFinish: () => {
+                redirecting.value = false;
+                startingOnlineId.value = null;
+                gatewayLoading.value = false;
+                stopWatchdog();
+            },
             onError: (e) => {
                 redirecting.value = false;
-                toast.error(
+                cancelPaymentLoading(
                     Object.values(e)[0] ?? 'Online payment is unavailable.',
                 );
             },
@@ -243,10 +359,21 @@ function payOnline(request: RequestItem): void {
                             <Button
                                 v-if="r.can_pay && r.online_url"
                                 size="sm"
-                                :disabled="redirecting"
+                                :disabled="
+                                    redirecting || startingOnlineId === r.id
+                                "
                                 @click="payOnline(r)"
                             >
-                                Pay online
+                                <AppIcon
+                                    v-if="startingOnlineId === r.id"
+                                    name="progress_activity"
+                                    :size="16"
+                                    class="animate-spin"
+                                />
+                                <template v-if="startingOnlineId === r.id">
+                                    Connecting...
+                                </template>
+                                <template v-else> Pay online </template>
                             </Button>
                             <Button
                                 v-if="r.can_pay"
@@ -309,4 +436,10 @@ function payOnline(request: RequestItem): void {
             />
         </DialogContent>
     </Dialog>
+
+    <!-- SSLCommerz Payment Loading Airplane Modal -->
+    <PaymentLoadingModal
+        :show="gatewayLoading"
+        @close="cancelPaymentLoading('Payment cancelled.')"
+    />
 </template>
