@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, setLayoutProps, usePage } from '@inertiajs/vue3';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import DataTable from '@/components/panel/DataTable.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -35,7 +36,13 @@ const descriptions: Record<string, string> = {
         'Submitted payments to check against the bank or mobile-banking statement. Oldest first.',
     verified: 'Verified payments waiting for final confirmation.',
     rejected: 'Payments that were not accepted, with the reason given.',
+    confirmed:
+        'Every confirmed payment has a numbered receipt you can download.',
+    bank: 'Payments made by bank transfer or deposit, for matching against the bank statement.',
 };
+
+// Queue screens fix the status; the bank list can still be filtered by it.
+const fixedStatus = props.preset !== null && props.preset !== 'bank';
 
 const columns: TableColumn<PaymentRow>[] = [
     { key: 'student', label: 'Student' },
@@ -66,7 +73,7 @@ const columns: TableColumn<PaymentRow>[] = [
         >
             <template #filters>
                 <SelectInput
-                    v-if="!preset"
+                    v-if="!fixedStatus"
                     v-model="filters.status"
                     :options="
                         statuses.map((s) => ({
@@ -90,7 +97,7 @@ const columns: TableColumn<PaymentRow>[] = [
                 v-if="
                     filters.search ||
                     filters.method ||
-                    (!preset && filters.status)
+                    (!fixedStatus && filters.status)
                 "
                 #actions
             >
@@ -149,6 +156,12 @@ const columns: TableColumn<PaymentRow>[] = [
                 >
             </template>
             <template #actions="{ row }"
+                ><a
+                    v-if="row.receipt_url"
+                    :href="row.receipt_url"
+                    class="tiny-action"
+                    :aria-label="`Download receipt ${row.receipt_number}`"
+                    ><AppIcon name="download" :size="14" /> Receipt</a
                 ><Link :href="row.url!" class="tiny-action">{{
                     row.status === 'pending' || row.status === 'verified'
                         ? 'Review'

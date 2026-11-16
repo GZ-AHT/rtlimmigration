@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { onMounted, ref } from 'vue';
+import { toast } from 'vue-sonner';
 import PaymentForm from '@/components/payments/PaymentForm.vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
@@ -15,8 +16,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    easyCheckoutSupported,
+    loadEasyCheckout,
+    openEasyCheckout,
+} from '@/lib/easyCheckout';
 import { formatDate } from '@/lib/format';
-import { history, index } from '@/routes/portal/payments';
+import { due, history, index } from '@/routes/portal/payments';
 import type {
     MoneyTotals,
     PaymentMethodOption,
@@ -29,9 +35,19 @@ type RequestItem = PaymentRequestRow & {
     awaiting: PaymentRow[];
     can_pay: boolean;
     pay_url: string;
+    invoice_url: string;
+    online_url: string | null;
 };
 
-defineProps<{
+const props = defineProps<{
+    dueOnly: boolean;
+    gateway: {
+        label: string;
+        mode: 'hosted' | 'easy';
+        script: string | null;
+        endpoint: string | null;
+        csrf: string | null;
+    } | null;
     totals: MoneyTotals;
     requests: RequestItem[];
     methods: PaymentMethodOption[];
@@ -43,17 +59,86 @@ defineOptions({
 });
 
 const paying = ref<RequestItem | null>(null);
+const redirecting = ref(false);
+
+// SSLCommerz Easy Checkout: the gateway opens in a popup over this page.
+// See lib/easyCheckout.ts for how their script has to be driven.
+const easyReady = ref(false);
+
+onMounted(async () => {
+    const gateway = props.gateway;
+
+    if (
+        gateway?.mode === 'easy' &&
+        gateway.script &&
+        gateway.endpoint &&
+        easyCheckoutSupported()
+    ) {
+        easyReady.value = await loadEasyCheckout(
+            gateway.script,
+            gateway.endpoint,
+        );
+    }
+});
+
+/**
+ * Starts an online payment: in the Easy Checkout popup when it is
+ * available, otherwise on the gateway's own page. Either way, coming back
+ * never marks anything paid: the gateway confirms to our server separately.
+ */
+function payOnline(request: RequestItem): void {
+    if (
+        easyReady.value &&
+        props.gateway?.csrf &&
+        openEasyCheckout(request.id, props.gateway.csrf)
+    ) {
+        return;
+    }
+
+    if (!request.online_url) {
+        return;
+    }
+
+    router.post(
+        request.online_url,
+        {},
+        {
+            preserveScroll: true,
+            onStart: () => (redirecting.value = true),
+            onError: (e) => {
+                redirecting.value = false;
+                toast.error(
+                    Object.values(e)[0] ?? 'Online payment is unavailable.',
+                );
+            },
+        },
+    );
+}
 </script>
 
 <template>
-    <Head title="Payments" />
+    <Head :title="props.dueOnly ? 'Due payments' : 'Payments'" />
 
     <PageHeader
         eyebrow="Student portal"
-        title="Payments"
-        description="Your fees and invoices. After you pay, our Accounts team verifies the payment and you are notified."
+        :title="props.dueOnly ? 'Due payments' : 'Payments'"
+        :description="
+            props.dueOnly
+                ? 'What you still owe, earliest deadline first.'
+                : 'Your fees and invoices. After you pay, our Accounts team verifies the payment and you are notified.'
+        "
     >
         <template #actions>
+            <Button v-if="!props.dueOnly" variant="outline" as-child>
+                <Link :href="due()">
+                    <AppIcon name="pending_actions" :size="18" /> Due payments
+                </Link>
+            </Button>
+            <Button v-else variant="outline" as-child>
+                <Link :href="index()">
+                    <AppIcon name="payments" :size="18" /> All invoices
+                </Link>
+            </Button>
             <Button variant="outline" as-child>
                 <Link :href="history()">
                     <AppIcon name="history" :size="18" /> Payment history
@@ -88,12 +173,18 @@ const paying = ref<RequestItem | null>(null);
         </div>
     </div>
 
-    <PanelCard title="My invoices">
+    <PanelCard :title="props.dueOnly ? 'Still to pay' : 'My invoices'">
         <EmptyState
             v-if="!requests.length"
-            icon="receipt_long"
-            title="No payment requests yet"
-            description="When your counselor raises a fee, it appears here."
+            :icon="props.dueOnly ? 'task_alt' : 'receipt_long'"
+            :title="
+                props.dueOnly ? 'Nothing is due' : 'No payment requests yet'
+            "
+            :description="
+                props.dueOnly
+                    ? 'You have no outstanding payments.'
+                    : 'When your counselor raises a fee, it appears here.'
+            "
         />
         <ul v-else class="divide-y">
             <li
@@ -134,7 +225,7 @@ const paying = ref<RequestItem | null>(null);
                             {{ r.description }}
                         </p>
                     </div>
-                    <div class="text-right">
+                    <div class="ml-auto text-right">
                         <p class="font-display text-lg font-extrabold">
                             {{ r.amount_label }}
                         </p>
@@ -144,14 +235,32 @@ const paying = ref<RequestItem | null>(null);
                         >
                             {{ r.outstanding_label }} left
                         </p>
-                        <Button
-                            v-if="r.can_pay"
-                            size="sm"
-                            class="mt-2"
-                            @click="paying = r"
-                        >
-                            Pay now
-                        </Button>
+                        <div class="mt-2 flex flex-wrap justify-end gap-1.5">
+                            <a :href="r.invoice_url" class="tiny-action"
+                                ><AppIcon name="download" :size="14" />
+                                Invoice</a
+                            >
+                            <Button
+                                v-if="r.can_pay && r.online_url"
+                                size="sm"
+                                :disabled="redirecting"
+                                @click="payOnline(r)"
+                            >
+                                Pay online
+                            </Button>
+                            <Button
+                                v-if="r.can_pay"
+                                size="sm"
+                                :variant="r.online_url ? 'outline' : 'default'"
+                                @click="paying = r"
+                            >
+                                {{
+                                    r.online_url
+                                        ? 'I have already paid'
+                                        : 'Pay now'
+                                }}
+                            </Button>
+                        </div>
                     </div>
                 </div>
                 <p

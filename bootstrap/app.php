@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // Payment gateway callbacks come from the gateway, not from our pages.
+        $middleware->validateCsrfTokens(except: ['payments/gateway/*']);
+
         $middleware->web(append: [
             EnsureUserIsActive::class,
             HandleAppearance::class,

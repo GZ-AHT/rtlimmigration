@@ -60,14 +60,20 @@ class PaymentRequestController extends Controller
             ->when(($filters['status'] ?? null) === 'open', fn (Builder $q) => $q->whereIn('status', $this->openStatuses()))
             ->when(($filters['status'] ?? 'open') !== 'open' && isset($filters['status']), fn (Builder $q) => $q->where('status', $filters['status']))
             ->when($filters['type'] ?? null, fn (Builder $q, int|string $t) => $q->where('payment_type_id', $t))
-            ->latest()
+            // The due list is worked from the most overdue down.
+            ->when($preset === 'open', fn (Builder $q) => $q->orderByRaw('due_date IS NULL')->orderBy('due_date'), fn (Builder $q) => $q->latest())
             ->latest('id')
             ->paginate(20)
             ->withQueryString()
             ->through(fn (PaymentRequest $r) => [...PaymentPresenter::request($r), 'url' => $this->areaRoute($request, 'payment-requests.show', $r)]);
 
         return Inertia::render('payments/Requests', [
-            'title' => $preset === 'unpaid' ? 'New payment requests' : 'Invoices',
+            'title' => match ($preset) {
+                'unpaid' => 'New payment requests',
+                'open' => 'Due payments',
+                'partial' => 'Partial payments',
+                default => 'Invoices',
+            },
             'preset' => $preset,
             'requests' => $requests,
             'filters' => ['search' => $filters['search'] ?? '', 'status' => $filters['status'] ?? '', 'type' => (string) ($filters['type'] ?? '')],
@@ -166,9 +172,10 @@ class PaymentRequestController extends Controller
                 ...PaymentPresenter::payment($p),
                 'url' => $this->areaHas($request, 'payments.show') ? $this->areaRoute($request, 'payments.show', $p) : null,
                 'evidence_url' => $p->evidence_path && $this->areaHas($request, 'payments.evidence') ? $this->areaRoute($request, 'payments.evidence', $p) : null,
+                'receipt_url' => $p->receipt_number !== null ? $this->areaRoute($request, 'payments.receipt', $p) : null,
             ])->values(),
             'history' => $paymentRequest->statusHistory->map(fn ($h) => PaymentPresenter::history($h, 'request'))->values(),
-            'methods' => PaymentMethod::active()->get()->map(fn (PaymentMethod $m) => [
+            'methods' => PaymentMethod::manual()->get()->map(fn (PaymentMethod $m) => [
                 'value' => (string) $m->id, 'label' => $m->name, 'requires_reference' => $m->requires_reference, 'requires_evidence' => $m->requires_evidence, 'instructions' => $m->instructions,
             ])->values(),
             'can' => [
@@ -183,6 +190,7 @@ class PaymentRequestController extends Controller
                 'pay' => $this->areaRoute($request, 'payment-requests.payments.store', $paymentRequest),
                 'record' => $this->areaHas($request, 'payment-requests.received') ? $this->areaRoute($request, 'payment-requests.received', $paymentRequest) : null,
                 'cancel' => $this->areaRoute($request, 'payment-requests.cancel', $paymentRequest),
+                'invoice' => $this->areaRoute($request, 'payment-requests.invoice', $paymentRequest),
             ],
         ]);
     }

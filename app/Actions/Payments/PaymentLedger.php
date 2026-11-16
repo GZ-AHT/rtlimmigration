@@ -2,9 +2,13 @@
 
 namespace App\Actions\Payments;
 
+use App\Enums\GatewayTransactionStatus;
+use App\Enums\PaymentMethodKind;
 use App\Enums\PaymentRequestStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\RefundStatus;
 use App\Enums\UserStatus;
+use App\Models\GatewayTransaction;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\PaymentRequest;
@@ -101,15 +105,15 @@ class PaymentLedger
      * REQ §12.1 step 4: a payment is submitted (by the student, or by staff
      * on their behalf) and waits for Accounts.
      */
-    public function submitPayment(PaymentRequest $request, PaymentMethod $method, int $amount, ?string $reference, CarbonInterface $paidOn, ?UploadedFile $evidence, User $actor, ?string $notes = null, bool $notifyFinance = true): Payment
+    public function submitPayment(PaymentRequest $request, PaymentMethod $method, int $amount, ?string $reference, CarbonInterface $paidOn, ?UploadedFile $evidence, User $actor, ?string $notes = null, bool $notifyFinance = true, bool $evidenceOptional = false): Payment
     {
         $stored = $evidence ? $this->storeEvidence($request, $evidence) : null;
 
         try {
-            $payment = DB::transaction(function () use ($request, $method, $amount, $reference, $paidOn, $stored, $actor, $notes) {
+            $payment = DB::transaction(function () use ($request, $method, $amount, $reference, $paidOn, $stored, $actor, $notes, $evidenceOptional) {
                 $request = PaymentRequest::whereKey($request->id)->lockForUpdate()->firstOrFail();
 
-                $this->guardSubmission($request, $method, $amount, $reference, $stored !== null);
+                $this->guardSubmission($request, $method, $amount, $reference, $stored !== null || $evidenceOptional);
 
                 $payment = $request->payments()->create([
                     'student_id' => $request->student_id,
@@ -233,22 +237,69 @@ class PaymentLedger
 
     /**
      * Accounts recording money received in person (REQ §12.3 "Cash Payment",
-     * "Manual Payment Entry"): submitted and confirmed in one step.
+     * "Manual Payment Entry"): submitted and confirmed in one step. Accounts
+     * is vouching for the money itself, so no proof upload is asked for,
+     * whatever the method normally requires of a student.
      */
     public function recordReceived(PaymentRequest $request, PaymentMethod $method, int $amount, ?string $reference, CarbonInterface $paidOn, User $actor, ?string $notes): Payment
     {
         self::guardConfirmer($request, $actor);
 
         return DB::transaction(function () use ($request, $method, $amount, $reference, $paidOn, $actor, $notes) {
-            $payment = $this->submitPayment($request, $method, $amount, $reference, $paidOn, null, $actor, $notes, notifyFinance: false);
+            $payment = $this->submitPayment($request, $method, $amount, $reference, $paidOn, null, $actor, $notes, notifyFinance: false, evidenceOptional: true);
 
             return $this->confirm($payment, $actor, __('Recorded as received by Accounts'));
         });
     }
 
     /**
-     * Derive the request status from its money (REQ §12.4). Refund statuses
-     * are added with refunds in Phase 5.
+     * REQ §12.3 online gateway: money the gateway has confirmed server-side.
+     * There is no person to confirm it, so the payment is confirmed by the
+     * system, unless the gateway flagged it as risky ($hold), in which case
+     * it waits for Accounts like any submitted payment.
+     *
+     * Call inside a transaction that already holds the request row lock.
+     * The amount is recorded even if it exceeds the outstanding balance: the
+     * student has really been charged, and Accounts can refund the excess.
+     */
+    public function recordGatewayPayment(GatewayTransaction $transaction, PaymentRequest $request, PaymentMethod $method, bool $hold, ?string $reference, string $note): Payment
+    {
+        $payment = $request->payments()->create([
+            'student_id' => $request->student_id,
+            'payment_method_id' => $method->id,
+            'amount' => $transaction->amount,
+            'currency' => $transaction->currency,
+            'transaction_reference' => $reference,
+            'paid_on' => today(),
+            'status' => $hold ? PaymentStatus::Pending : PaymentStatus::Confirmed,
+            'submitted_by' => $transaction->initiated_by,
+            'verified_at' => $hold ? null : now(),
+            'confirmed_at' => $hold ? null : now(),
+            'receipt_number' => $hold ? null : $this->numbers->next('receipt'),
+            'notes' => $note,
+        ]);
+
+        $this->history($payment, null, $payment->status->value, null, $note);
+
+        if (! $hold) {
+            $request->amount_paid += $payment->amount;
+            $request->save();
+        }
+
+        $this->recalculate($request);
+
+        return $payment;
+    }
+
+    /** Tell the student and counselor about a payment the system confirmed. */
+    public function announce(Payment $payment): void
+    {
+        $this->notifyDecision($payment);
+    }
+
+    /**
+     * Derive the request status from its money (REQ §12.4): payments,
+     * refunds and online attempts.
      */
     public function recalculate(PaymentRequest $request, ?User $actor = null): void
     {
@@ -257,16 +308,28 @@ class PaymentLedger
         }
 
         $awaiting = $request->payments()->whereIn('status', [PaymentStatus::Pending->value, PaymentStatus::Verified->value])->exists();
-        // Compare the enum, not a string: Eloquent casts the status column.
-        $lastDecided = $request->payments()->whereIn('status', [PaymentStatus::Confirmed->value, PaymentStatus::Rejected->value])->reorder()->latest('updated_at')->latest('id')->first()?->status;
+        $lastDecided = $request->payments()->whereIn('status', [PaymentStatus::Confirmed->value, PaymentStatus::Rejected->value])->reorder()->latest('updated_at')->latest('id')->first();
         $overdue = $request->due_date !== null && $request->due_date->isBefore(today());
+        $refundOpen = $request->refunds()->whereIn('status', [RefundStatus::Requested->value, RefundStatus::Approved->value])->exists();
+        $lastAttempt = $request->gatewayTransactions()->reorder()->latest('id')->first();
+        // The most recent thing that happened was an online attempt that failed.
+        $gatewayFailed = $lastAttempt !== null
+            && in_array($lastAttempt->status, [GatewayTransactionStatus::Failed, GatewayTransactionStatus::Invalid], true)
+            && ($lastDecided === null || $lastDecided->updated_at?->isBefore($lastAttempt->updated_at));
 
+        // Compare enums, not strings: Eloquent casts the status columns.
         $status = match (true) {
+            $request->amount_paid > 0 && $request->amount_refunded >= $request->amount_paid => PaymentRequestStatus::Refunded,
+            // A refund in progress only relabels an invoice that is otherwise
+            // settled. One with a balance stays partial or due, so it remains
+            // on the due lists and can still be paid.
+            $request->amount_paid >= $request->amount && $refundOpen => PaymentRequestStatus::RefundRequested,
             $request->amount_paid >= $request->amount => PaymentRequestStatus::Paid,
             $awaiting => PaymentRequestStatus::Pending,
             $overdue => PaymentRequestStatus::Due,
             $request->amount_paid > 0 => PaymentRequestStatus::Partial,
-            $lastDecided === PaymentStatus::Rejected => PaymentRequestStatus::Rejected,
+            $gatewayFailed => PaymentRequestStatus::Failed,
+            $lastDecided?->status === PaymentStatus::Rejected => PaymentRequestStatus::Rejected,
             default => PaymentRequestStatus::Unpaid,
         };
 
@@ -276,7 +339,13 @@ class PaymentLedger
 
         $from = $request->status->value;
         $request->status = $status;
-        $request->paid_at = $status === PaymentRequestStatus::Paid ? ($request->paid_at ?? now()) : null;
+
+        if ($status === PaymentRequestStatus::Paid) {
+            $request->paid_at ??= now();
+        } elseif ($request->amount_paid < $request->amount) {
+            $request->paid_at = null;
+        }
+
         $request->save();
 
         $this->history($request, $from, $status->value, $actor, null);
@@ -305,7 +374,7 @@ class PaymentLedger
             throw ValidationException::withMessages(['request' => __('This request is :status and no longer accepts payments.', ['status' => strtolower($request->status->label())])]);
         }
 
-        if (! $method->is_active) {
+        if (! $method->is_active || $method->kind === PaymentMethodKind::Gateway) {
             throw ValidationException::withMessages(['payment_method_id' => __('That payment method is not available.')]);
         }
 
@@ -346,7 +415,8 @@ class PaymentLedger
         return ['disk' => $disk, 'path' => $path, 'name' => mb_substr($file->getClientOriginalName(), 0, 255), 'mime' => (string) $file->getMimeType()];
     }
 
-    private function history(Model $subject, ?string $from, string $to, ?User $actor, ?string $note): void
+    /** REQ §12.5 rule 7: one row per status change, for requests, payments and refunds. */
+    public function history(Model $subject, ?string $from, string $to, ?User $actor, ?string $note): void
     {
         $subject->morphMany(PaymentStatusHistory::class, 'subject')->create([
             'from_status' => $from,

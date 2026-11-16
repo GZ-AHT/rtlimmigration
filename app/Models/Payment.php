@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
@@ -19,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property int $student_id
  * @property int $payment_method_id
  * @property int $amount
+ * @property int $amount_refunded
  * @property string $currency
  * @property string|null $transaction_reference
  * @property CarbonInterface $paid_on
@@ -44,18 +46,19 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property-read User|null $confirmer
  */
 #[Fillable([
-    'payment_request_id', 'student_id', 'payment_method_id', 'amount', 'currency', 'transaction_reference', 'paid_on',
+    'payment_request_id', 'student_id', 'payment_method_id', 'amount', 'amount_refunded', 'currency', 'transaction_reference', 'paid_on',
     'evidence_disk', 'evidence_path', 'evidence_original_name', 'evidence_mime_type', 'status', 'submitted_by',
     'verified_by', 'verified_at', 'confirmed_by', 'confirmed_at', 'rejection_reason', 'receipt_number', 'notes',
 ])]
 class Payment extends Model
 {
-    protected $attributes = ['status' => 'pending', 'currency' => 'BDT'];
+    protected $attributes = ['status' => 'pending', 'currency' => 'BDT', 'amount_refunded' => 0];
 
     protected function casts(): array
     {
         return [
             'amount' => 'integer',
+            'amount_refunded' => 'integer',
             'paid_on' => 'date',
             'status' => PaymentStatus::class,
             'verified_at' => 'datetime',
@@ -97,6 +100,24 @@ class Payment extends Model
     public function confirmer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'confirmed_by')->withTrashed();
+    }
+
+    /** @return HasMany<Refund, $this> */
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class)->latest()->latest('id');
+    }
+
+    /** What can still be refunded: not already refunded or held by an open refund. */
+    public function refundable(): int
+    {
+        if ($this->status !== PaymentStatus::Confirmed) {
+            return 0;
+        }
+
+        $held = (int) $this->refunds()->whereIn('status', ['requested', 'approved'])->sum('amount');
+
+        return max(0, $this->amount - $this->amount_refunded - $held);
     }
 
     /** @return MorphMany<PaymentStatusHistory, $this> */

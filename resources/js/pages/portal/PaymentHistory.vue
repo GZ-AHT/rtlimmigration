@@ -1,32 +1,31 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
-import DataTable from '@/components/panel/DataTable.vue';
+import EmptyState from '@/components/panel/EmptyState.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
 import StatusBadge from '@/components/panel/StatusBadge.vue';
+import RefundRequestDialog from '@/components/payments/RefundRequestDialog.vue';
+import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 import { history } from '@/routes/portal/payments';
-import type { PaymentRow, TableColumn } from '@/types';
+import { index as refundsIndex } from '@/routes/portal/refunds';
+import type { PaymentRow } from '@/types';
 
-defineProps<{ payments: PaymentRow[] }>();
+type HistoryRow = PaymentRow & {
+    refundable_decimal: string;
+    refundable_label: string;
+    refund_url: string | null;
+};
+
+defineProps<{ payments: HistoryRow[] }>();
 
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Payment history', href: history() }] },
 });
 
-const columns: TableColumn<PaymentRow>[] = [
-    { key: 'type', label: 'Payment' },
-    { key: 'amount_label', label: 'Amount', align: 'right' },
-    { key: 'method', label: 'Method', hideBelow: 'md' },
-    { key: 'status', label: 'Status' },
-    {
-        key: 'paid_on',
-        label: 'Paid on',
-        hideBelow: 'sm',
-        format: (r) => formatDate(r.paid_on),
-    },
-];
+const refunding = ref<HistoryRow | null>(null);
 </script>
 
 <template>
@@ -35,60 +34,116 @@ const columns: TableColumn<PaymentRow>[] = [
     <PageHeader
         eyebrow="Student portal"
         title="Payment history"
-        description="Every payment you have submitted and its result."
-    />
+        description="Every payment you have submitted and its result. Confirmed payments have a receipt to download."
+    >
+        <template #actions>
+            <Button variant="outline" as-child>
+                <Link :href="refundsIndex()">
+                    <AppIcon name="currency_exchange" :size="18" /> My refunds
+                </Link>
+            </Button>
+        </template>
+    </PageHeader>
 
-    <PanelCard flush>
-        <DataTable
-            :columns="columns"
-            :rows="payments"
-            caption="Payment history"
-            empty-icon="payments"
-            empty-title="No payments yet"
-        >
-            <template #cell-type="{ row }">
-                <span class="block font-semibold text-foreground">{{
-                    row.type
-                }}</span>
-                <span class="block text-[11px] text-muted-foreground">
-                    {{ row.invoice_number }}
-                    <template v-if="row.receipt_number">
-                        · receipt {{ row.receipt_number }}</template
+    <PanelCard title="My payments">
+        <EmptyState
+            v-if="!payments.length"
+            icon="payments"
+            title="No payments yet"
+            description="Payments you make appear here with their status."
+        />
+        <ul v-else class="divide-y">
+            <li
+                v-for="p in payments"
+                :key="p.id"
+                class="py-4 first:pt-0 last:pb-0"
+            >
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p
+                            class="flex flex-wrap items-center gap-2 text-[13px] font-semibold"
+                        >
+                            {{ p.type }}
+                            <StatusBadge
+                                :label="p.status_label"
+                                :tone="p.status_tone"
+                            />
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                            {{ p.invoice_number }} · {{ p.method }} · paid
+                            {{ formatDate(p.paid_on) }}
+                        </p>
+                        <p
+                            v-if="p.transaction_reference || p.receipt_number"
+                            class="text-xs text-muted-foreground"
+                        >
+                            <template v-if="p.receipt_number"
+                                >Receipt {{ p.receipt_number }}</template
+                            ><template
+                                v-if="
+                                    p.receipt_number && p.transaction_reference
+                                "
+                            >
+                                · </template
+                            ><template v-if="p.transaction_reference"
+                                >ref {{ p.transaction_reference }}</template
+                            >
+                        </p>
+                        <p v-if="p.refunded" class="text-xs text-warning">
+                            {{ p.refunded_label }} refunded
+                        </p>
+                    </div>
+                    <p class="ml-auto font-display text-lg font-extrabold">
+                        {{ p.amount_label }}
+                    </p>
+                </div>
+                <p
+                    v-if="p.rejection_reason"
+                    class="mt-2 rounded-lg bg-danger-soft px-3 py-2 text-xs text-danger"
+                >
+                    <b>Not accepted:</b> {{ p.rejection_reason }}
+                </p>
+                <div
+                    v-if="p.receipt_url || p.refund_url || p.evidence_url"
+                    class="mt-2.5 flex flex-wrap gap-1.5"
+                >
+                    <a
+                        v-if="p.receipt_url"
+                        :href="p.receipt_url"
+                        class="tiny-action"
+                        ><AppIcon name="download" :size="14" /> Receipt</a
                     >
-                </span>
-                <span
-                    v-if="row.rejection_reason"
-                    class="block text-[11px] text-danger"
-                    >{{ row.rejection_reason }}</span
-                >
-            </template>
-            <template #cell-amount_label="{ row }">
-                <b class="text-foreground">{{ row.amount_label }}</b>
-            </template>
-            <template #cell-method="{ row }">
-                <span class="block">{{ row.method }}</span>
-                <span
-                    v-if="row.transaction_reference"
-                    class="block text-[11px] text-muted-foreground"
-                    >ref {{ row.transaction_reference }}</span
-                >
-            </template>
-            <template #cell-status="{ row }">
-                <StatusBadge
-                    :label="row.status_label"
-                    :tone="row.status_tone"
-                />
-            </template>
-            <template #actions="{ row }">
-                <a
-                    v-if="row.evidence_url"
-                    :href="row.evidence_url"
-                    target="_blank"
-                    rel="noopener"
-                    class="tiny-action"
-                    ><AppIcon name="attach_file" :size="14" /> Proof</a
-                >
-            </template>
-        </DataTable>
+                    <a
+                        v-if="p.evidence_url"
+                        :href="p.evidence_url"
+                        target="_blank"
+                        rel="noopener"
+                        class="tiny-action"
+                        ><AppIcon name="attach_file" :size="14" /> Proof</a
+                    >
+                    <button
+                        v-if="p.refund_url"
+                        type="button"
+                        class="tiny-action"
+                        @click="refunding = p"
+                    >
+                        <AppIcon name="currency_exchange" :size="14" /> Request
+                        refund
+                    </button>
+                </div>
+            </li>
+        </ul>
     </PanelCard>
+
+    <RefundRequestDialog
+        v-if="refunding"
+        :key="refunding.id"
+        :open="true"
+        :submit-url="refunding.refund_url"
+        :refundable="refunding.refundable_decimal"
+        :refundable-label="refunding.refundable_label"
+        currency="BDT"
+        :subject="refunding.receipt_number ?? refunding.invoice_number ?? ''"
+        @update:open="(v) => !v && (refunding = null)"
+    />
 </template>

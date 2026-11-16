@@ -100,6 +100,18 @@ class Student extends Model
         return $this->hasMany(Payment::class)->latest()->latest('id');
     }
 
+    /** @return HasMany<Application, $this> */
+    public function applications(): HasMany
+    {
+        return $this->hasMany(Application::class)->latest()->latest('id');
+    }
+
+    /** @return HasMany<Refund, $this> */
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class)->latest()->latest('id');
+    }
+
     /** @return HasMany<StudentNote, $this> */
     public function notes(): HasMany
     {

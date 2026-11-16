@@ -4,10 +4,13 @@ namespace Database\Seeders;
 
 use App\Models\Country;
 use App\Models\DocumentCategory;
+use App\Models\ExpenseCategory;
 use App\Models\PaymentMethod;
 use App\Models\PaymentType;
 use App\Models\Service;
 use App\Models\TicketCategory;
+use App\Models\VisaType;
+use App\Models\Workflow;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -81,6 +84,8 @@ class ReferenceDataSeeder extends Seeder
             ['Cash at office', 'cash', false, false, false],
             ['Debit / credit card (office POS)', 'card', true, false, false],
             ['Manual entry', 'manual', false, false, false],
+            // Filed by the gateway callback only; never entered by hand.
+            ['Online payment (SSLCommerz)', 'gateway', false, false, false],
         ];
 
         foreach ($methods as $i => [$name, $kind, $reference, $evidence, $studentSelectable]) {
@@ -92,6 +97,99 @@ class ReferenceDataSeeder extends Seeder
 
         foreach (['General enquiry', 'Admission', 'Visa', 'Payment', 'Documents', 'Technical support'] as $i => $name) {
             TicketCategory::firstOrCreate(['slug' => Str::slug($name)], ['name' => $name, 'sort_order' => ($i + 1) * 10]);
+        }
+
+        $this->seedVisaTypesAndWorkflows();
+
+        // Roadmap Q12: starting categories for expense records; Accounts can add more.
+        $expenseCategories = ['Office rent', 'Salaries', 'Utilities', 'Marketing', 'Embassy & visa fees', 'University fees',
+            'Courier & postage', 'Travel', 'Bank & gateway charges', 'Other'];
+
+        foreach ($expenseCategories as $i => $name) {
+            ExpenseCategory::firstOrCreate(['slug' => Str::slug($name)], ['name' => $name, 'sort_order' => ($i + 1) * 10]);
+        }
+    }
+
+    /**
+     * REQ §13 suggested stages, plus roadmap Q10 and Q14: one engine, with
+     * Working Visa and Work & Examination as visa types that have their own
+     * checklist and workflow. Only seeded once; after that Super Admin owns
+     * them (Visa types, Workflows & stages).
+     */
+    private function seedVisaTypesAndWorkflows(): void
+    {
+        $types = [
+            ['Study visa', 'study', 'University and college admission with a student visa.', ['passport', 'passport-size-photo', 'academic-certificates', 'academic-transcripts', 'english-test-result', 'bank-statement', 'statement-of-purpose', 'offer-letter']],
+            ['Working visa', 'work', 'Employer-sponsored work permit and visa.', ['passport', 'passport-size-photo', 'cv-resume', 'offer-letter', 'national-id-birth-certificate']],
+            ['Visitor visa', 'visitor', 'Tourist, family and business visits.', ['passport', 'passport-size-photo', 'bank-statement']],
+            ['Work & examination', 'exam', 'Language and skills examinations and work assessments needed for an application.', ['passport', 'passport-size-photo', 'national-id-birth-certificate']],
+        ];
+
+        foreach ($types as $i => [$name, $kind, $description, $documents]) {
+            $type = VisaType::firstOrCreate(['slug' => Str::slug($name)], ['name' => $name, 'kind' => $kind, 'description' => $description, 'sort_order' => ($i + 1) * 10]);
+
+            if ($type->wasRecentlyCreated) {
+                $type->documentCategories()->sync(DocumentCategory::whereIn('slug', $documents)->pluck('id'));
+            }
+        }
+
+        if (Workflow::exists()) {
+            return;
+        }
+
+        $decision = 'Visa Approved / Visa Rejected';
+        $closing = [
+            [$decision, 'decision', 'The embassy has decided. Your counselor will explain the outcome.'],
+            ['Office Visit Requested', 'visit_requested', 'Please visit our office. Your counselor will confirm the time.'],
+            ['Office Visit Completed', 'visit_completed', null],
+            ['Process Completed', 'final', null],
+        ];
+
+        $workflows = [
+            ['Standard visa process', null, [
+                ['File Opened', 'standard', 'Your file is open and your counselor is preparing your case.'],
+                ['Initial Documents Pending', 'standard', 'Please upload the documents on your checklist.'],
+                ['Documents Submitted', 'standard', null],
+                ['Document Verification', 'standard', 'We are checking your documents.'],
+                ['University / Employer Application', 'standard', null],
+                ['Application Submitted', 'standard', null],
+                ['Application Under Review', 'standard', null],
+                ['Additional Documents Required', 'standard', 'More documents are needed. Your counselor will tell you which.'],
+                ['Interview Scheduled', 'standard', null],
+                ['Visa Application Submitted', 'standard', null],
+                ['Visa Processing', 'standard', 'The embassy is processing your visa.'],
+                ['Decision Received', 'standard', null],
+                ...$closing,
+            ]],
+            ['Working visa process', 'working-visa', [
+                ['File Opened', 'standard', 'Your file is open and your counselor is preparing your case.'],
+                ['Documents Submitted', 'standard', null],
+                ['Document Verification', 'standard', 'We are checking your documents.'],
+                ['Job Offer / Employer Application', 'standard', null],
+                ['Work Permit Application Submitted', 'standard', null],
+                ['Work Permit Under Review', 'standard', null],
+                ['Additional Documents Required', 'standard', 'More documents are needed. Your counselor will tell you which.'],
+                ['Interview / Biometrics Scheduled', 'standard', null],
+                ['Visa Application Submitted', 'standard', null],
+                ['Visa Processing', 'standard', 'The embassy is processing your visa.'],
+                ...$closing,
+            ]],
+            ['Work & examination process', 'work-examination', [
+                ['Registered', 'standard', 'You are registered. Your counselor will book the examination.'],
+                ['Documents Submitted', 'standard', null],
+                ['Examination Booked', 'standard', 'Your examination is booked. Check the date on your application.'],
+                ['Examination Taken', 'standard', null],
+                ['Result Received', 'standard', 'Your result is in. See it on your application.'],
+                ['Process Completed', 'final', null],
+            ]],
+        ];
+
+        foreach ($workflows as [$name, $typeSlug, $stages]) {
+            $workflow = Workflow::create(['name' => $name, 'visa_type_id' => $typeSlug ? VisaType::where('slug', $typeSlug)->value('id') : null]);
+
+            foreach ($stages as $i => [$stage, $kind, $description]) {
+                $workflow->stages()->create(['name' => $stage, 'kind' => $kind, 'description' => $description, 'sort_order' => ($i + 1) * 10]);
+            }
         }
     }
 }

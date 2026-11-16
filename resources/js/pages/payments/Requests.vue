@@ -59,7 +59,13 @@ const columns: TableColumn<PaymentRequestRow>[] = [
     <PageHeader
         eyebrow="Payments"
         :title="title"
-        description="Payment requests raised against students. Each has a unique invoice number."
+        :description="
+            preset === 'open'
+                ? 'Every invoice still owed money, most overdue first.'
+                : preset === 'partial'
+                  ? 'Invoices that have been paid in part and still have a balance.'
+                  : 'Payment requests raised against students. Each has a unique invoice number.'
+        "
     >
         <template v-if="urls.create" #actions>
             <Button as-child

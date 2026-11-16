@@ -17,6 +17,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property int $id
  * @property int $student_id
  * @property int|null $student_file_id
+ * @property int|null $application_id
+ * @property int|null $application_status_history_id
  * @property int|null $category_id
  * @property string|null $title
  * @property string $disk
@@ -40,7 +42,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read User|null $reviewer
  */
 #[Fillable([
-    'student_id', 'student_file_id', 'category_id', 'title', 'disk', 'path', 'original_name', 'mime_type', 'size',
+    'student_id', 'student_file_id', 'application_id', 'application_status_history_id', 'category_id', 'title', 'disk', 'path', 'original_name', 'mime_type', 'size',
     'status', 'uploaded_by', 'reviewed_by', 'reviewed_at', 'rejection_reason', 'replaces_id', 'is_current', 'expires_at',
 ])]
 class Document extends Model

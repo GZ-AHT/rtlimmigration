@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Http\Controllers\Payments;
+
+use App\Enums\PaymentStatus;
+use App\Http\Controllers\Controller;
+use App\Models\Payment;
+use App\Models\PaymentRequest;
+use App\Support\Settings\SettingsRepository;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * Downloadable invoices and receipts (REQ §12.5 rule 12, §9.1 "Student
+ * Invoices" and "Payment Receipts"). Mounted in all four areas; the
+ * policies decide who may open which document.
+ */
+class PaymentDocumentController extends Controller
+{
+    public function invoice(PaymentRequest $paymentRequest, SettingsRepository $settings): Response
+    {
+        Gate::authorize('view', $paymentRequest);
+
+        $paymentRequest->load(['student.user', 'type', 'file', 'requester', 'payments' => fn ($q) => $q->where('status', PaymentStatus::Confirmed->value)->with('method')]);
+
+        return Pdf::loadView('pdf.invoice', ['invoice' => $paymentRequest, 'company' => self::company($settings)])
+            ->setPaper('a4')
+            ->download($paymentRequest->invoice_number.'.pdf');
+    }
+
+    public function receipt(Payment $payment, SettingsRepository $settings): Response
+    {
+        Gate::authorize('view', $payment);
+        // A receipt exists only once the money is confirmed.
+        abort_unless($payment->status === PaymentStatus::Confirmed && $payment->receipt_number !== null, 404);
+
+        $payment->load(['request.type', 'request.file', 'student.user', 'method', 'confirmer']);
+
+        return Pdf::loadView('pdf.receipt', ['payment' => $payment, 'company' => self::company($settings)])
+            ->setPaper('a4')
+            ->download($payment->receipt_number.'.pdf');
+    }
+
+    /** @return array{name: string, tagline: string|null, address: string|null, phone: string|null, email: string|null} */
+    public static function company(SettingsRepository $settings): array
+    {
+        return [
+            'name' => (string) $settings->get('general.site_name', config('app.name')),
+            'tagline' => $settings->get('general.tagline'),
+            'address' => $settings->get('general.address'),
+            'phone' => $settings->get('general.phone'),
+            'email' => $settings->get('general.contact_email'),
+        ];
+    }
+}

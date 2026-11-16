@@ -2,16 +2,20 @@
 
 namespace App\Support;
 
+use App\Enums\ApplicationStatus;
 use App\Enums\DocumentStatus;
 use App\Enums\FileStatus;
 use App\Enums\LeadStatus;
 use App\Enums\PaymentRequestStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\RefundStatus;
+use App\Models\Application;
 use App\Models\Document;
 use App\Models\Lead;
 use App\Models\LeadFollowUp;
 use App\Models\Payment;
 use App\Models\PaymentRequest;
+use App\Models\Refund;
 use App\Models\Student;
 use App\Models\StudentFile;
 use App\Models\User;
@@ -20,7 +24,7 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Figures for the dashboards (REQ §2, §8.1, §9.1, §10.1). Everything is
  * read from the same tables the screens use (REQ §26 single source of
- * truth); visa figures arrive with Phase 6.
+ * truth).
  */
 class DashboardMetrics
 {
@@ -38,6 +42,9 @@ class DashboardMetrics
             ['key' => 'documents', 'label' => 'Pending documents', 'value' => Document::where('is_current', true)->where('status', DocumentStatus::Pending->value)->whereHas('student', $mine)->count(), 'icon' => 'description'],
             ['key' => 'payment_pending', 'label' => 'Payment pending', 'value' => PaymentRequest::whereHas('student', $mine)->whereIn('status', [PaymentRequestStatus::Unpaid->value, PaymentRequestStatus::Pending->value, PaymentRequestStatus::Partial->value, PaymentRequestStatus::Due->value, PaymentRequestStatus::Rejected->value])->count(), 'icon' => 'pending_actions'],
             ['key' => 'payment_confirmed', 'label' => 'Payments confirmed', 'value' => Payment::whereHas('student', $mine)->where('status', PaymentStatus::Confirmed->value)->where('confirmed_at', '>=', now()->startOfMonth())->count(), 'icon' => 'task_alt', 'hint' => 'This month'],
+            ['key' => 'visa_processing', 'label' => 'Visa processing', 'value' => Application::whereHas('student', $mine)->where('status', ApplicationStatus::InProgress->value)->count(), 'icon' => 'approval', 'hint' => 'Applications in progress'],
+            ['key' => 'visa_approved', 'label' => 'Visa approved', 'value' => Application::whereHas('student', $mine)->where('decision', 'approved')->count(), 'icon' => 'verified'],
+            ['key' => 'visa_rejected', 'label' => 'Visa rejected', 'value' => Application::whereHas('student', $mine)->where('decision', 'rejected')->count(), 'icon' => 'cancel'],
             ['key' => 'follow_ups', 'label' => 'Follow-up tasks', 'value' => LeadFollowUp::whereNull('completed_at')->where('due_at', '<=', now()->endOfDay())->whereHas('lead', $mine)->count(), 'icon' => 'event_repeat', 'hint' => 'Due today or overdue'],
         ];
     }
@@ -54,6 +61,7 @@ class DashboardMetrics
             ['key' => 'received', 'label' => 'Received payments', 'value' => (clone $confirmed)->count(), 'icon' => 'task_alt'],
             ['key' => 'due', 'label' => 'Total due', 'value' => Money::format((int) PaymentRequest::whereIn('status', $openStatuses)->selectRaw('COALESCE(SUM(amount - amount_paid), 0) as o')->value('o')), 'icon' => 'pending_actions', 'hint' => PaymentRequest::where('status', PaymentRequestStatus::Due->value)->count().' overdue'],
             ['key' => 'pending', 'label' => 'Pending verification', 'value' => Payment::whereIn('status', [PaymentStatus::Pending->value, PaymentStatus::Verified->value])->count(), 'icon' => 'pending'],
+            ['key' => 'refunds', 'label' => 'Total refunds', 'value' => Money::format((int) Refund::where('status', RefundStatus::Processed->value)->sum('amount')), 'icon' => 'currency_exchange', 'hint' => Refund::whereIn('status', [RefundStatus::Requested->value, RefundStatus::Approved->value])->count().' open'],
             ['key' => 'today', 'label' => "Today's transactions", 'value' => (clone $today)->count(), 'icon' => 'today', 'hint' => Money::format((int) (clone $today)->sum('amount'))],
         ];
     }

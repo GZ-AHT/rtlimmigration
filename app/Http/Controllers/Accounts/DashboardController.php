@@ -10,7 +10,7 @@ use App\Support\Presenters\PaymentPresenter;
 use Inertia\Inertia;
 use Inertia\Response;
 
-/** REQ §9.1 Accounts Dashboard overview. Refund totals arrive with Phase 5. */
+/** REQ §9.1 Accounts Dashboard overview. */
 class DashboardController extends Controller
 {
     public function __invoke(): Response

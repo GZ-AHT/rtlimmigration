@@ -325,7 +325,7 @@ describe('visibility', function () {
         $payment = pay($this, $request, '20000', 'D1');
         $this->actingAs($this->accounts)->patch(route('accounts.payments.confirm', $payment))->assertSessionHasNoErrors();
 
-        $this->actingAs($this->counselor)->get(route('counselor.dashboard'))->assertInertia(fn ($p) => $p->component('counselor/Dashboard')->has('stats', 8)->has('payments', 1));
+        $this->actingAs($this->counselor)->get(route('counselor.dashboard'))->assertInertia(fn ($p) => $p->component('counselor/Dashboard')->has('stats', 11)->has('payments', 1));
         $this->actingAs($this->accounts)->get(route('accounts.dashboard'))->assertInertia(fn ($p) => $p->component('accounts/Dashboard')->where('stats.0.value', '৳20,000')->has('monthly', 12)->has('methods', 1));
         $this->actingAs($this->student->user)->get(route('portal.dashboard'))->assertInertia(fn ($p) => $p->component('portal/Dashboard')->where('money.paid', '৳20,000')->where('money.next', null));
     });
@@ -397,4 +397,20 @@ it('converts money without floating-point error', function () {
 
     expect(fn () => Money::toMinor('-5'))->toThrow(InvalidArgumentException::class);
     expect(fn () => Money::toMinor('1.234'))->toThrow(InvalidArgumentException::class);
+});
+
+it('lets Accounts record a bank transfer as received without uploading proof', function () {
+    $request = raise($this);
+
+    // Students must upload a slip for bank transfers; Accounts vouches for the money itself.
+    $this->actingAs($this->accounts)->post(route('accounts.payment-requests.received', $request), [
+        'payment_method_id' => $this->bank->id, 'amount' => '20000', 'transaction_reference' => 'BANK-55', 'paid_on' => now()->toDateString(),
+    ])->assertSessionHasNoErrors();
+
+    expect($request->fresh()->status)->toBe(PaymentRequestStatus::Paid);
+
+    $second = raise($this);
+    $this->actingAs($this->student->user)->post(route('portal.payments.store', $second), [
+        'payment_method_id' => $this->bank->id, 'amount' => '20000', 'transaction_reference' => 'BANK-56', 'paid_on' => now()->toDateString(),
+    ])->assertSessionHasErrors('evidence');
 });

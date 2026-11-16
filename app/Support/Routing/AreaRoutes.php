@@ -2,9 +2,12 @@
 
 namespace App\Support\Routing;
 
+use App\Http\Controllers\Accounts;
+use App\Http\Controllers\Applications;
 use App\Http\Controllers\Documents;
 use App\Http\Controllers\Leads;
 use App\Http\Controllers\Payments;
+use App\Http\Controllers\Reports;
 use App\Http\Controllers\Students;
 use Illuminate\Support\Facades\Route;
 
@@ -64,6 +67,25 @@ class AreaRoutes
     }
 
     /**
+     * Applications of every visa type (REQ §13, §14, §17). The working-visa
+     * and work-and-examination menus are the same screens, filtered.
+     */
+    public static function applications(): void
+    {
+        Route::get('applications', [Applications\ApplicationController::class, 'index'])->name('applications.index');
+        Route::get('applications/status-updates', [Applications\ApplicationController::class, 'index'])->defaults('active', true)->middleware('can:applications.update')->name('applications.updates');
+        Route::get('applications/exams', [Applications\ApplicationController::class, 'index'])->defaults('kind', 'exam')->middleware('can:exams.view')->name('applications.exams');
+        Route::get('applications/create', [Applications\ApplicationController::class, 'create'])->name('applications.create');
+        Route::post('applications', [Applications\ApplicationController::class, 'store'])->name('applications.store');
+        Route::get('applications/{application}', [Applications\ApplicationController::class, 'show'])->name('applications.show');
+        Route::put('applications/{application}', [Applications\ApplicationController::class, 'update'])->name('applications.update');
+        // POST, not PATCH: the update can carry supporting documents.
+        Route::post('applications/{application}/advance', [Applications\ApplicationController::class, 'advance'])->middleware('throttle:30,1')->name('applications.advance');
+        Route::patch('applications/{application}/withdraw', [Applications\ApplicationController::class, 'withdraw'])->name('applications.withdraw');
+        Route::post('applications/{application}/fee', [Applications\ApplicationController::class, 'fee'])->name('applications.fee');
+    }
+
+    /**
      * Payment requests and payments (REQ §12). Finance areas (admin,
      * accounts) also get verification, confirmation and cash entry.
      */
@@ -76,9 +98,21 @@ class AreaRoutes
         Route::patch('payment-requests/{paymentRequest}/cancel', [Payments\PaymentRequestController::class, 'cancel'])->name('payment-requests.cancel');
         Route::post('payment-requests/{paymentRequest}/payments', [Payments\PaymentController::class, 'store'])->middleware('throttle:20,1')->name('payment-requests.payments.store');
 
+        Route::get('payment-requests/{paymentRequest}/invoice', [Payments\PaymentDocumentController::class, 'invoice'])->name('payment-requests.invoice');
+        // REQ §8.1 "Due Payment List", §9.1 "Due Payments"
+        Route::get('invoices/due', [Payments\PaymentRequestController::class, 'index'])->defaults('status', 'open')->name('payment-requests.due');
+
         Route::get('payments', [Payments\PaymentController::class, 'index'])->name('payments.index');
         Route::get('payments/{payment}', [Payments\PaymentController::class, 'show'])->name('payments.show');
         Route::get('payments/{payment}/evidence', [Payments\PaymentController::class, 'evidence'])->name('payments.evidence');
+        Route::get('payments/{payment}/receipt', [Payments\PaymentDocumentController::class, 'receipt'])->name('payments.receipt');
+
+        // REQ §8.1 / §9.1 refunds: anyone here may ask; approval and payout are checked by policy.
+        Route::get('refunds', [Payments\RefundController::class, 'index'])->name('refunds.index');
+        Route::get('refunds/{refund}', [Payments\RefundController::class, 'show'])->name('refunds.show');
+        Route::post('payments/{payment}/refunds', [Payments\RefundController::class, 'store'])->middleware('throttle:20,1')->name('payments.refunds.store');
+        Route::patch('refunds/{refund}/approve', [Payments\RefundController::class, 'approve'])->name('refunds.approve');
+        Route::patch('refunds/{refund}/reject', [Payments\RefundController::class, 'reject'])->name('refunds.reject');
 
         if ($finance) {
             Route::get('invoices/new', [Payments\PaymentRequestController::class, 'index'])->defaults('status', 'unpaid')->name('payment-requests.new');
@@ -89,6 +123,36 @@ class AreaRoutes
             Route::patch('payments/{payment}/verify', [Payments\PaymentController::class, 'verify'])->name('payments.verify');
             Route::patch('payments/{payment}/confirm', [Payments\PaymentController::class, 'confirm'])->name('payments.confirm');
             Route::patch('payments/{payment}/reject', [Payments\PaymentController::class, 'reject'])->name('payments.reject');
+
+            // REQ §9.1 menus 8, 10, 12 and 14–20
+            Route::get('invoices/partial', [Payments\PaymentRequestController::class, 'index'])->defaults('status', 'partial')->name('payment-requests.partial');
+            Route::get('receipts', [Payments\PaymentController::class, 'index'])->defaults('status', 'confirmed')->name('payments.receipts');
+            Route::get('refund-processing', [Payments\RefundController::class, 'index'])->defaults('status', 'approved')->name('refunds.processing');
+            Route::patch('refunds/{refund}/process', [Payments\RefundController::class, 'process'])->name('refunds.process');
+            Route::get('transactions', [Payments\TransactionController::class, 'index'])->name('transactions.index');
+            Route::get('transactions/bank', [Payments\PaymentController::class, 'index'])->defaults('kind', 'bank_transfer')->name('transactions.bank');
+            Route::get('transactions/gateway', [Payments\TransactionController::class, 'gateway'])->name('transactions.gateway');
+
+            Route::middleware('can:expenses.manage')->group(function () {
+                Route::get('expenses', [Accounts\ExpenseController::class, 'index'])->name('expenses.index');
+                Route::post('expenses', [Accounts\ExpenseController::class, 'store'])->name('expenses.store');
+                // POST, not PUT: PHP only parses file uploads on POST.
+                Route::post('expenses/{expense}', [Accounts\ExpenseController::class, 'update'])->name('expenses.update');
+                Route::delete('expenses/{expense}', [Accounts\ExpenseController::class, 'destroy'])->name('expenses.destroy');
+                Route::get('expenses/{expense}/attachment', [Accounts\ExpenseController::class, 'attachment'])->name('expenses.attachment');
+                Route::post('expense-categories', [Accounts\ExpenseController::class, 'storeCategory'])->name('expense-categories.store');
+            });
+
+            Route::middleware('can:reports.financial')->group(function () {
+                Route::get('reports/financial', [Reports\FinancialReportController::class, 'index'])->name('reports.financial');
+                Route::get('reports/counselors', [Reports\FinancialReportController::class, 'counselors'])->name('reports.counselors');
+                Route::get('reports/students', [Reports\FinancialReportController::class, 'students'])->name('reports.students');
+            });
+
+            Route::middleware('can:reports.export')->group(function () {
+                Route::get('reports/exports', [Reports\FinancialReportController::class, 'downloads'])->name('reports.downloads');
+                Route::get('reports/exports/{report}/{format}', [Reports\FinancialReportController::class, 'download'])->middleware('throttle:30,1')->name('reports.download');
+            });
         }
     }
 }

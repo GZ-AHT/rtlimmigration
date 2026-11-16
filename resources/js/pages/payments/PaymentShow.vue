@@ -6,11 +6,17 @@ import AppIcon from '@/components/panel/AppIcon.vue';
 import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
+import RefundRequestDialog from '@/components/payments/RefundRequestDialog.vue';
 import StatusBadge from '@/components/panel/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDate, formatDateTime, relativeTime } from '@/lib/format';
-import type { HistoryEntry, PaymentRequestRow, PaymentRow } from '@/types';
+import type {
+    HistoryEntry,
+    PaymentRequestRow,
+    PaymentRow,
+    RefundRow,
+} from '@/types';
 
 const props = defineProps<{
     payment: PaymentRow & {
@@ -19,9 +25,23 @@ const props = defineProps<{
         evidence_is_image: boolean;
     };
     history: HistoryEntry[];
-    can: { verify: boolean; confirm: boolean; reject: boolean };
+    refunds: RefundRow[];
+    refundable: { minor: number; label: string; decimal: string };
+    can: {
+        verify: boolean;
+        confirm: boolean;
+        reject: boolean;
+        refund: boolean;
+    };
     isRequester: boolean;
-    urls: { index: string; verify: string; confirm: string; reject: string };
+    urls: {
+        index: string;
+        verify: string | null;
+        confirm: string | null;
+        reject: string | null;
+        receipt: string | null;
+        refund: string | null;
+    };
 }>();
 
 setLayoutProps({
@@ -31,8 +51,13 @@ setLayoutProps({
 const dialog = ref<null | 'confirm' | 'reject'>(null);
 const reason = ref('');
 const busy = ref(false);
+const refunding = ref(false);
 
-function act(url: string, data: Record<string, string> = {}): void {
+function act(url: string | null, data: Record<string, string> = {}): void {
+    if (!url) {
+        return;
+    }
+
     router.patch(url, data, {
         preserveScroll: true,
         onStart: () => (busy.value = true),
@@ -59,6 +84,18 @@ function act(url: string, data: Record<string, string> = {}): void {
                 :tone="payment.status_tone"
                 class="self-center"
             />
+            <Button v-if="urls.receipt" variant="outline" as-child
+                ><a :href="urls.receipt"
+                    ><AppIcon name="download" :size="18" /> Receipt</a
+                ></Button
+            >
+            <Button
+                v-if="can.refund"
+                variant="outline"
+                @click="refunding = true"
+                ><AppIcon name="currency_exchange" :size="18" /> Request
+                refund</Button
+            >
             <Button
                 v-if="can.verify"
                 variant="outline"
@@ -132,6 +169,12 @@ function act(url: string, data: Record<string, string> = {}): void {
                             {{ payment.receipt_number }}
                         </dd>
                     </div>
+                    <div v-if="payment.refunded">
+                        <dt class="text-muted-foreground">Refunded</dt>
+                        <dd class="font-medium">
+                            {{ payment.refunded_label }}
+                        </dd>
+                    </div>
                 </dl>
                 <p
                     v-if="payment.notes"
@@ -147,7 +190,53 @@ function act(url: string, data: Record<string, string> = {}): void {
                 </p>
             </PanelCard>
 
-            <PanelCard title="Proof of payment">
+            <PanelCard
+                v-if="refunds.length"
+                title="Refunds"
+                description="Refunds requested against this payment."
+            >
+                <ul class="divide-y">
+                    <li
+                        v-for="r in refunds"
+                        :key="r.id"
+                        class="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                    >
+                        <div class="min-w-0 text-[13px]">
+                            <p class="flex flex-wrap items-center gap-2">
+                                <b>{{ r.amount_label }}</b>
+                                <StatusBadge
+                                    :label="r.status_label"
+                                    :tone="r.status_tone"
+                                />
+                            </p>
+                            <p class="text-xs text-muted-foreground">
+                                {{ r.refund_number }} · requested
+                                {{ relativeTime(r.created_at)
+                                }}<template v-if="r.requested_by">
+                                    by {{ r.requested_by }}</template
+                                >
+                            </p>
+                            <p class="mt-1 text-xs text-secondary-foreground">
+                                {{ r.reason }}
+                            </p>
+                        </div>
+                        <Link v-if="r.url" :href="r.url" class="tiny-action"
+                            >Details</Link
+                        >
+                    </li>
+                </ul>
+            </PanelCard>
+
+            <PanelCard
+                v-if="payment.method_kind === 'gateway'"
+                title="Proof of payment"
+            >
+                <p class="text-[13px] text-muted-foreground">
+                    Paid online. The payment gateway confirmed this transaction
+                    directly to our server, so no proof was uploaded.
+                </p>
+            </PanelCard>
+            <PanelCard v-else title="Proof of payment">
                 <template v-if="payment.evidence_url">
                     <img
                         v-if="payment.evidence_is_image"
@@ -230,6 +319,15 @@ function act(url: string, data: Record<string, string> = {}): void {
             </PanelCard>
         </div>
     </div>
+
+    <RefundRequestDialog
+        v-model:open="refunding"
+        :submit-url="urls.refund"
+        :refundable="refundable.decimal"
+        :refundable-label="refundable.label"
+        :currency="payment.request.currency"
+        :subject="payment.receipt_number ?? payment.request.invoice_number"
+    />
 
     <ConfirmDialog
         :open="dialog === 'confirm'"

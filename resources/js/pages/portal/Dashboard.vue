@@ -10,10 +10,12 @@ import StatusBadge from '@/components/panel/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/format';
 import { dashboard, file as fileRoute } from '@/routes/portal';
+import { index as applicationsIndex } from '@/routes/portal/applications';
 import { index as paymentsIndex } from '@/routes/portal/payments';
 import { edit as profileEdit } from '@/routes/portal/profile';
 import type {
     AppNotification,
+    ApplicationRow,
     Completeness,
     FileRow,
     MoneyTotals,
@@ -36,6 +38,7 @@ defineProps<{
     files: FileRow[];
     counselor: { name: string; email: string; phone: string | null } | null;
     money: MoneyTotals | null;
+    applications: (ApplicationRow & { progress: number })[];
     activity: AppNotification[];
 }>();
 </script>
@@ -103,6 +106,40 @@ defineProps<{
             class="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(300px,1fr)]"
         >
             <div class="flex min-w-0 flex-col gap-4">
+                <PanelCard
+                    v-if="applications.length"
+                    title="Application progress"
+                    description="Where each of your applications stands."
+                >
+                    <ul class="divide-y">
+                        <li
+                            v-for="a in applications"
+                            :key="a.id"
+                            class="py-3 first:pt-0 last:pb-0"
+                        >
+                            <div
+                                class="mb-2 flex flex-wrap items-center justify-between gap-2"
+                            >
+                                <Link
+                                    :href="applicationsIndex()"
+                                    class="text-[13px] font-semibold hover:text-primary"
+                                    >{{ a.visa_type
+                                    }}<template v-if="a.country">
+                                        · {{ a.country }}</template
+                                    ></Link
+                                >
+                                <StatusBadge
+                                    :label="a.status_label"
+                                    :tone="a.status_tone"
+                                />
+                            </div>
+                            <ProgressBar
+                                :value="a.progress"
+                                :label="a.stage ?? 'Not started'"
+                            />
+                        </li>
+                    </ul>
+                </PanelCard>
                 <PanelCard
                     title="My file"
                     description="Your counselor opens a file for each application."

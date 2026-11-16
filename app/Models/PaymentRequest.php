@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property string|null $description
  * @property int $amount
  * @property int $amount_paid
+ * @property int $amount_refunded
  * @property string $currency
  * @property CarbonInterface|null $due_date
  * @property PaymentRequestStatus $status
@@ -39,18 +40,19 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property-read User|null $requester
  */
 #[Fillable([
-    'invoice_number', 'student_id', 'student_file_id', 'payment_type_id', 'description', 'amount', 'amount_paid',
+    'invoice_number', 'student_id', 'student_file_id', 'payment_type_id', 'description', 'amount', 'amount_paid', 'amount_refunded',
     'currency', 'due_date', 'status', 'requested_by', 'notes', 'paid_at', 'cancelled_at', 'cancelled_by', 'cancel_reason',
 ])]
 class PaymentRequest extends Model
 {
-    protected $attributes = ['status' => 'unpaid', 'amount_paid' => 0, 'currency' => 'BDT'];
+    protected $attributes = ['status' => 'unpaid', 'amount_paid' => 0, 'amount_refunded' => 0, 'currency' => 'BDT'];
 
     protected function casts(): array
     {
         return [
             'amount' => 'integer',
             'amount_paid' => 'integer',
+            'amount_refunded' => 'integer',
             'due_date' => 'date',
             'status' => PaymentRequestStatus::class,
             'paid_at' => 'datetime',
@@ -86,6 +88,18 @@ class PaymentRequest extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class)->latest()->latest('id');
+    }
+
+    /** @return HasMany<Refund, $this> */
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(Refund::class)->latest()->latest('id');
+    }
+
+    /** @return HasMany<GatewayTransaction, $this> */
+    public function gatewayTransactions(): HasMany
+    {
+        return $this->hasMany(GatewayTransaction::class)->latest()->latest('id');
     }
 
     /** @return MorphMany<PaymentStatusHistory, $this> */

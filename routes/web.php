@@ -3,6 +3,7 @@
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\Payments\GatewayController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Website\EnquiryController;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,15 @@ Route::post('enquiry', [EnquiryController::class, 'store'])->middleware('throttl
 Route::get('invitation/{user}/{hash}', InvitationController::class)
     ->middleware(['signed', 'throttle:6,1'])
     ->name('invitation.accept');
+
+// REQ §12.3 / §12.5 payment gateway callbacks. Public and CSRF-exempt
+// (bootstrap/app.php): the gateway posts here, and each call only triggers a
+// server-to-server validation with the gateway.
+Route::post('payments/gateway/{gateway}/ipn', [GatewayController::class, 'ipn'])->middleware('throttle:120,1')->name('gateway.ipn');
+Route::match(['get', 'post'], 'payments/gateway/{gateway}/return/{outcome}', [GatewayController::class, 'return'])
+    ->whereIn('outcome', ['success', 'fail', 'cancel'])
+    ->middleware('throttle:60,1')
+    ->name('gateway.return');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardRedirectController::class)->name('dashboard');

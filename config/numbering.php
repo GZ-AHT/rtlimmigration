@@ -18,6 +18,7 @@ return [
         'file' => ['prefix' => 'FILE', 'format' => '{prefix}-{Y}-{seq}', 'pad' => 5, 'reset' => 'yearly'],
         'invoice' => ['prefix' => 'INV', 'format' => '{prefix}-{Y}{m}-{seq}', 'pad' => 5, 'reset' => 'monthly'],
         'receipt' => ['prefix' => 'RCP', 'format' => '{prefix}-{Y}{m}-{seq}', 'pad' => 5, 'reset' => 'monthly'],
+        'application' => ['prefix' => 'APP', 'format' => '{prefix}-{Y}-{seq}', 'pad' => 5, 'reset' => 'yearly'],
         'refund' => ['prefix' => 'RFD', 'format' => '{prefix}-{Y}-{seq}', 'pad' => 5, 'reset' => 'yearly'],
         'ticket' => ['prefix' => 'TKT', 'format' => '{prefix}-{seq}', 'pad' => 6, 'reset' => 'never'],
         'lead' => ['prefix' => 'LD', 'format' => '{prefix}-{Y}-{seq}', 'pad' => 5, 'reset' => 'yearly'],

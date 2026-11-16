@@ -38,4 +38,13 @@ class Money
 
         return $symbol.number_format($minor / 100, $decimals);
     }
+
+    /**
+     * 500050 → "BDT 5,000.50". For PDFs and spreadsheets, where the ৳ sign
+     * is missing from the embedded fonts.
+     */
+    public static function plain(int $minor, string $currency = 'BDT'): string
+    {
+        return $currency.' '.number_format($minor / 100, 2);
+    }
 }

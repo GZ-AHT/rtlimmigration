@@ -33,7 +33,9 @@ defineProps<{
         description="Revenue, dues and the payments waiting for you."
     />
 
-    <div class="mb-6 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-5">
+    <div
+        class="mb-6 grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6"
+    >
         <StatCard
             v-for="stat in stats"
             :key="stat.key"

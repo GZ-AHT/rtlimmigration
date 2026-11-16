@@ -153,6 +153,8 @@ export type PaymentRequestRow = {
     amount: number;
     amount_label: string;
     paid_label: string;
+    refunded: number;
+    refunded_label: string;
     outstanding: number;
     outstanding_label: string;
     currency: string;
@@ -174,7 +176,10 @@ export type PaymentRow = {
     student_number: string | null;
     amount: number;
     amount_label: string;
+    refunded: number;
+    refunded_label: string;
     method: string;
+    method_kind: string;
     transaction_reference: string | null;
     paid_on: string;
     has_evidence: boolean;
@@ -192,7 +197,37 @@ export type PaymentRow = {
     created_at: string | null;
     url?: string | null;
     evidence_url?: string | null;
+    receipt_url?: string | null;
 };
+
+export type RefundRow = {
+    id: number;
+    refund_number: string;
+    invoice_number: string | null;
+    type: string | null;
+    receipt_number: string | null;
+    student: string | null;
+    student_number: string | null;
+    amount: number;
+    amount_label: string;
+    reason: string;
+    status: 'requested' | 'approved' | 'rejected' | 'processed';
+    status_label: string;
+    status_tone: Tone;
+    requested_by: string | null;
+    approved_by: string | null;
+    approved_at: string | null;
+    decision_note: string | null;
+    processed_by: string | null;
+    processed_at: string | null;
+    method: string | null;
+    transaction_reference: string | null;
+    notes: string | null;
+    created_at: string | null;
+    url?: string | null;
+};
+
+export type DateRange = { from: string; to: string };
 
 export type PaymentMethodOption = Option & {
     requires_reference: boolean;
@@ -214,6 +249,8 @@ export type MoneyTotals = {
     paid: string;
     due: string;
     due_minor: number;
+    refunded: string;
+    refunded_minor: number;
     next: {
         type: string;
         invoice_number: string;
@@ -221,3 +258,69 @@ export type MoneyTotals = {
         due_date: string | null;
     } | null;
 };
+
+export type ApplicationRow = {
+    id: number;
+    application_number: string;
+    student: string | null;
+    student_number: string | null;
+    visa_type: string;
+    kind: 'study' | 'work' | 'visitor' | 'exam' | 'other';
+    country: string | null;
+    file_number: string | null;
+    title: string | null;
+    organisation: string | null;
+    reference_number: string | null;
+    scheduled_at: string | null;
+    result: string | null;
+    stage: string | null;
+    stage_kind: string | null;
+    status: 'in_progress' | 'approved' | 'rejected' | 'completed' | 'withdrawn';
+    status_label: string;
+    status_tone: Tone;
+    decision: 'approved' | 'rejected' | null;
+    decided_at: string | null;
+    rejection_reason: string | null;
+    office_visit_requested_at: string | null;
+    office_visit_at: string | null;
+    office_visit_completed_at: string | null;
+    completed_at: string | null;
+    labels: { title: string; organisation: string; schedule: string };
+    created_at: string | null;
+    updated_at: string | null;
+    url?: string;
+};
+
+export type StageStep = {
+    id: number;
+    name: string;
+    kind:
+        | 'standard'
+        | 'decision'
+        | 'visit_requested'
+        | 'visit_completed'
+        | 'final';
+    description: string | null;
+    state: 'done' | 'current' | 'upcoming';
+};
+
+export type ApplicationHistoryEntry = {
+    id: number;
+    event: 'created' | 'stage' | 'update' | 'decision' | 'withdrawn';
+    from: string | null;
+    to: string;
+    note: string | null;
+    by: string | null;
+    at: string;
+    notified: boolean;
+    documents: { id: number; name: string; url: string }[];
+};
+
+export type VisaChecklistItem = {
+    category: string;
+    status: string;
+    label: string;
+    tone: Tone;
+};
+
+export type VisaRequirementItem = { title: string; description: string | null };

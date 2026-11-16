@@ -33,7 +33,13 @@ const props = defineProps<{
     can: { pay: boolean; record: boolean; cancel: boolean };
     outstandingDecimal: string;
     evidence: { max_mb: number; extensions: string[] };
-    urls: { index: string; pay: string; record: string | null; cancel: string };
+    urls: {
+        index: string;
+        pay: string;
+        record: string | null;
+        cancel: string;
+        invoice: string;
+    };
 }>();
 
 setLayoutProps({
@@ -72,6 +78,11 @@ function cancel(): void {
                 :tone="request.status_tone"
                 class="self-center"
             />
+            <Button variant="outline" as-child
+                ><a :href="urls.invoice"
+                    ><AppIcon name="download" :size="18" /> Invoice PDF</a
+                ></Button
+            >
             <Button v-if="request.student_url" variant="outline" as-child
                 ><Link :href="request.student_url"
                     ><AppIcon name="school" :size="18" /> Student</Link
@@ -99,6 +110,12 @@ function cancel(): void {
                 class="mt-1 font-display text-xl font-extrabold text-success sm:text-2xl"
             >
                 {{ request.paid_label }}
+            </p>
+            <p
+                v-if="request.refunded"
+                class="text-[11px] text-muted-foreground"
+            >
+                {{ request.refunded_label }} refunded
             </p>
         </div>
         <div class="rounded-xl border bg-card p-4">
@@ -171,6 +188,13 @@ function cancel(): void {
                                 class="tiny-action"
                                 ><AppIcon name="attach_file" :size="14" />
                                 Proof</a
+                            >
+                            <a
+                                v-if="p.receipt_url"
+                                :href="p.receipt_url"
+                                class="tiny-action"
+                                ><AppIcon name="download" :size="14" />
+                                Receipt</a
                             >
                             <Link v-if="p.url" :href="p.url" class="tiny-action"
                                 >Details</Link

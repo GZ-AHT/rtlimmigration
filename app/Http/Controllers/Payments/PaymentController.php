@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Payments;
 
 use App\Actions\Payments\PaymentLedger;
+use App\Enums\PaymentMethodKind;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Concerns\ResolvesAreaRoutes;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\PaymentRequest;
+use App\Models\Refund;
 use App\Support\Money;
 use App\Support\Presenters\PaymentPresenter;
 use Carbon\CarbonImmutable;
@@ -37,6 +39,8 @@ class PaymentController extends Controller
 
         $user = $request->user();
         $preset = $request->route()?->defaults['status'] ?? null;
+        // "Bank Transactions": every payment made by bank transfer or deposit.
+        $kind = $request->route()?->defaults['kind'] ?? null;
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'status' => ['nullable', Rule::enum(PaymentStatus::class)],
@@ -44,7 +48,8 @@ class PaymentController extends Controller
         ]);
         $status = $preset ?? ($filters['status'] ?? null);
 
-        $base = Payment::query()->visibleTo($user);
+        $base = Payment::query()->visibleTo($user)
+            ->when($kind, fn (Builder $q, string $k) => $q->whereHas('method', fn (Builder $m) => $m->where('kind', $k)));
 
         $payments = (clone $base)
             ->with(['request.type', 'student.user', 'method', 'submitter', 'confirmer'])
@@ -61,23 +66,29 @@ class PaymentController extends Controller
             ->latest('id')
             ->paginate(25)
             ->withQueryString()
-            ->through(fn (Payment $p) => [...PaymentPresenter::payment($p), 'url' => $this->areaRoute($request, 'payments.show', $p)]);
+            ->through(fn (Payment $p) => [
+                ...PaymentPresenter::payment($p),
+                'url' => $this->areaRoute($request, 'payments.show', $p),
+                'receipt_url' => $p->receipt_number !== null ? $this->areaRoute($request, 'payments.receipt', $p) : null,
+            ]);
 
         $counts = (clone $base)->selectRaw('status, count(*) as c')->groupBy('status')->pluck('c', 'status');
 
         return Inertia::render('payments/Payments', [
-            'title' => match ($preset) {
-                'pending' => 'Pending verification',
-                'verified' => 'Payment confirmation',
-                'rejected' => 'Rejected transactions',
+            'title' => match (true) {
+                $kind === PaymentMethodKind::BankTransfer->value => 'Bank transactions',
+                $preset === 'pending' => 'Pending verification',
+                $preset === 'verified' => 'Payment confirmation',
+                $preset === 'rejected' => 'Rejected transactions',
+                $preset === 'confirmed' => 'Payment receipts',
                 default => 'All payments',
             },
-            'preset' => $preset,
+            'preset' => $kind ? 'bank' : $preset,
             'payments' => $payments,
             'filters' => ['search' => $filters['search'] ?? '', 'status' => $filters['status'] ?? '', 'method' => (string) ($filters['method'] ?? '')],
             'counts' => collect(PaymentStatus::cases())->mapWithKeys(fn ($s) => [$s->value => (int) ($counts[$s->value] ?? 0)]),
             'statuses' => PaymentStatus::options(),
-            'methods' => PaymentMethod::active()->get(['id', 'name'])->map(fn ($m) => ['value' => (string) $m->id, 'label' => $m->name])->values(),
+            'methods' => PaymentMethod::active()->when($kind, fn (Builder $q, string $k) => $q->where('kind', $k))->get(['id', 'name'])->map(fn ($m) => ['value' => (string) $m->id, 'label' => $m->name])->values(),
         ]);
     }
 
@@ -85,7 +96,8 @@ class PaymentController extends Controller
     {
         Gate::authorize('view', $payment);
 
-        $payment->load(['request.type', 'request.student.user', 'request.requester', 'student.user', 'method', 'submitter', 'verifier', 'confirmer', 'statusHistory.changer']);
+        $payment->load(['request.type', 'request.student.user', 'request.requester', 'student.user', 'method', 'submitter', 'verifier', 'confirmer', 'statusHistory.changer', 'refunds.requester', 'refunds.approver', 'refunds.processor', 'refunds.method']);
+        $refundable = $payment->refundable();
         $user = $request->user();
         $awaiting = $payment->status->isAwaitingDecision();
         $isRequester = $payment->request->requested_by === $user->id;
@@ -101,7 +113,10 @@ class PaymentController extends Controller
                 'evidence_is_image' => str_starts_with((string) $payment->evidence_mime_type, 'image/'),
             ],
             'history' => $payment->statusHistory->map(fn ($h) => PaymentPresenter::history($h, 'payment'))->values(),
+            'refunds' => $payment->refunds->map(fn (Refund $r) => [...PaymentPresenter::refund($r), 'url' => $this->areaHas($request, 'refunds.show') ? $this->areaRoute($request, 'refunds.show', $r) : null])->values(),
+            'refundable' => ['minor' => $refundable, 'label' => Money::format($refundable, $payment->currency), 'decimal' => Money::toDecimal($refundable)],
             'can' => [
+                'refund' => $refundable > 0 && $user->can('create', [Refund::class, $payment]) && $this->areaHas($request, 'payments.refunds.store'),
                 'verify' => $payment->status === PaymentStatus::Pending && $user->can('verify', $payment),
                 'confirm' => $awaiting && $user->can('confirm', $payment) && ! $isRequester,
                 'reject' => $awaiting && $user->can('confirm', $payment) && ! $isRequester,
@@ -109,9 +124,11 @@ class PaymentController extends Controller
             'isRequester' => $isRequester && $awaiting,
             'urls' => [
                 'index' => $this->areaRoute($request, 'payments.index'),
-                'verify' => $this->areaRoute($request, 'payments.verify', $payment),
-                'confirm' => $this->areaRoute($request, 'payments.confirm', $payment),
-                'reject' => $this->areaRoute($request, 'payments.reject', $payment),
+                'verify' => $this->areaHas($request, 'payments.verify') ? $this->areaRoute($request, 'payments.verify', $payment) : null,
+                'confirm' => $this->areaHas($request, 'payments.confirm') ? $this->areaRoute($request, 'payments.confirm', $payment) : null,
+                'reject' => $this->areaHas($request, 'payments.reject') ? $this->areaRoute($request, 'payments.reject', $payment) : null,
+                'receipt' => $payment->receipt_number !== null ? $this->areaRoute($request, 'payments.receipt', $payment) : null,
+                'refund' => $this->areaHas($request, 'payments.refunds.store') ? $this->areaRoute($request, 'payments.refunds.store', $payment) : null,
             ],
         ]);
     }
@@ -217,7 +234,7 @@ class PaymentController extends Controller
     public static function validatePayment(Request $request, bool $withEvidence = true): array
     {
         $rules = [
-            'payment_method_id' => ['required', 'integer', Rule::exists(PaymentMethod::class, 'id')->where('is_active', true)],
+            'payment_method_id' => ['required', 'integer', Rule::exists(PaymentMethod::class, 'id')->where('is_active', true)->whereNot('kind', PaymentMethodKind::Gateway->value)],
             'amount' => ['required', 'string', 'regex:/^\d{1,11}(\.\d{1,2})?$/'],
             'transaction_reference' => ['nullable', 'string', 'max:120'],
             'paid_on' => ['required', 'date', 'before_or_equal:today'],

@@ -40,4 +40,15 @@ class PaymentMethod extends Model
     {
         $query->where('is_active', true)->orderBy('sort_order')->orderBy('name');
     }
+
+    /**
+     * Methods a person can enter by hand. Online gateway payments are only
+     * ever recorded by the gateway callback.
+     *
+     * @param  Builder<self>  $query
+     */
+    public function scopeManual(Builder $query): void
+    {
+        $query->where('is_active', true)->where('kind', '!=', PaymentMethodKind::Gateway->value)->orderBy('sort_order')->orderBy('name');
+    }
 }
