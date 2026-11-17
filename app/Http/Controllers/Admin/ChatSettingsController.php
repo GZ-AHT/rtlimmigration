@@ -19,6 +19,7 @@ class ChatSettingsController extends Controller
     public function edit(ChatSettings $settings): Response
     {
         Gate::authorize('chat.manage');
+        abort_unless(ChatSettings::tawkEnabled(), 404);
 
         return Inertia::render('admin/chat/Settings', [
             'settings' => $settings->forAdmin(),
@@ -43,6 +44,7 @@ class ChatSettingsController extends Controller
     public function update(Request $request, ChatSettings $settings): RedirectResponse
     {
         Gate::authorize('chat.manage');
+        abort_unless(ChatSettings::tawkEnabled(), 404);
 
         $data = $request->validate([
             'enabled' => ['required', 'boolean'],

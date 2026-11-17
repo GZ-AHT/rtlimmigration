@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enums\Area;
 use App\Http\Controllers\NotificationController;
 use App\Models\User;
+use App\Support\Chat\ChatSecuritySettings;
 use App\Support\Chat\ChatSettings;
 use App\Support\Navigation;
 use App\Support\Settings\SettingsRepository;
@@ -62,8 +63,10 @@ class HandleInertiaRequests extends Middleware
                 'unread' => $user->unreadNotifications()->count(),
                 'recent' => $user->notifications()->limit(5)->get()->map(NotificationController::present(...)),
             ] : null,
-            // REQ §18: the Tawk.to widget for visitors and students; null for staff.
+            // REQ §18: the Tawk.to widget for visitors and students; null for staff, or while Tawk.to is switched off.
             'chat' => fn () => app(ChatSettings::class)->widgetFor($user),
+            // REQ §11 F: show the website chat button to visitors and students (staff answer from the panel).
+            'guestChat' => fn () => app(ChatSecuritySettings::class)->guestChatEnabled() && ($user === null || $user->homeArea() === Area::Portal),
             'site' => fn () => app(SettingsRepository::class)->public(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];

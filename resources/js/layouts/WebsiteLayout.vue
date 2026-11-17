@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import ChatLauncher from '@/components/chat/ChatLauncher.vue';
 import { Toaster } from '@/components/ui/sonner';
 import { home } from '@/routes';
 
@@ -65,6 +66,7 @@ const general = computed(
                 {{ general.address }}
             </div>
         </footer>
+        <ChatLauncher />
         <Toaster />
     </div>
 </template>

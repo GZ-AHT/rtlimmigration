@@ -24,6 +24,8 @@ class ChatWebhookController extends Controller
 
     public function __invoke(Request $request, ChatSettings $settings, RecordChatEvent $record): JsonResponse
     {
+        abort_unless(ChatSettings::tawkEnabled(), 404);
+
         $raw = (string) $request->getContent();
 
         if (strlen($raw) > self::MAX_BYTES) {

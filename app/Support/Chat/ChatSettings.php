@@ -30,10 +30,16 @@ class ChatSettings
 
     public function __construct(private SettingsRepository $settings) {}
 
-    /** The widget can only load once it is switched on and both IDs are set. */
+    /** Whether the Tawk.to integration is switched on for this server (config/chat.php, TAWK_ENABLED). */
+    public static function tawkEnabled(): bool
+    {
+        return (bool) config('chat.tawk.enabled', false);
+    }
+
+    /** The widget can only load once the integration is on, it is switched on in settings and both IDs are set. */
     public function enabled(): bool
     {
-        return (bool) $this->get('enabled', false) && filled($this->get('property_id')) && filled($this->get('widget_id'));
+        return self::tawkEnabled() && (bool) $this->get('enabled', false) && filled($this->get('property_id')) && filled($this->get('widget_id'));
     }
 
     /** Secure Mode: visitors we identify are signed with the property's API key. */

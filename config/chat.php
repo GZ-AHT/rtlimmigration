@@ -17,6 +17,16 @@
 
 return [
 
+    /*
+    | Tawk.to (REQ §18) is switched off: the system's own chat (portal
+    | messages and website chat) replaces it. The integration is kept, so
+    | TAWK_ENABLED=true brings back the widget, webhook, Chat settings,
+    | Chat history and Offline messages screens.
+    */
+    'tawk' => [
+        'enabled' => (bool) env('TAWK_ENABLED', false),
+    ],
+
     'malware' => [
         'driver' => env('CHAT_MALWARE_SCANNER', 'none'),
         'clamav' => [

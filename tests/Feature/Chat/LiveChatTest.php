@@ -25,6 +25,8 @@ const API_KEY = 'tawk-api-key';
 
 beforeEach(function () {
     $this->seed(ReferenceDataSeeder::class);
+    // Tawk.to is off by default (config/chat.php); these tests cover the kept integration.
+    config(['chat.tawk.enabled' => true]);
     app(ChatSettings::class)->save([
         'enabled' => true,
         'property_id' => 'abc123def456ghi789',

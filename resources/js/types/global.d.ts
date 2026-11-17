@@ -29,6 +29,8 @@ declare module '@inertiajs/core' {
             navigation: PanelNavGroup[];
             notifications: { unread: number; recent: AppNotification[] } | null;
             chat: ChatWidgetConfig | null;
+            /** Website chat popup: on for visitors and students while website chat is enabled. */
+            guestChat: boolean;
             site: Record<string, Record<string, unknown>>;
             sidebarOpen: boolean;
             [key: string]: unknown;

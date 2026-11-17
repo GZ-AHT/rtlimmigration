@@ -62,6 +62,21 @@ class GuestChatController extends Controller
 
     public function show(Request $request): Response
     {
+        return Inertia::render('website/Chat', $this->state($request));
+    }
+
+    /**
+     * The same state as the chat page, as JSON, for the chat popup shown on
+     * every website page. Still identified by the visitor's cookie only.
+     */
+    public function widget(Request $request): JsonResponse
+    {
+        return response()->json($this->state($request))->header('Cache-Control', 'no-store, private');
+    }
+
+    /** @return array<string, mixed> */
+    private function state(Request $request): array
+    {
         $enabled = $this->settings->guestChatEnabled();
         $guest = $enabled ? $this->currentGuest($request) : null;
         $conversation = $guest?->conversation;
@@ -80,7 +95,7 @@ class GuestChatController extends Controller
 
         $student = $request->user()?->student;
 
-        return Inertia::render('website/Chat', [
+        return [
             'enabled' => $enabled,
             'visitor' => $guest ? ['name' => $guest->name, 'suspended' => $guest->isSuspended(), 'linked' => $guest->linked_user_id !== null] : null,
             'thread' => $thread,
@@ -92,7 +107,7 @@ class GuestChatController extends Controller
             ],
             'canLink' => $student !== null && $guest !== null && $guest->linked_user_id === null,
             'portalChatUrl' => $student !== null ? route('portal.chat', absolute: false) : null,
-        ]);
+        ];
     }
 
     public function start(Request $request): JsonResponse

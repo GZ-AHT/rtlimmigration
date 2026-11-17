@@ -38,6 +38,7 @@ Route::post('chat/webhook/tawk', ChatWebhookController::class)->middleware('thro
 // REQ §11 website chat for visitors without an account. CSRF-protected like
 // every web route; the visitor's chat is found from their session cookie.
 Route::get('chat', [GuestChatController::class, 'show'])->name('chat.guest');
+Route::get('chat/widget', [GuestChatController::class, 'widget'])->middleware('throttle:60,1')->name('chat.guest.widget');
 Route::post('chat/start', [GuestChatController::class, 'start'])->middleware('throttle:10,1')->name('chat.guest.start');
 Route::get('chat/messages', [GuestChatController::class, 'messages'])->middleware('throttle:120,1')->name('chat.guest.messages.index');
 Route::post('chat/messages', [GuestChatController::class, 'store'])->middleware('throttle:30,1')->name('chat.guest.messages.store');

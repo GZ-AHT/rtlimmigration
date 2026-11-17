@@ -50,6 +50,8 @@ class ConversationController extends Controller
 
         $user = $request->user();
         $kind = ChatKind::from((string) $request->route('kind', 'chat'));
+        // Tawk.to chat history and offline messages only exist while the integration is on.
+        abort_unless($kind->isNative() || ChatSettings::tawkEnabled(), 404);
 
         $isNative = $kind->isNative();
 
@@ -110,6 +112,7 @@ class ConversationController extends Controller
     public function show(Request $request, ChatConversation $conversation, PortalMessaging $messaging): Response
     {
         Gate::authorize('view', $conversation);
+        abort_unless($conversation->kind->isNative() || ChatSettings::tawkEnabled(), 404);
 
         $conversation->load(['assignee:id,name', 'student.user:id,name', 'lead:id,lead_number']);
         $user = $request->user();
@@ -161,6 +164,7 @@ class ConversationController extends Controller
     public function update(Request $request, ChatConversation $conversation, PortalMessaging $messaging): RedirectResponse
     {
         Gate::authorize('update', $conversation);
+        abort_unless($conversation->kind->isNative() || ChatSettings::tawkEnabled(), 404);
 
         $data = $request->validate([
             'status' => ['sometimes', Rule::enum(ChatStatus::class)],
@@ -223,6 +227,7 @@ class ConversationController extends Controller
     public function lead(Request $request, ChatConversation $conversation, CaptureLead $capture, AssignLead $assign): RedirectResponse
     {
         Gate::authorize('update', $conversation);
+        abort_unless($conversation->kind->isNative() || ChatSettings::tawkEnabled(), 404);
 
         if ($conversation->lead_id !== null || $conversation->student_id !== null) {
             throw ValidationException::withMessages(['lead' => __('This conversation is already linked to a lead or a student.')]);

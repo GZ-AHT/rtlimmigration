@@ -96,6 +96,12 @@
 - Also fixed: three small type errors (`easyCheckout.ts`, roles pages) that stopped `vue-tsc` passing.
 - Fixed from the 2026-11-16 payment changes: two `GatewayPaymentTest` cases failed because a fail or cancel return now asks SSLCommerz whether the attempt was in fact paid, and the tests didn't fake that lookup. The lookup is intended (an Easy Checkout popup that closes after payment must not be recorded as failed), so only the tests changed. Two tests were added: a cancel claim that SSLCommerz shows as paid settles the invoice, and a cancel still records when SSLCommerz can't be reached.
 
+**Tawk.to switched off (2026-11-17, owner's decision)**
+
+- The system's own chat replaces Tawk.to: portal messages for students, and website chat for visitors. This departs from REQ §18, which names Tawk.to.
+- The integration is kept but off: `TAWK_ENABLED=false` (default, `config/chat.php`). While it's off there is no widget, the webhook returns 404, and the Tawk.to settings, chat history and offline messages screens and menus are hidden. Set `TAWK_ENABLED=true` to bring it all back.
+- **Website chat popup:** a "Chat with us" button on every public website page opens the visitor's chat in a panel (full screen on phones). It uses the same chat, cookie and security checks as `/chat`. The panel loads its state from `GET /chat/widget` only when opened and polls only while open. It stays open across page changes in the same tab. It's hidden on `/chat` itself, for staff, and whenever website chat is off (Admin → Live Chat → Chat security).
+
 **Easy Checkout (added 2026-11-16)**
 
 - "Pay online" now opens SSLCommerz Easy Checkout, their popup over the payments page. Set `SSLCOMMERZ_CHECKOUT=hosted` to go back to redirecting to SSLCommerz's own page.

@@ -27,6 +27,8 @@ const props = defineProps<{
     emptyText: string;
     placeholder?: string;
     onCaptchaRequired?: () => Promise<string | null>;
+    /** Shorter message area, for the website chat popup. */
+    compact?: boolean;
 }>();
 
 const scroller = ref<HTMLElement | null>(null);
@@ -185,7 +187,12 @@ function size(bytes: number): string {
     <div class="flex min-h-0 flex-col">
         <div
             ref="scroller"
-            class="flex h-[min(60vh,560px)] min-h-[320px] flex-col gap-2.5 overflow-y-auto px-1 py-2"
+            class="flex flex-col gap-2.5 overflow-y-auto px-1 py-2"
+            :class="
+                compact
+                    ? 'h-[min(45vh,360px)] min-h-[200px]'
+                    : 'h-[min(60vh,560px)] min-h-[320px]'
+            "
             role="log"
             aria-live="polite"
             aria-label="Messages"
