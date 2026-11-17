@@ -12,6 +12,7 @@ use App\Http\Controllers\Payments\PaymentController;
 use App\Http\Controllers\Payments\PaymentDocumentController;
 use App\Http\Controllers\Portal;
 use App\Http\Controllers\Students;
+use App\Models\Page;
 use App\Support\Routing\AreaRoutes;
 use Illuminate\Support\Facades\Route;
 
@@ -135,6 +136,97 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::get('logs/{message}', [Admin\EmailLogController::class, 'show'])->whereNumber('message')->name('logs.show');
             Route::post('logs/{message}/retry', [Admin\EmailLogController::class, 'retry'])->whereNumber('message')->name('logs.retry');
         });
+
+        // REQ §21 / §23.4 website images (used by every editor's picker)
+        Route::get('media', [Admin\MediaController::class, 'index'])->name('media.index');
+        Route::post('media', [Admin\MediaController::class, 'store'])->middleware('throttle:60,1')->name('media.store');
+        Route::patch('media/{media}', [Admin\MediaController::class, 'update'])->name('media.update');
+        Route::delete('media/{media}', [Admin\MediaController::class, 'destroy'])->name('media.destroy');
+
+        // REQ §4 Blog Management
+        Route::prefix('blog')->name('blog.')->group(function () {
+            Route::get('posts', [Admin\Blog\BlogPostController::class, 'index'])->name('posts.index');
+            Route::get('posts/create', [Admin\Blog\BlogPostController::class, 'create'])->name('posts.create');
+            Route::post('posts', [Admin\Blog\BlogPostController::class, 'store'])->name('posts.store');
+            Route::get('posts/{post}/edit', [Admin\Blog\BlogPostController::class, 'edit'])->name('posts.edit');
+            Route::put('posts/{post}', [Admin\Blog\BlogPostController::class, 'update'])->name('posts.update');
+            Route::patch('posts/{post}/feature', [Admin\Blog\BlogPostController::class, 'feature'])->name('posts.feature');
+            Route::delete('posts/{post}', [Admin\Blog\BlogPostController::class, 'destroy'])->name('posts.destroy');
+            Route::patch('posts/{post}/restore', [Admin\Blog\BlogPostController::class, 'restore'])->whereNumber('post')->name('posts.restore');
+            Route::get('comments', [Admin\Blog\BlogCommentController::class, 'index'])->name('comments.index');
+            Route::patch('comments/{comment}', [Admin\Blog\BlogCommentController::class, 'update'])->name('comments.update');
+            Route::delete('comments/{comment}', [Admin\Blog\BlogCommentController::class, 'destroy'])->name('comments.destroy');
+            Route::get('authors', [Admin\Blog\AuthorController::class, 'index'])->name('authors.index');
+            Route::put('authors/{user}', [Admin\Blog\AuthorController::class, 'update'])->name('authors.update');
+            Route::get('{kind}', [Admin\Blog\BlogTaxonomyController::class, 'index'])->whereIn('kind', ['categories', 'tags'])->name('taxonomy.index');
+            Route::post('{kind}', [Admin\Blog\BlogTaxonomyController::class, 'store'])->whereIn('kind', ['categories', 'tags'])->name('taxonomy.store');
+            Route::put('{kind}/{id}', [Admin\Blog\BlogTaxonomyController::class, 'update'])->whereIn('kind', ['categories', 'tags'])->whereNumber('id')->name('taxonomy.update');
+            Route::delete('{kind}/{id}', [Admin\Blog\BlogTaxonomyController::class, 'destroy'])->whereIn('kind', ['categories', 'tags'])->whereNumber('id')->name('taxonomy.destroy');
+        });
+
+        // REQ §5 Page Management (section builder) and REQ §21 Website CMS
+        Route::get('pages', [Admin\Cms\PageController::class, 'index'])->name('pages.index');
+        Route::get('pages/create', [Admin\Cms\PageController::class, 'create'])->name('pages.create');
+        Route::post('pages', [Admin\Cms\PageController::class, 'store'])->name('pages.store');
+        Route::get('pages/{page}/edit', [Admin\Cms\PageController::class, 'edit'])->name('pages.edit');
+        Route::put('pages/{page}', [Admin\Cms\PageController::class, 'update'])->name('pages.update');
+        Route::delete('pages/{page}', [Admin\Cms\PageController::class, 'destroy'])->name('pages.destroy');
+        Route::patch('pages/{page}/restore', [Admin\Cms\PageController::class, 'restore'])->whereNumber('page')->name('pages.restore');
+        Route::post('pages/{page}/revisions/{revision}', [Admin\Cms\PageController::class, 'restoreRevision'])->name('pages.revisions.restore');
+        Route::prefix('cms')->name('cms.')->group(function () {
+            Route::get('homepage', fn () => redirect()->route('admin.pages.edit', Page::where('system_key', 'home')->firstOrFail()))->middleware('can:cms.manage')->name('homepage');
+            Route::get('settings', [Admin\Cms\SiteSettingsController::class, 'edit'])->name('settings');
+            Route::put('settings/{group}', [Admin\Cms\SiteSettingsController::class, 'update'])->name('settings.update');
+            Route::get('menus', [Admin\Cms\MenuController::class, 'index'])->name('menus.index');
+            Route::post('menus/{menu}/items', [Admin\Cms\MenuController::class, 'store'])->name('menus.items.store');
+            Route::put('menus/{menu}/order', [Admin\Cms\MenuController::class, 'reorder'])->name('menus.reorder');
+            Route::put('menu-items/{item}', [Admin\Cms\MenuController::class, 'update'])->name('menus.items.update');
+            Route::delete('menu-items/{item}', [Admin\Cms\MenuController::class, 'destroy'])->name('menus.items.destroy');
+            Route::get('faqs', [Admin\Cms\FaqController::class, 'index'])->name('faqs.index');
+            Route::post('faqs', [Admin\Cms\FaqController::class, 'store'])->name('faqs.store');
+            Route::put('faqs/order', [Admin\Cms\FaqController::class, 'reorder'])->name('faqs.reorder');
+            Route::put('faqs/{faq}', [Admin\Cms\FaqController::class, 'update'])->name('faqs.update');
+            Route::delete('faqs/{faq}', [Admin\Cms\FaqController::class, 'destroy'])->name('faqs.destroy');
+            Route::post('faq-categories', [Admin\Cms\FaqController::class, 'storeCategory'])->name('faqs.categories.store');
+            Route::delete('faq-categories/{category}', [Admin\Cms\FaqController::class, 'destroyCategory'])->name('faqs.categories.destroy');
+            Route::get('testimonials', [Admin\Cms\TestimonialController::class, 'index'])->name('testimonials.index');
+            Route::post('testimonials', [Admin\Cms\TestimonialController::class, 'store'])->name('testimonials.store');
+            Route::put('testimonials/order', [Admin\Cms\TestimonialController::class, 'reorder'])->name('testimonials.reorder');
+            Route::put('testimonials/{testimonial}', [Admin\Cms\TestimonialController::class, 'update'])->name('testimonials.update');
+            Route::delete('testimonials/{testimonial}', [Admin\Cms\TestimonialController::class, 'destroy'])->name('testimonials.destroy');
+            Route::get('newsletter', [Admin\Cms\NewsletterController::class, 'index'])->name('newsletter.index');
+            Route::get('newsletter/export', [Admin\Cms\NewsletterController::class, 'export'])->name('newsletter.export');
+            Route::delete('newsletter/{subscriber}', [Admin\Cms\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
+        });
+
+        // REQ §15 University Management
+        Route::get('universities', [Admin\Universities\UniversityController::class, 'index'])->name('universities.index');
+        Route::get('universities/create', [Admin\Universities\UniversityController::class, 'create'])->name('universities.create');
+        Route::post('universities', [Admin\Universities\UniversityController::class, 'store'])->name('universities.store');
+        Route::get('universities/{university}/edit', [Admin\Universities\UniversityController::class, 'edit'])->name('universities.edit');
+        Route::put('universities/{university}', [Admin\Universities\UniversityController::class, 'update'])->name('universities.update');
+        Route::delete('universities/{university}', [Admin\Universities\UniversityController::class, 'destroy'])->name('universities.destroy');
+        Route::post('universities/{university}/courses', [Admin\Universities\UniversityController::class, 'storeCourse'])->name('universities.courses.store');
+        Route::put('universities/{university}/courses/{course}', [Admin\Universities\UniversityController::class, 'updateCourse'])->name('universities.courses.update');
+        Route::delete('universities/{university}/courses/{course}', [Admin\Universities\UniversityController::class, 'destroyCourse'])->name('universities.courses.destroy');
+        Route::get('countries', [Admin\Universities\CountryController::class, 'index'])->name('countries.index');
+        Route::patch('countries/{country}', [Admin\Universities\CountryController::class, 'update'])->name('countries.update');
+
+        // REQ §16 Partner Application Management
+        Route::get('partner-applications', [Admin\Partners\PartnerApplicationController::class, 'index'])->name('partner-applications.index');
+        Route::get('partner-applications/{application}', [Admin\Partners\PartnerApplicationController::class, 'show'])->name('partner-applications.show');
+        Route::post('partner-applications/{application}/approve', [Admin\Partners\PartnerApplicationController::class, 'approve'])->name('partner-applications.approve');
+        Route::post('partner-applications/{application}/reject', [Admin\Partners\PartnerApplicationController::class, 'reject'])->name('partner-applications.reject');
+        Route::get('partners', [Admin\Partners\PartnerController::class, 'index'])->name('partners.index');
+        Route::get('partners/{partner}', [Admin\Partners\PartnerController::class, 'show'])->name('partners.show');
+        Route::put('partners/{partner}', [Admin\Partners\PartnerController::class, 'update'])->name('partners.update');
+        Route::patch('partners/{partner}/status', [Admin\Partners\PartnerController::class, 'status'])->name('partners.status');
+        Route::post('partners/{partner}/documents', [Admin\Partners\PartnerController::class, 'storeDocument'])->name('partners.documents.store');
+        Route::get('partner-documents/{document}', [Admin\Partners\PartnerController::class, 'document'])->name('partners.documents.show');
+        Route::delete('partner-documents/{document}', [Admin\Partners\PartnerController::class, 'destroyDocument'])->name('partners.documents.destroy');
+        Route::post('partners/{partner}/commissions', [Admin\Partners\PartnerController::class, 'storeCommission'])->name('partners.commissions.store');
+        Route::patch('partner-commissions/{commission}', [Admin\Partners\PartnerController::class, 'updateCommission'])->name('partners.commissions.update');
+        Route::post('partners/{partner}/payments', [Admin\Partners\PartnerController::class, 'storePayment'])->name('partners.payments.store');
 
         // Component reference for reviewing the panel design system.
         // Local environment only; never registered in production.

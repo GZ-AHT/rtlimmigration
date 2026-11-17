@@ -12,6 +12,8 @@
 |   permission  permission required to see the item (null = area access only)
 |   phase       roadmap phase that delivers the module (docs/ROADMAP.md)
 |
+|   params      optional route parameters
+|
 | An item may instead have `children` (title, route, permission, phase),
 | rendered as an expandable sub-menu.
 |
@@ -76,8 +78,15 @@ return [
                     ['title' => 'Visa types', 'route' => 'admin.visa-types.index', 'permission' => 'workflows.manage', 'phase' => 6],
                     ['title' => 'Workflows & stages', 'route' => 'admin.workflows.index', 'permission' => 'workflows.manage', 'phase' => 6],
                 ]],
-                ['title' => 'University Management', 'icon' => 'account_balance', 'route' => null, 'permission' => 'universities.view', 'phase' => 9],
-                ['title' => 'Partner Management', 'icon' => 'handshake', 'route' => null, 'permission' => 'partners.view', 'phase' => 9],
+                ['title' => 'University Management', 'icon' => 'account_balance', 'children' => [
+                    ['title' => 'All universities', 'route' => 'admin.universities.index', 'permission' => 'universities.view', 'phase' => 9],
+                    ['title' => 'Add university', 'route' => 'admin.universities.create', 'permission' => 'universities.manage', 'phase' => 9],
+                    ['title' => 'Countries', 'route' => 'admin.countries.index', 'permission' => 'universities.view', 'phase' => 9],
+                ]],
+                ['title' => 'Partner Management', 'icon' => 'handshake', 'children' => [
+                    ['title' => 'Applications', 'route' => 'admin.partner-applications.index', 'permission' => 'partners.view', 'phase' => 9],
+                    ['title' => 'Partners', 'route' => 'admin.partners.index', 'permission' => 'partners.view', 'phase' => 9],
+                ]],
                 ['title' => 'Working Visa', 'icon' => 'flight_takeoff', 'route' => 'admin.applications.working', 'permission' => 'working-visa.view', 'phase' => 6],
                 ['title' => 'Exam & Work Management', 'icon' => 'work', 'route' => 'admin.applications.exams', 'permission' => 'exams.view', 'phase' => 6],
             ]],
@@ -109,9 +118,23 @@ return [
                 ]],
             ]],
             ['label' => 'Website', 'items' => [
-                ['title' => 'Blog Management', 'icon' => 'article', 'route' => null, 'permission' => 'blog.view', 'phase' => 9],
-                ['title' => 'Page Management', 'icon' => 'web', 'route' => null, 'permission' => 'pages.view', 'phase' => 9],
-                ['title' => 'Website CMS', 'icon' => 'design_services', 'route' => null, 'permission' => 'cms.manage', 'phase' => 9],
+                ['title' => 'Blog Management', 'icon' => 'article', 'children' => [
+                    ['title' => 'All posts', 'route' => 'admin.blog.posts.index', 'permission' => 'blog.view', 'phase' => 9],
+                    ['title' => 'New post', 'route' => 'admin.blog.posts.create', 'permission' => 'blog.manage', 'phase' => 9],
+                    ['title' => 'Categories', 'route' => 'admin.blog.taxonomy.index', 'params' => ['kind' => 'categories'], 'permission' => 'blog.view', 'phase' => 9],
+                    ['title' => 'Tags', 'route' => 'admin.blog.taxonomy.index', 'params' => ['kind' => 'tags'], 'permission' => 'blog.view', 'phase' => 9],
+                    ['title' => 'Comments', 'route' => 'admin.blog.comments.index', 'permission' => 'blog.view', 'phase' => 9],
+                    ['title' => 'Authors', 'route' => 'admin.blog.authors.index', 'permission' => 'blog.view', 'phase' => 9],
+                ]],
+                ['title' => 'Page Management', 'icon' => 'web', 'route' => 'admin.pages.index', 'permission' => 'pages.view', 'phase' => 9],
+                ['title' => 'Website CMS', 'icon' => 'design_services', 'children' => [
+                    ['title' => 'Homepage', 'route' => 'admin.cms.homepage', 'permission' => 'cms.manage', 'phase' => 9],
+                    ['title' => 'Site settings', 'route' => 'admin.cms.settings', 'permission' => 'cms.manage', 'phase' => 9],
+                    ['title' => 'Menus', 'route' => 'admin.cms.menus.index', 'permission' => 'cms.manage', 'phase' => 9],
+                    ['title' => 'FAQs', 'route' => 'admin.cms.faqs.index', 'permission' => 'cms.manage', 'phase' => 9],
+                    ['title' => 'Testimonials', 'route' => 'admin.cms.testimonials.index', 'permission' => 'cms.manage', 'phase' => 9],
+                    ['title' => 'Newsletter', 'route' => 'admin.cms.newsletter.index', 'permission' => 'cms.manage', 'phase' => 9],
+                ]],
                 ['title' => 'SEO Management', 'icon' => 'travel_explore', 'route' => null, 'permission' => 'seo.manage', 'phase' => 10],
             ]],
             ['label' => 'Insights', 'items' => [
@@ -123,7 +146,7 @@ return [
                     ['title' => 'Export reports', 'route' => 'admin.reports.downloads', 'permission' => 'reports.export', 'phase' => 5],
                 ]],
                 ['title' => 'Notifications', 'icon' => 'notifications', 'route' => null, 'permission' => 'notifications.manage', 'phase' => 12],
-                ['title' => 'Media Library', 'icon' => 'perm_media', 'route' => null, 'permission' => 'media.view', 'phase' => 11],
+                ['title' => 'Media Library', 'icon' => 'perm_media', 'route' => 'admin.media.index', 'permission' => 'media.view', 'phase' => 9],
             ]],
             ['label' => 'System', 'items' => [
                 ['title' => 'Integrations', 'icon' => 'extension', 'route' => null, 'permission' => 'integrations.manage', 'phase' => 11],

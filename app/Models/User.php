@@ -111,6 +111,18 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return $this->hasOne(EmailSignature::class);
     }
 
+    /** @return HasMany<BlogPost, $this> REQ §4 posts written by this user */
+    public function blogPosts(): HasMany
+    {
+        return $this->hasMany(BlogPost::class, 'author_id');
+    }
+
+    /** @return HasOne<AuthorProfile, $this> */
+    public function authorProfile(): HasOne
+    {
+        return $this->hasOne(AuthorProfile::class);
+    }
+
     /** @return HasOne<Student, $this> */
     public function student(): HasOne
     {

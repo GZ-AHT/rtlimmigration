@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int $id
@@ -26,5 +27,11 @@ class Country extends Model
     public function scopeDestinations(Builder $query): void
     {
         $query->where('is_destination', true)->where('is_active', true)->orderBy('sort_order')->orderBy('name');
+    }
+
+    /** @return HasMany<University, $this> */
+    public function universities(): HasMany
+    {
+        return $this->hasMany(University::class);
     }
 }

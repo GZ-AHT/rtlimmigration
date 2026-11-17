@@ -15,6 +15,7 @@ return [
 
     'types' => [
         'student' => ['prefix' => 'STU', 'format' => '{prefix}-{Y}-{seq}', 'pad' => 5, 'reset' => 'yearly'],
+        'partner' => ['prefix' => 'PTR', 'format' => '{prefix}-{seq}', 'pad' => 4, 'reset' => 'never'],
         'file' => ['prefix' => 'FILE', 'format' => '{prefix}-{Y}-{seq}', 'pad' => 5, 'reset' => 'yearly'],
         'invoice' => ['prefix' => 'INV', 'format' => '{prefix}-{Y}{m}-{seq}', 'pad' => 5, 'reset' => 'monthly'],
         'receipt' => ['prefix' => 'RCP', 'format' => '{prefix}-{Y}{m}-{seq}', 'pad' => 5, 'reset' => 'monthly'],

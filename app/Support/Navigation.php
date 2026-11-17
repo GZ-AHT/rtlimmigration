@@ -81,7 +81,7 @@ class Navigation
         return [
             'title' => $item['title'],
             'icon' => $item['icon'] ?? null,
-            'href' => $built ? route($item['route'], absolute: false) : null,
+            'href' => $built ? route($item['route'], $item['params'] ?? [], absolute: false) : null,
             'phase' => (int) $item['phase'],
             'planned' => ! $built,
         ];
