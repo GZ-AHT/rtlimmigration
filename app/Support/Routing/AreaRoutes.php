@@ -6,6 +6,7 @@ use App\Http\Controllers\Accounts;
 use App\Http\Controllers\Applications;
 use App\Http\Controllers\Chat;
 use App\Http\Controllers\Documents;
+use App\Http\Controllers\Email;
 use App\Http\Controllers\Leads;
 use App\Http\Controllers\Payments;
 use App\Http\Controllers\Reports;
@@ -101,6 +102,21 @@ class AreaRoutes
             Route::get('chat/{conversation}/messages', [Chat\ChatMessageController::class, 'index'])->whereNumber('conversation')->middleware('throttle:120,1')->name('chat.messages.index');
             Route::post('chat/{conversation}/messages', [Chat\ChatMessageController::class, 'store'])->whereNumber('conversation')->middleware('throttle:30,1')->name('chat.messages.store');
             Route::get('chat/attachments/{attachment}', [Chat\ChatMessageController::class, 'attachment'])->whereNumber('attachment')->name('chat.attachments.show');
+        });
+    }
+
+    /**
+     * "My email" for staff (REQ §3, §19.1): assigned mailboxes, webmail
+     * sign-in, signature and sending from inside the system.
+     */
+    public static function email(): void
+    {
+        Route::middleware('can:email.access')->group(function () {
+            Route::get('email', [Email\MailboxController::class, 'index'])->name('email.index');
+            Route::put('email/signature', [Email\MailboxController::class, 'signature'])->name('email.signature');
+            Route::post('email/mailboxes/{account}/webmail', [Email\MailboxController::class, 'webmail'])->whereNumber('account')->middleware('throttle:10,1')->name('email.webmail');
+            Route::get('email/compose', [Email\ComposeController::class, 'create'])->name('email.compose');
+            Route::post('email/compose', [Email\ComposeController::class, 'store'])->middleware('throttle:30,1')->name('email.send');
         });
     }
 

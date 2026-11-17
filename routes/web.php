@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Chat\ChatWebhookController;
 use App\Http\Controllers\DashboardRedirectController;
+use App\Http\Controllers\Email\EmailTrackingController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Payments\GatewayController;
@@ -34,6 +35,10 @@ Route::match(['get', 'post'], 'payments/gateway/{gateway}/return/{outcome}', [Ga
 // REQ §18 Tawk.to webhooks. Public and CSRF-exempt (bootstrap/app.php);
 // every request must carry a valid X-Tawk-Signature.
 Route::post('chat/webhook/tawk', ChatWebhookController::class)->middleware('throttle:240,1')->name('chat.webhook');
+
+// REQ §3 email tracking: opens (1x1 image) and clicks (signed redirect) on mail this system sent.
+Route::get('email/o/{message}.gif', [EmailTrackingController::class, 'open'])->middleware('throttle:120,1')->name('email.track.open');
+Route::get('email/c/{message}', [EmailTrackingController::class, 'click'])->middleware(['signed', 'throttle:120,1'])->name('email.track.click');
 
 // REQ §11 website chat for visitors without an account. CSRF-protected like
 // every web route; the visitor's chat is found from their session cookie.

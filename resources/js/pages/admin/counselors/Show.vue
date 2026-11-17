@@ -14,6 +14,7 @@ import { edit, index } from '@/routes/admin/counselors';
 import { show as showUser } from '@/routes/admin/users';
 import type {
     ActivityEntry,
+    EmailMessageRow,
     LeadRow,
     Stat,
     StudentRow,
@@ -43,6 +44,7 @@ defineProps<{
     leads: LeadRow[];
     students: StudentRow[];
     activity: ActivityEntry[];
+    emails: EmailMessageRow[] | null;
 }>();
 
 defineOptions({
@@ -247,6 +249,41 @@ const studentColumns: TableColumn<StudentRow>[] = [
                         }}</span>
                     </template>
                 </DataTable>
+            </PanelCard>
+            <PanelCard
+                v-if="emails"
+                flush
+                title="Email history"
+                description="Sent by or to this counselor from the system. The 15 most recent."
+            >
+                <EmptyState
+                    v-if="!emails.length"
+                    icon="mail"
+                    title="No emails yet"
+                />
+                <ul v-else class="divide-y">
+                    <li
+                        v-for="email in emails"
+                        :key="email.id"
+                        class="flex items-center justify-between gap-3 px-4 py-2.5"
+                    >
+                        <div class="min-w-0">
+                            <p class="truncate text-[13px] font-semibold">
+                                {{ email.subject }}
+                            </p>
+                            <p
+                                class="truncate text-[11px] text-muted-foreground"
+                            >
+                                {{ email.from_email }} → {{ email.to_email }} ·
+                                {{ relativeTime(email.created_at) }}
+                            </p>
+                        </div>
+                        <StatusBadge
+                            :label="email.status_label"
+                            :tone="email.status_tone"
+                        />
+                    </li>
+                </ul>
             </PanelCard>
         </div>
     </div>
