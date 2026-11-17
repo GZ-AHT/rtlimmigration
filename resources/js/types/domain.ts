@@ -419,3 +419,53 @@ export type ChatDetail = ChatRow & {
     assigned_to: number | null;
     lead: { id: number; number: string } | null;
 };
+
+/** REQ §19.2: a mailbox on the cPanel mail server (App\Support\Presenters\EmailPresenter::account). */
+export type EmailAccountRow = {
+    id: number;
+    email: string;
+    domain: string;
+    display_name: string | null;
+    quota_mb: number | null;
+    disk_used_mb: number | null;
+    usage_percent: number | null;
+    status: 'active' | 'suspended';
+    status_label: string;
+    status_tone: Tone;
+    on_server: boolean;
+    has_password: boolean;
+    synced_at: string | null;
+    users: { id: number; name: string; can_send: boolean }[];
+};
+
+/** REQ §3 delivery log entry (EmailPresenter::message). */
+export type EmailMessageRow = {
+    id: number;
+    subject: string;
+    from_email: string;
+    to_email: string;
+    to_name: string | null;
+    recipient: string | null;
+    sender: string | null;
+    campaign: string | null;
+    status: 'queued' | 'sent' | 'failed';
+    status_label: string;
+    status_tone: Tone;
+    error: string | null;
+    attachments: string[];
+    sent_at: string | null;
+    created_at: string | null;
+    opened_at: string | null;
+    open_count: number;
+    clicked_at: string | null;
+    click_count: number;
+};
+
+export type EmailTemplateItem = {
+    id: number;
+    name: string;
+    category: string | null;
+    subject: string;
+    body: string;
+    is_active?: boolean;
+};

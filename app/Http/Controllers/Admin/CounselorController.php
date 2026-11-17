@@ -9,10 +9,12 @@ use App\Enums\LeadStatus;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Counselor;
+use App\Models\EmailMessage;
 use App\Models\Lead;
 use App\Models\Student;
 use App\Models\User;
 use App\Support\Presenters\ActivityPresenter;
+use App\Support\Presenters\EmailPresenter;
 use App\Support\Presenters\LeadPresenter;
 use App\Support\Presenters\StudentPresenter;
 use Illuminate\Database\Eloquent\Builder;
@@ -136,6 +138,11 @@ class CounselorController extends Controller
                 ->map(fn (Lead $l) => [...LeadPresenter::row($l), 'url' => route('admin.leads.show', $l, false)]),
             'students' => Student::where('counselor_id', $userId)->with('user')->latest()->limit(10)->get()
                 ->map(fn (Student $s) => [...StudentPresenter::row($s), 'url' => route('admin.students.show', $s, false)]),
+            // REQ §3 "Counselor Email History": what they sent from the system and what was sent to them.
+            'emails' => $request->user()->can('email.manage') ? EmailMessage::query()
+                ->where(fn ($q) => $q->where('sent_by', $userId)->orWhere('to_email', $counselor->user->email))
+                ->with('recipient')->latest('id')->limit(15)->get()
+                ->map(fn (EmailMessage $m) => EmailPresenter::message($m))->values() : null,
             // REQ §8 "Counselor Activity Logs".
             'activity' => Activity::query()->whereMorphedTo('causer', $counselor->user)->with(['causer:id,name', 'subject'])->latest()->limit(15)->get()
                 ->map(fn (Activity $a) => ActivityPresenter::present($a)),

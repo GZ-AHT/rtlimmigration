@@ -12,12 +12,14 @@ use App\Http\Controllers\Portal\PortalController;
 use App\Models\Country;
 use App\Models\Document;
 use App\Models\DocumentCategory;
+use App\Models\EmailMessage;
 use App\Models\PaymentRequest;
 use App\Models\Service;
 use App\Models\Student;
 use App\Models\StudentFile;
 use App\Models\User;
 use App\Support\CounselorDirectory;
+use App\Support\Presenters\EmailPresenter;
 use App\Support\Presenters\PaymentPresenter;
 use App\Support\Presenters\StudentPresenter;
 use App\Support\StudentRecords;
@@ -154,7 +156,7 @@ class StudentController extends Controller
             'profile', 'educations', 'files.service', 'files.country', 'notes.user', 'paymentRequests.type', 'paymentRequests.file',
         ]);
         $user = $request->user();
-        $tab = $request->validate(['tab' => ['nullable', Rule::in(['overview', 'profile', 'files', 'documents', 'payments', 'notes'])]])['tab'] ?? 'overview';
+        $tab = $request->validate(['tab' => ['nullable', Rule::in(['overview', 'profile', 'files', 'documents', 'payments', 'emails', 'notes'])]])['tab'] ?? 'overview';
 
         return Inertia::render('students/Show', [
             'tab' => $tab,
@@ -174,6 +176,15 @@ class StudentController extends Controller
                 'totals' => PaymentPresenter::totals($student->paymentRequests),
                 'requests' => $student->paymentRequests->map(fn (PaymentRequest $r) => [...PaymentPresenter::request($r), 'url' => $this->areaRoute($request, 'payment-requests.show', $r)])->values(),
                 'create_url' => $user->can('create', [PaymentRequest::class, $student]) && $this->areaHas($request, 'payment-requests.create') ? $this->areaRoute($request, 'payment-requests.create', ['student' => $student->id]) : null,
+            ] : null,
+            // REQ §3 "Student Email History": mail sent to them from the system (not from webmail).
+            'emails' => $user->can('email.access') ? [
+                'items' => EmailMessage::query()
+                    ->where(fn ($q) => $q->where(fn ($q) => $q->where('recipient_type', $student->getMorphClass())->where('recipient_id', $student->id))
+                        ->orWhere('to_email', $student->user->email))
+                    ->with('sender:id,name')->latest('id')->limit(50)->get()
+                    ->map(fn (EmailMessage $m) => EmailPresenter::message($m))->values(),
+                'compose_url' => $this->areaHas($request, 'email.compose') ? $this->areaRoute($request, 'email.compose', ['student' => $student->id]) : null,
             ] : null,
             // Notes are internal: staff only.
             'notes' => $student->notes->map(fn ($n) => [

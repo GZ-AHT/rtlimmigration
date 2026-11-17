@@ -11,6 +11,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -96,6 +97,18 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     public function counselorProfile(): HasOne
     {
         return $this->hasOne(Counselor::class);
+    }
+
+    /** @return BelongsToMany<EmailAccount, $this> REQ §19.2 mailboxes this user may open */
+    public function emailAccounts(): BelongsToMany
+    {
+        return $this->belongsToMany(EmailAccount::class)->withPivot(['can_send'])->withTimestamps();
+    }
+
+    /** @return HasOne<EmailSignature, $this> */
+    public function emailSignature(): HasOne
+    {
+        return $this->hasOne(EmailSignature::class);
     }
 
     /** @return HasOne<Student, $this> */

@@ -31,6 +31,7 @@ import type {
     Checklist,
     Completeness,
     CounselorOption,
+    EmailMessageRow,
     FileRow,
     MoneyTotals,
     Option,
@@ -98,6 +99,7 @@ const props = defineProps<{
     files: FileRow[];
     checklist: Checklist;
     notes: Note[];
+    emails: { items: EmailMessageRow[]; compose_url: string | null } | null;
     payments: {
         totals: MoneyTotals;
         requests: PaymentRequestRow[];
@@ -150,8 +152,29 @@ const tabs = computed(() => [
               },
           ]
         : []),
+    ...(props.emails
+        ? [
+              {
+                  key: 'emails',
+                  label: 'Emails',
+                  count: props.emails.items.length || undefined,
+              },
+          ]
+        : []),
     { key: 'notes', label: 'Notes', count: props.notes.length || undefined },
 ]);
+
+const emailColumns: TableColumn<EmailMessageRow>[] = [
+    { key: 'subject', label: 'Email' },
+    { key: 'status', label: 'Status' },
+    { key: 'open_count', label: 'Opened', align: 'right', hideBelow: 'md' },
+    {
+        key: 'created_at',
+        label: 'Sent',
+        hideBelow: 'sm',
+        format: (r) => relativeTime(r.created_at),
+    },
+];
 
 const paymentColumns: TableColumn<PaymentRequestRow>[] = [
     { key: 'invoice_number', label: 'Invoice' },
@@ -720,6 +743,50 @@ const fileColumns: TableColumn<FileRow>[] = [
             </DataTable>
         </PanelCard>
     </div>
+
+    <!-- Emails (REQ §3 Student Email History) -->
+    <PanelCard
+        v-else-if="tab === 'emails' && emails"
+        title="Emails sent from the system"
+        description="Compose and bulk emails to this student. Mail sent from webmail stays in that mailbox."
+        flush
+    >
+        <template v-if="emails.compose_url" #actions>
+            <Button size="sm" as-child
+                ><Link :href="emails.compose_url"
+                    ><AppIcon name="edit" :size="16" /> Email student</Link
+                ></Button
+            >
+        </template>
+        <DataTable
+            :columns="emailColumns"
+            :rows="emails.items"
+            caption="Emails to this student"
+            empty-title="No emails sent from the system yet"
+            empty-icon="mail"
+        >
+            <template #cell-subject="{ row }">
+                <span class="block truncate font-semibold text-foreground">{{
+                    row.subject
+                }}</span>
+                <span class="block text-[11px] text-muted-foreground"
+                    >From {{ row.from_email }}
+                    <template v-if="row.sender">
+                        · by {{ row.sender }}</template
+                    ></span
+                >
+            </template>
+            <template #cell-status="{ row }">
+                <StatusBadge
+                    :label="row.status_label"
+                    :tone="row.status_tone"
+                />
+            </template>
+            <template #cell-open_count="{ row }">
+                {{ row.open_count > 0 ? row.open_count : '—' }}
+            </template>
+        </DataTable>
+    </PanelCard>
 
     <!-- Notes -->
     <div

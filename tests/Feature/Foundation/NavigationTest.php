@@ -78,9 +78,10 @@ it('marks unbuilt modules as planned with no link', function () {
     expect($items['My Dashboard']['planned'])->toBeFalse()
         ->and($items['My Leads']['planned'])->toBeFalse()
         ->and($items['Visa Processing']['planned'])->toBeFalse()
-        ->and($items['Email']['planned'])->toBeTrue()
-        ->and($items['Email']['href'])->toBeNull()
-        ->and($items['Email']['phase'])->toBe(8);
+        ->and($items['Email']['planned'])->toBeFalse()
+        ->and($items['Reports']['planned'])->toBeTrue()
+        ->and($items['Reports']['href'])->toBeNull()
+        ->and($items['Reports']['phase'])->toBe(12);
 });
 
 it('shares the sidebar of the current area with the page', function () {

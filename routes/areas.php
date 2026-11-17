@@ -105,6 +105,37 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::delete('chat/security/guests/{guest}/suspension', [Admin\ChatSecurityController::class, 'unsuspend'])->whereNumber('guest')->name('chat.security.guests.unsuspend');
         AreaRoutes::chat();
 
+        // REQ §3 / §19 email: mailboxes on the cPanel server, templates, bulk email and delivery logs
+        AreaRoutes::email();
+        Route::prefix('email')->name('email.')->group(function () {
+            Route::get('accounts', [Admin\EmailAccountController::class, 'index'])->name('accounts.index');
+            Route::post('accounts', [Admin\EmailAccountController::class, 'store'])->name('accounts.store');
+            Route::post('accounts/sync', [Admin\EmailAccountController::class, 'sync'])->middleware('throttle:6,1')->name('accounts.sync');
+            Route::put('accounts/{account}', [Admin\EmailAccountController::class, 'update'])->name('accounts.update');
+            Route::put('accounts/{account}/password', [Admin\EmailAccountController::class, 'password'])->name('accounts.password');
+            Route::patch('accounts/{account}/status', [Admin\EmailAccountController::class, 'status'])->name('accounts.status');
+            Route::post('accounts/{account}/provision', [Admin\EmailAccountController::class, 'provision'])->name('accounts.provision');
+            Route::post('accounts/{account}/test', [Admin\EmailAccountController::class, 'test'])->middleware('throttle:6,1')->name('accounts.test');
+            Route::delete('accounts/{account}', [Admin\EmailAccountController::class, 'destroy'])->name('accounts.destroy');
+
+            Route::get('settings', [Admin\EmailSettingsController::class, 'edit'])->name('settings');
+            Route::put('settings', [Admin\EmailSettingsController::class, 'update'])->name('settings.update');
+            Route::post('settings/test', [Admin\EmailSettingsController::class, 'test'])->middleware('throttle:6,1')->name('settings.test');
+
+            Route::get('templates', [Admin\EmailTemplateController::class, 'index'])->name('templates.index');
+            Route::post('templates', [Admin\EmailTemplateController::class, 'store'])->name('templates.store');
+            Route::put('templates/{template}', [Admin\EmailTemplateController::class, 'update'])->name('templates.update');
+            Route::delete('templates/{template}', [Admin\EmailTemplateController::class, 'destroy'])->name('templates.destroy');
+
+            Route::get('bulk', [Admin\BulkEmailController::class, 'index'])->name('bulk.index');
+            Route::post('bulk/preview', [Admin\BulkEmailController::class, 'preview'])->name('bulk.preview');
+            Route::post('bulk', [Admin\BulkEmailController::class, 'store'])->middleware('throttle:6,1')->name('bulk.store');
+
+            Route::get('logs', [Admin\EmailLogController::class, 'index'])->name('logs.index');
+            Route::get('logs/{message}', [Admin\EmailLogController::class, 'show'])->whereNumber('message')->name('logs.show');
+            Route::post('logs/{message}/retry', [Admin\EmailLogController::class, 'retry'])->whereNumber('message')->name('logs.retry');
+        });
+
         // Component reference for reviewing the panel design system.
         // Local environment only; never registered in production.
         if (app()->isLocal()) {
@@ -124,6 +155,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Counselor->accessPermission(
         AreaRoutes::applications();
         AreaRoutes::payments(finance: false);
         AreaRoutes::chat();
+        AreaRoutes::email();
     });
 
 Route::middleware(['auth', 'verified', 'can:'.Area::Accounts->accessPermission()])
@@ -136,6 +168,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Accounts->accessPermission()
         Route::get('payment-methods', [Admin\PaymentSettingsController::class, 'methods'])->name('payment-methods.index');
         Route::post('payment-methods', [Admin\PaymentSettingsController::class, 'storeMethod'])->name('payment-methods.store');
         Route::put('payment-methods/{method}', [Admin\PaymentSettingsController::class, 'updateMethod'])->name('payment-methods.update');
+        AreaRoutes::email();
     });
 
 Route::middleware(['auth', 'verified', 'can:'.Area::Portal->accessPermission()])
@@ -176,4 +209,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Portal->accessPermission()])
         Route::get('chat/messages', [Portal\PortalChatController::class, 'messages'])->middleware('throttle:120,1')->name('chat.messages.index');
         Route::post('chat/messages', [Portal\PortalChatController::class, 'store'])->middleware('throttle:30,1')->name('chat.messages.store');
         Route::get('chat/attachments/{attachment}', [Portal\PortalChatController::class, 'attachment'])->whereNumber('attachment')->name('chat.attachments.show');
+
+        // REQ §10.1 Email: only for students an admin has granted email.access.
+        AreaRoutes::email();
     });

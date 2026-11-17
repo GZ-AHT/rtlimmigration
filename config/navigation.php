@@ -79,7 +79,15 @@ return [
                 ['title' => 'Exam & Work Management', 'icon' => 'work', 'route' => 'admin.applications.exams', 'permission' => 'exams.view', 'phase' => 6],
             ]],
             ['label' => 'Communication', 'items' => [
-                ['title' => 'Email / Roundcube', 'icon' => 'mail', 'route' => null, 'permission' => 'email.access', 'phase' => 8],
+                ['title' => 'Email / Roundcube', 'icon' => 'mail', 'children' => [
+                    ['title' => 'My email', 'route' => 'admin.email.index', 'permission' => 'email.access', 'phase' => 8],
+                    ['title' => 'Compose', 'route' => 'admin.email.compose', 'permission' => 'email.access', 'phase' => 8],
+                    ['title' => 'Email accounts', 'route' => 'admin.email.accounts.index', 'permission' => 'email.manage', 'phase' => 8],
+                    ['title' => 'Templates', 'route' => 'admin.email.templates.index', 'permission' => 'email.manage', 'phase' => 8],
+                    ['title' => 'Bulk email', 'route' => 'admin.email.bulk.index', 'permission' => 'email.manage', 'phase' => 8],
+                    ['title' => 'Delivery logs', 'route' => 'admin.email.logs.index', 'permission' => 'email.manage', 'phase' => 8],
+                    ['title' => 'Email settings', 'route' => 'admin.email.settings', 'permission' => 'email.manage', 'phase' => 8],
+                ]],
                 ['title' => 'Live Chat / Tawk.to', 'icon' => 'forum', 'children' => [
                     ['title' => 'Chat history', 'route' => 'admin.chat.index', 'permission' => 'chat.access', 'phase' => 7],
                     ['title' => 'Offline messages', 'route' => 'admin.chat.offline', 'permission' => 'chat.access', 'phase' => 7],
@@ -146,7 +154,7 @@ return [
             ]],
             ['label' => 'Communication', 'items' => [
                 ['title' => 'Student Communication', 'icon' => 'chat', 'route' => 'counselor.chat.portal', 'permission' => 'chat.access', 'phase' => 7],
-                ['title' => 'Email', 'icon' => 'mail', 'route' => null, 'permission' => 'email.access', 'phase' => 8],
+                ['title' => 'Email', 'icon' => 'mail', 'route' => 'counselor.email.index', 'permission' => 'email.access', 'phase' => 8],
                 ['title' => 'Live Chat', 'icon' => 'forum', 'children' => [
                     ['title' => 'Chat history', 'route' => 'counselor.chat.index', 'permission' => 'chat.access', 'phase' => 7],
                     ['title' => 'Offline messages', 'route' => 'counselor.chat.offline', 'permission' => 'chat.access', 'phase' => 7],
@@ -165,6 +173,8 @@ return [
         'accounts' => [
             ['label' => 'Overview', 'items' => [
                 ['title' => 'Accounts Dashboard', 'icon' => 'dashboard', 'route' => 'accounts.dashboard', 'permission' => null, 'phase' => 4],
+                // Not one of REQ §9.1's 20 menus; Accounts staff have email.access (REQ §19.2 "Assign Email to User").
+                ['title' => 'Email', 'icon' => 'mail', 'route' => 'accounts.email.index', 'permission' => 'email.access', 'phase' => 8],
             ]],
             ['label' => 'Payments', 'items' => [
                 ['title' => 'All Payments', 'icon' => 'payments', 'route' => 'accounts.payments.index', 'permission' => 'payments.view', 'phase' => 4],
@@ -218,7 +228,8 @@ return [
             ['label' => 'Communication', 'items' => [
                 ['title' => 'Notifications', 'icon' => 'notifications', 'route' => 'notifications.index', 'permission' => null, 'phase' => 4],
                 ['title' => 'Live Chat', 'icon' => 'forum', 'route' => 'portal.chat', 'permission' => null, 'phase' => 7],
-                ['title' => 'Email', 'icon' => 'mail', 'route' => null, 'permission' => 'email.access', 'phase' => 8],
+                // REQ §10.1 "Access assigned email functionality if enabled": shown only to students granted email.access.
+                ['title' => 'Email', 'icon' => 'mail', 'route' => 'portal.email.index', 'permission' => 'email.access', 'phase' => 8],
             ]],
         ],
 
