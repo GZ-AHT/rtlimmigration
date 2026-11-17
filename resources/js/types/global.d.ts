@@ -1,4 +1,5 @@
 import type { Directive } from 'vue';
+import type { ChatWidgetConfig } from '@/lib/tawk';
 import type { Auth } from '@/types/auth';
 import type {
     AppNotification,
@@ -27,6 +28,7 @@ declare module '@inertiajs/core' {
             area: CurrentArea | null;
             navigation: PanelNavGroup[];
             notifications: { unread: number; recent: AppNotification[] } | null;
+            chat: ChatWidgetConfig | null;
             site: Record<string, Record<string, unknown>>;
             sidebarOpen: boolean;
             [key: string]: unknown;

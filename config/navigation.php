@@ -80,7 +80,15 @@ return [
             ]],
             ['label' => 'Communication', 'items' => [
                 ['title' => 'Email / Roundcube', 'icon' => 'mail', 'route' => null, 'permission' => 'email.access', 'phase' => 8],
-                ['title' => 'Live Chat / Tawk.to', 'icon' => 'forum', 'route' => null, 'permission' => 'chat.access', 'phase' => 7],
+                ['title' => 'Live Chat / Tawk.to', 'icon' => 'forum', 'children' => [
+                    ['title' => 'Chat history', 'route' => 'admin.chat.index', 'permission' => 'chat.access', 'phase' => 7],
+                    ['title' => 'Offline messages', 'route' => 'admin.chat.offline', 'permission' => 'chat.access', 'phase' => 7],
+                    ['title' => 'Student messages', 'route' => 'admin.chat.portal', 'permission' => 'chat.access', 'phase' => 7],
+                    ['title' => 'Website chats', 'route' => 'admin.chat.guest', 'permission' => 'chat.access', 'phase' => 7],
+                    ['title' => 'Moderation', 'route' => 'admin.chat.moderation', 'permission' => 'chat.moderate', 'phase' => 7],
+                    ['title' => 'Chat security', 'route' => 'admin.chat.security', 'permission' => 'security.manage', 'phase' => 7],
+                    ['title' => 'Chat settings', 'route' => 'admin.chat.settings', 'permission' => 'chat.manage', 'phase' => 7],
+                ]],
                 ['title' => 'Ticket & Contact', 'icon' => 'confirmation_number', 'children' => [
                     ['title' => 'Tickets', 'route' => 'admin.tickets.index', 'permission' => 'tickets.view', 'phase' => 2],
                     ['title' => 'Contact Inquiries', 'route' => 'admin.inquiries.index', 'permission' => 'leads.view', 'phase' => 2],
@@ -137,9 +145,14 @@ return [
                 ['title' => 'Exam / Work Management', 'icon' => 'work', 'route' => 'counselor.applications.exams', 'permission' => 'exams.view', 'phase' => 6],
             ]],
             ['label' => 'Communication', 'items' => [
-                ['title' => 'Student Communication', 'icon' => 'chat', 'route' => null, 'permission' => 'students.view', 'phase' => 4],
+                ['title' => 'Student Communication', 'icon' => 'chat', 'route' => 'counselor.chat.portal', 'permission' => 'chat.access', 'phase' => 7],
                 ['title' => 'Email', 'icon' => 'mail', 'route' => null, 'permission' => 'email.access', 'phase' => 8],
-                ['title' => 'Live Chat', 'icon' => 'forum', 'route' => null, 'permission' => 'chat.access', 'phase' => 7],
+                ['title' => 'Live Chat', 'icon' => 'forum', 'children' => [
+                    ['title' => 'Chat history', 'route' => 'counselor.chat.index', 'permission' => 'chat.access', 'phase' => 7],
+                    ['title' => 'Offline messages', 'route' => 'counselor.chat.offline', 'permission' => 'chat.access', 'phase' => 7],
+                    ['title' => 'Student messages', 'route' => 'counselor.chat.portal', 'permission' => 'chat.access', 'phase' => 7],
+                    ['title' => 'Website chats', 'route' => 'counselor.chat.guest', 'permission' => 'chat.access', 'phase' => 7],
+                ]],
                 ['title' => 'Follow-up Management', 'icon' => 'event_repeat', 'route' => 'counselor.follow-ups.index', 'permission' => 'leads.update', 'phase' => 2],
             ]],
             ['label' => 'Account', 'items' => [
@@ -204,7 +217,7 @@ return [
             ]],
             ['label' => 'Communication', 'items' => [
                 ['title' => 'Notifications', 'icon' => 'notifications', 'route' => 'notifications.index', 'permission' => null, 'phase' => 4],
-                ['title' => 'Live Chat', 'icon' => 'forum', 'route' => null, 'permission' => null, 'phase' => 7],
+                ['title' => 'Live Chat', 'icon' => 'forum', 'route' => 'portal.chat', 'permission' => null, 'phase' => 7],
                 ['title' => 'Email', 'icon' => 'mail', 'route' => null, 'permission' => 'email.access', 'phase' => 8],
             ]],
         ],

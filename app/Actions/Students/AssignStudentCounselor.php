@@ -2,6 +2,7 @@
 
 namespace App\Actions\Students;
 
+use App\Actions\Chat\PortalMessaging;
 use App\Enums\Role;
 use App\Models\Student;
 use App\Models\User;
@@ -15,6 +16,8 @@ use Illuminate\Validation\ValidationException;
  */
 class AssignStudentCounselor
 {
+    public function __construct(private PortalMessaging $messaging) {}
+
     public function __invoke(Student $student, ?User $counselor, ?User $actor, ?string $note = null, bool $notify = true): void
     {
         if ($counselor && (! $counselor->hasRole(Role::Counselor->value) || ! $counselor->isActive())) {
@@ -25,7 +28,9 @@ class AssignStudentCounselor
             return;
         }
 
-        DB::transaction(function () use ($student, $counselor, $actor, $note) {
+        $previous = $student->counselor;
+
+        DB::transaction(function () use ($student, $counselor, $actor, $note, $previous) {
             $student->counselorAssignments()->whereNull('ended_at')->update(['ended_at' => now()]);
 
             $student->counselor_id = $counselor?->id;
@@ -44,6 +49,9 @@ class AssignStudentCounselor
                 ->event('counselor_assigned')
                 ->withProperties(['counselor' => $counselor?->name])
                 ->log('counselor_assigned');
+
+            // The student's message thread follows them to the new counselor.
+            $this->messaging->counselorChanged($student, $previous, $counselor);
         });
 
         if ($notify && $counselor && $counselor->isNot($actor)) {

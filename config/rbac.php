@@ -99,8 +99,10 @@ return [
             'email.manage' => 'Manage email accounts, templates and SMTP',
         ],
         'Live chat' => [
-            'chat.access' => 'Use live chat',
-            'chat.manage' => 'Manage live chat settings',
+            'chat.access' => 'Use live chat (own and own students\' chats)',
+            'chat.view-all' => 'See and assign every chat and offline message',
+            'chat.manage' => 'Manage live chat settings and keys',
+            'chat.moderate' => 'Review flagged chat messages and approve or reject them',
         ],
         'Tickets & contacts' => [
             'tickets.view' => 'View tickets and contact inquiries',
@@ -164,7 +166,7 @@ return [
             'leads.view', 'leads.create', 'leads.update', 'leads.assign', 'leads.transfer', 'leads.convert',
             'counselors.view',
             'tickets.view', 'tickets.manage', 'tickets.assign',
-            'email.access', 'chat.access',
+            'email.access', 'chat.access', 'chat.view-all',
             'reports.view',
         ],
         'counselor' => [

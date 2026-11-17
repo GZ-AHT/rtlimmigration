@@ -8,3 +8,6 @@ Schedule::command('leads:remind-follow-ups')->everyFifteenMinutes()->withoutOver
 
 // REQ §12.4: flag unpaid requests as overdue once their due date passes.
 Schedule::command('payments:mark-overdue')->dailyAt('00:10')->withoutOverlapping();
+
+// REQ §11 I: chat security data retention.
+Schedule::command('chat:prune-security')->dailyAt('02:30')->withoutOverlapping();

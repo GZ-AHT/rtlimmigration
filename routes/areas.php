@@ -89,6 +89,22 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::post('tickets/{ticket}/replies', [Admin\TicketController::class, 'reply'])->name('tickets.reply');
         Route::resource('tickets', Admin\TicketController::class)->except(['edit', 'destroy']);
 
+        // REQ §18 Live chat (Tawk.to)
+        Route::get('chat/settings', [Admin\ChatSettingsController::class, 'edit'])->name('chat.settings');
+        Route::put('chat/settings', [Admin\ChatSettingsController::class, 'update'])->name('chat.settings.update');
+
+        // REQ §11 chat security and moderation (Super Admin; moderation also chat.moderate)
+        Route::get('chat/moderation', [Admin\ChatModerationController::class, 'index'])->name('chat.moderation');
+        Route::post('chat/moderation/{message}', [Admin\ChatModerationController::class, 'decide'])->whereNumber('message')->middleware('throttle:120,1')->name('chat.moderation.decide');
+        Route::get('chat/security', [Admin\ChatSecurityController::class, 'edit'])->name('chat.security');
+        Route::put('chat/security', [Admin\ChatSecurityController::class, 'update'])->name('chat.security.update');
+        Route::get('chat/security/activity', [Admin\ChatSecurityController::class, 'activity'])->name('chat.security.activity');
+        Route::post('chat/security/blocks', [Admin\ChatSecurityController::class, 'block'])->name('chat.security.blocks.store');
+        Route::delete('chat/security/blocks/{block}', [Admin\ChatSecurityController::class, 'unblock'])->whereNumber('block')->name('chat.security.blocks.destroy');
+        Route::post('chat/security/guests/{guest}/suspension', [Admin\ChatSecurityController::class, 'suspend'])->whereNumber('guest')->name('chat.security.guests.suspend');
+        Route::delete('chat/security/guests/{guest}/suspension', [Admin\ChatSecurityController::class, 'unsuspend'])->whereNumber('guest')->name('chat.security.guests.unsuspend');
+        AreaRoutes::chat();
+
         // Component reference for reviewing the panel design system.
         // Local environment only; never registered in production.
         if (app()->isLocal()) {
@@ -107,6 +123,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Counselor->accessPermission(
         AreaRoutes::students();
         AreaRoutes::applications();
         AreaRoutes::payments(finance: false);
+        AreaRoutes::chat();
     });
 
 Route::middleware(['auth', 'verified', 'can:'.Area::Accounts->accessPermission()])
@@ -153,4 +170,10 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Portal->accessPermission()])
         // REQ §10.1 Visa Application, Application Status
         Route::get('applications', [Portal\PortalApplicationController::class, 'index'])->name('applications.index');
         Route::get('application-status', [Portal\PortalApplicationController::class, 'status'])->name('applications.status');
+
+        // REQ §10.1 Live Chat
+        Route::get('chat', Portal\PortalChatController::class)->name('chat');
+        Route::get('chat/messages', [Portal\PortalChatController::class, 'messages'])->middleware('throttle:120,1')->name('chat.messages.index');
+        Route::post('chat/messages', [Portal\PortalChatController::class, 'store'])->middleware('throttle:30,1')->name('chat.messages.store');
+        Route::get('chat/attachments/{attachment}', [Portal\PortalChatController::class, 'attachment'])->whereNumber('attachment')->name('chat.attachments.show');
     });

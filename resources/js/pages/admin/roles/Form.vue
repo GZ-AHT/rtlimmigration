@@ -67,7 +67,7 @@ function submit(): void {
     form.transform((data) =>
         props.role?.built_in ? { permissions: data.permissions } : data,
     );
-    form.submit(editing.value ? update(String(props.role!.id)) : store(), {
+    form.submit(editing.value ? update(props.role!.id) : store(), {
         preserveScroll: true,
     });
 }

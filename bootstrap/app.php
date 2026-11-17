@@ -18,8 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        // Payment gateway callbacks come from the gateway, not from our pages.
-        $middleware->validateCsrfTokens(except: ['payments/gateway/*']);
+        // Payment gateway callbacks and Tawk.to webhooks come from those
+        // services, not from our pages.
+        $middleware->validateCsrfTokens(except: ['payments/gateway/*', 'chat/webhook/*']);
 
         $middleware->web(append: [
             EnsureUserIsActive::class,

@@ -4,6 +4,7 @@ namespace App\Support\Routing;
 
 use App\Http\Controllers\Accounts;
 use App\Http\Controllers\Applications;
+use App\Http\Controllers\Chat;
 use App\Http\Controllers\Documents;
 use App\Http\Controllers\Leads;
 use App\Http\Controllers\Payments;
@@ -83,6 +84,24 @@ class AreaRoutes
         Route::post('applications/{application}/advance', [Applications\ApplicationController::class, 'advance'])->middleware('throttle:30,1')->name('applications.advance');
         Route::patch('applications/{application}/withdraw', [Applications\ApplicationController::class, 'withdraw'])->name('applications.withdraw');
         Route::post('applications/{application}/fee', [Applications\ApplicationController::class, 'fee'])->name('applications.fee');
+    }
+
+    /** Live chat history, offline messages, tags and assignment (REQ §18). */
+    public static function chat(): void
+    {
+        Route::middleware('can:chat.access')->group(function () {
+            Route::get('chat', [Chat\ConversationController::class, 'index'])->name('chat.index');
+            Route::get('chat/offline-messages', [Chat\ConversationController::class, 'index'])->defaults('kind', 'offline')->name('chat.offline');
+            Route::get('chat/student-messages', [Chat\ConversationController::class, 'index'])->defaults('kind', 'portal')->name('chat.portal');
+            Route::get('chat/website-chats', [Chat\ConversationController::class, 'index'])->defaults('kind', 'guest')->name('chat.guest');
+            Route::get('chat/{conversation}', [Chat\ConversationController::class, 'show'])->whereNumber('conversation')->name('chat.show');
+            Route::patch('chat/{conversation}', [Chat\ConversationController::class, 'update'])->whereNumber('conversation')->name('chat.update');
+            Route::post('chat/{conversation}/lead', [Chat\ConversationController::class, 'lead'])->whereNumber('conversation')->name('chat.lead');
+            // Portal threads and website chats: polled every few seconds while open.
+            Route::get('chat/{conversation}/messages', [Chat\ChatMessageController::class, 'index'])->whereNumber('conversation')->middleware('throttle:120,1')->name('chat.messages.index');
+            Route::post('chat/{conversation}/messages', [Chat\ChatMessageController::class, 'store'])->whereNumber('conversation')->middleware('throttle:30,1')->name('chat.messages.store');
+            Route::get('chat/attachments/{attachment}', [Chat\ChatMessageController::class, 'attachment'])->whereNumber('attachment')->name('chat.attachments.show');
+        });
     }
 
     /**

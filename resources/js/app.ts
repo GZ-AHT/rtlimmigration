@@ -5,6 +5,7 @@ import PanelLayout from '@/layouts/PanelLayout.vue';
 import WebsiteLayout from '@/layouts/WebsiteLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
+import { initializeChatWidget } from '@/lib/tawk';
 
 const appName = import.meta.env.VITE_APP_NAME || 'RTL Immigration';
 
@@ -44,3 +45,6 @@ initializeTheme();
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();
+
+// This will load the live chat widget for visitors and students...
+initializeChatWidget();

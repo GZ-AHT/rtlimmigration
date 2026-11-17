@@ -324,3 +324,98 @@ export type VisaChecklistItem = {
 };
 
 export type VisaRequirementItem = { title: string; description: string | null };
+
+export type ChatRow = {
+    id: number;
+    kind: 'chat' | 'offline' | 'portal' | 'guest';
+    kind_label: string;
+    kind_icon: string;
+    reference: string | null;
+    status: string;
+    status_label: string;
+    status_tone: Tone;
+    visitor: string;
+    visitor_email: string | null;
+    location: string | null;
+    subject: string | null;
+    preview: string | null;
+    message_count: number;
+    tags: string[];
+    assignee: string | null;
+    student: { id: number; number: string; name: string | null } | null;
+    started_at: string | null;
+    ended_at: string | null;
+    last_message_at: string | null;
+    unread_count: number;
+    url?: string;
+};
+
+/** A message in a student's portal thread (kept in this system, not Tawk.to). */
+export type ChatSenderType = 'student' | 'visitor' | 'staff' | 'system';
+
+/**
+ * How a message's moderation looks to the person viewing it. "delivered"
+ * shows nothing; senders see pending / not_delivered; staff see flagged or
+ * held; moderators see the actual status.
+ */
+export type MessageModerationState =
+    | 'delivered'
+    | 'pending'
+    | 'not_delivered'
+    | 'flagged'
+    | 'held'
+    | 'approved'
+    | 'blocked'
+    | 'rejected';
+
+export type PortalMessage = {
+    id: number;
+    client_id: string | null;
+    sender_type: ChatSenderType;
+    sender_name: string | null;
+    body: string | null;
+    attachments: {
+        id: number;
+        name: string;
+        size: number;
+        mime_type: string;
+        url: string;
+    }[];
+    moderation: {
+        state: MessageModerationState;
+        label: string | null;
+        reasons: string[];
+    };
+    created_at: string | null;
+};
+
+export type PortalThread = {
+    messages: PortalMessage[];
+    /** Polling cursor: the conversation's latest change sequence number. */
+    cursor: number;
+    has_more: boolean;
+};
+
+export type ChatComposerLimits = {
+    max_body: number;
+    max_files: number;
+    max_file_kb: number;
+    accept: string;
+};
+
+export type ChatMessage = {
+    sender: 'agent' | 'visitor' | 'system';
+    name: string | null;
+    text: string;
+    time: string | null;
+    attachments: { name: string; url: string }[];
+};
+
+export type ChatDetail = ChatRow & {
+    external_id: string;
+    property_name: string | null;
+    first_message: string | null;
+    messages: ChatMessage[];
+    assigned_to: number | null;
+    lead: { id: number; number: string } | null;
+};

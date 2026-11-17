@@ -11,6 +11,7 @@ use App\Models\Country;
 use App\Models\Service;
 use App\Models\User;
 use App\Notifications\NewLeadReceived;
+use App\Support\Chat\ChatSecuritySettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
@@ -31,6 +32,7 @@ class EnquiryController extends Controller
             'services' => Service::active()->get(['id', 'name'])->map(fn ($s) => ['value' => (string) $s->id, 'label' => $s->name])->values(),
             'countries' => Country::destinations()->get(['id', 'name'])->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name])->values(),
             'channels' => array_values(array_filter(ContactChannel::options(), fn ($o) => in_array($o['value'], ['phone', 'email', 'whatsapp', 'video', 'in_person'], true))),
+            'chatEnabled' => app(ChatSecuritySettings::class)->guestChatEnabled(),
         ]);
     }
 

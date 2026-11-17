@@ -59,6 +59,18 @@ function startOnline($test): GatewayTransaction
 }
 
 /** What SSLCommerz's validation API says about the attempt. */
+/**
+ * SSLCommerz's transaction lookup (merchantTransIDvalidationAPI), which
+ * verify() consults before accepting a fail or cancel claim. With no
+ * elements it says the attempt was never paid.
+ *
+ * @param  list<array<string, mixed>>  $elements
+ */
+function fakeLookup(array $elements = []): void
+{
+    Http::fake(['sandbox.sslcommerz.com/validator/api/merchantTransIDvalidationAPI.php*' => Http::response(['APIConnect' => 'DONE', 'no_of_trans_found' => count($elements), 'element' => $elements])]);
+}
+
 function fakeValidation(GatewayTransaction $transaction, array $overrides = []): void
 {
     Http::fake(['sandbox.sslcommerz.com/validator/*' => Http::response(array_merge([
@@ -271,6 +283,7 @@ describe('gateway callbacks', function () {
 
     it('records a failed attempt and lets a later valid callback still settle it', function () {
         $transaction = startOnline($this);
+        fakeLookup();
 
         $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'fail']), ['tran_id' => $transaction->tran_id, 'status' => 'FAILED', 'error' => 'Insufficient balance'])
             ->assertOk()->assertSee('Payment not completed');
@@ -289,12 +302,36 @@ describe('gateway callbacks', function () {
 
     it('notes a cancelled attempt without touching the invoice', function () {
         $transaction = startOnline($this);
+        fakeLookup();
 
         $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'cancel']), ['tran_id' => $transaction->tran_id, 'status' => 'CANCELLED'])
             ->assertOk()->assertSee('Payment cancelled');
 
         expect($transaction->fresh()->status)->toBe(GatewayTransactionStatus::Cancelled)
             ->and($this->invoice->fresh()->status)->toBe(PaymentRequestStatus::Unpaid);
+    });
+
+    it('settles a cancel or fail claim that SSLCommerz shows was actually paid', function () {
+        $transaction = startOnline($this);
+        fakeLookup([['status' => 'VALID', 'tran_id' => $transaction->tran_id, 'val_id' => 'VAL888', 'amount' => '20000.00', 'currency' => 'BDT', 'currency_type' => 'BDT', 'currency_amount' => '20000.00', 'bank_tran_id' => 'BANK888', 'risk_level' => '0']]);
+
+        // e.g. the Easy Checkout popup closed after the payer had paid.
+        $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'cancel']), ['tran_id' => $transaction->tran_id, 'status' => 'CANCELLED'])
+            ->assertOk()->assertSee('Payment received');
+
+        expect($transaction->fresh()->status)->toBe(GatewayTransactionStatus::Paid)
+            ->and(Payment::sole()->transaction_reference)->toBe('BANK888')
+            ->and($this->invoice->fresh()->status)->toBe(PaymentRequestStatus::Paid);
+    });
+
+    it('still records a cancellation when the lookup cannot reach SSLCommerz', function () {
+        $transaction = startOnline($this);
+        Http::fake(['sandbox.sslcommerz.com/validator/*' => Http::response('Bad gateway', 502)]);
+
+        $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'cancel']), ['tran_id' => $transaction->tran_id, 'status' => 'CANCELLED'])
+            ->assertOk()->assertSee('Payment cancelled');
+
+        expect($transaction->fresh()->status)->toBe(GatewayTransactionStatus::Cancelled)->and(Payment::count())->toBe(0);
     });
 
     it('changes nothing when the gateway cannot be reached to validate', function () {

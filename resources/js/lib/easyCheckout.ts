@@ -448,7 +448,7 @@ function observeModal(
                 for (let i = 0; i < mutation.removedNodes.length; i++) {
                     const node = mutation.removedNodes[i];
                     const isIframeRemoved =
-                        node.tagName === 'IFRAME' ||
+                        node.nodeName === 'IFRAME' ||
                         (node instanceof HTMLElement &&
                             node.querySelector('iframe'));
                     if (

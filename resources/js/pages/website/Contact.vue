@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { guest as guestChat } from '@/routes/chat';
 import { store } from '@/routes/enquiry';
 import type { Option } from '@/types';
 
@@ -12,7 +13,12 @@ import type { Option } from '@/types';
  * The section copy below is the Figma copy. It moves into the CMS with the
  * rest of the page in Phase 9 (REQ §21.8).
  */
-defineProps<{ services: Option[]; countries: Option[]; channels: Option[] }>();
+defineProps<{
+    services: Option[];
+    countries: Option[];
+    channels: Option[];
+    chatEnabled?: boolean;
+}>();
 
 const sent = ref(false);
 const form = useForm({
@@ -417,6 +423,12 @@ const label = 'mb-2 block text-sm leading-[19.5px] font-medium text-site-ink';
                     Ask about a video consultation and connect with us from
                     wherever you are.
                 </p>
+                <Link
+                    v-if="chatEnabled"
+                    :href="guestChat()"
+                    class="mt-6 inline-flex h-11 items-center rounded-[10px] bg-white px-4 text-sm font-semibold text-site-ink hover:bg-site-blush"
+                    >Chat with us now ↗</Link
+                >
             </aside>
         </div>
     </section>

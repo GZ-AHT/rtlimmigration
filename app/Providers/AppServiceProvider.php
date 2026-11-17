@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Enums\Role;
 use App\Models\User;
 use App\Policies\RolePolicy;
+use App\Support\Chat\Security\ClamAvScanner;
+use App\Support\Chat\Security\MalwareScanner;
+use App\Support\Chat\Security\NullMalwareScanner;
 use App\Support\Search\GlobalSearch;
 use App\Support\Search\Providers\PageSearchProvider;
 use App\Support\Search\Providers\UserSearchProvider;
@@ -25,6 +28,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SettingsRepository::class);
+
+        // Chat attachment virus scanning (config/chat.php).
+        $this->app->bind(MalwareScanner::class, fn () => config('chat.malware.driver') === 'clamav'
+            ? new ClamAvScanner((string) config('chat.malware.clamav.socket'), (int) config('chat.malware.clamav.timeout'))
+            : new NullMalwareScanner);
 
         // Global search modules, in display order. Later phases add theirs.
         $this->app->singleton(GlobalSearch::class, fn ($app) => new GlobalSearch([
