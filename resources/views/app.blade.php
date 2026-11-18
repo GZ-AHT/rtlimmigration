@@ -1,7 +1,7 @@
 @php
-    // Public website pages are light-only (roadmap Q9) and carry the
+    // Public website and auth pages are light-only (roadmap Q9, Q11) and carry the
     // Super Admin's site-wide custom code (Q16); admin and portal pages don't.
-    $isWebsite = str_starts_with($page['component'] ?? '', 'website/');
+    $isWebsite = str_starts_with($page['component'] ?? '', 'website/') || str_starts_with($page['component'] ?? '', 'auth/');
     $siteCode = $isWebsite ? app(\App\Support\Settings\SettingsRepository::class) : null;
 @endphp
 <!DOCTYPE html>

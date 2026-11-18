@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
-import TextLink from '@/components/TextLink.vue';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { Form, Head, Link } from '@inertiajs/vue3';
+import SiteArrow from '@/components/website/SiteArrow.vue';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
 
 defineOptions({
     layout: {
-        title: 'Email verification',
+        title: 'Verify your email',
         description:
-            'Please verify your email address by clicking on the link we just emailed to you.',
+            'Please confirm your email address to unlock all portal features and consultation tracking',
     },
 });
 
@@ -24,24 +22,42 @@ defineProps<{
 
     <div
         v-if="status === 'verification-link-sent'"
-        class="mb-4 text-center text-sm font-medium text-green-600"
+        class="mb-6 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-800"
     >
-        A new verification link has been sent to the email address you provided
-        during registration.
+        A new verification link has been sent to the email address you provided.
     </div>
 
     <Form
         v-bind="send.form()"
-        class="space-y-6 text-center"
+        class="flex flex-col gap-5 text-center"
         v-slot="{ processing }"
     >
-        <Button :disabled="processing" variant="secondary">
-            <Spinner v-if="processing" />
-            Resend verification email
-        </Button>
+        <p class="text-sm leading-relaxed text-site-muted">
+            Before proceeding, please check your inbox for a verification email.
+            If you didn't receive it, we can easily send you another.
+        </p>
 
-        <TextLink :href="logout()" as="button" class="mx-auto block text-sm">
-            Log out
-        </TextLink>
+        <button
+            type="submit"
+            :disabled="processing"
+            class="flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
+        >
+            <span v-if="processing">Sending verification link…</span>
+            <template v-else>
+                <span>Resend verification email</span>
+                <SiteArrow glyph="→" />
+            </template>
+        </button>
+
+        <div class="pt-2 text-center text-sm text-site-muted">
+            <Link
+                :href="logout()"
+                as="button"
+                method="post"
+                class="font-semibold text-site-red hover:underline"
+            >
+                Log out
+            </Link>
+        </div>
     </Form>
 </template>

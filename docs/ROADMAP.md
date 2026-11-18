@@ -127,7 +127,7 @@
 - **Forms:** partner applications (with up to 3 PDF/JPG/PNG documents of 5 MB each, stored privately; one pending application per email; reviewers and Super Admins are notified), blog comments (held for moderation, with replies), and newsletter sign-up and one-click unsubscribe (`/newsletter/unsubscribe/{token}`). All of them have honeypots and rate limits.
 - **SEO basics** on every public page: title, description, canonical, Open Graph and Twitter tags, and noindex for previews and non-public pages. The rest of SEO is Phase 10.
 - **Responsive:** checked at 1440 and 390 px. Below 1280 px the nav becomes a slide-in menu. Tablet widths and the mobile menu's open state have not been checked by eye.
-- The website-style login (Q11) is not done yet: the auth pages still use the starter-kit layout.
+- The website-style auth screens (Q11) are complete: login, registration, password reset, 2FA, email verification and password confirmation all use the website layout and Figma styling.
 - Tests: `tests/Feature/Cms/PublicWebsiteTest.php` (28 tests).
 
 **Phase 9a notes (content admin, 2026-11-18)**
@@ -298,7 +298,7 @@ Based on REQ §26, with additions marked ➕.
 | Reviews / Student testimonials (nav)        | ❌          | Derive from the Homepage "Student stories" block                              |
 | Privacy, Terms, Cookie policy               | ❌          | Simple CMS legal template                                                     |
 | Custom landing pages                        | ❌          | Built from the section builder using Figma sections                           |
-| Login / Register / Forgot password / 2FA    | ❌          | Derive from the website style (see Q11)                                       |
+| Login / Register / Forgot password / 2FA    | ✅          | Derived from the website style (Q11 complete)                                 |
 | 404, maintenance page                       | ❌          | Derive                                                                        |
 | **Tablet / mobile layouts (all pages)**     | ❌          | Responsive adaptation of the desktop frames; screenshots sent for your review |
 | Dark mode for the website                   | ❌          | See Q9                                                                        |

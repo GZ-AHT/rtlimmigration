@@ -49,7 +49,7 @@ function confirmDelete(): void {
         return;
     }
 
-    router.delete(destroy(deleting.value.id).url, {
+    router.delete(destroy(String(deleting.value.id)).url, {
         preserveScroll: true,
         onStart: () => (busy.value = true),
         onError: (errors) =>
@@ -84,7 +84,7 @@ function confirmDelete(): void {
             <template #cell-label="{ row }">
                 <span class="flex items-center gap-2.5">
                     <span
-                        class="grid size-[30px] shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground"
+                        class="grid size-30px shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground"
                     >
                         <AppIcon
                             :name="row.full_access ? 'shield_person' : 'badge'"
@@ -120,7 +120,7 @@ function confirmDelete(): void {
             <template #actions="{ row }">
                 <Link
                     v-if="row.can.update"
-                    :href="edit(row.id)"
+                    :href="edit(String(row.id))"
                     class="rounded-md border bg-card px-2 py-1.5 text-[11px] text-secondary-foreground hover:border-ring hover:text-accent-foreground"
                     >Edit</Link
                 >

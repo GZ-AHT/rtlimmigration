@@ -67,7 +67,7 @@ function submit(): void {
     form.transform((data) =>
         props.role?.built_in ? { permissions: data.permissions } : data,
     );
-    form.submit(editing.value ? update(props.role!.id) : store(), {
+    form.submit(editing.value ? update(String(props.role!.id)) : store(), {
         preserveScroll: true,
     });
 }
@@ -192,7 +192,7 @@ const permissionErrors = computed(() =>
         </div>
 
         <div
-            class="sticky bottom-0 -mx-[15px] flex justify-end gap-2 border-t bg-background/95 px-[15px] py-3 backdrop-blur md:-mx-8 md:px-8"
+            class="sticky bottom-0-mx-[15px] flex justify-end gap-2 border-t bg-background/95 px-15px py-3 backdrop-blur md:-mx-8 md:px-8"
         >
             <Button variant="outline" as-child>
                 <Link :href="index()">Cancel</Link>

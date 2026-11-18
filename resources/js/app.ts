@@ -47,9 +47,11 @@ void createInertiaApp({
 // This will set light / dark mode on page load...
 initializeTheme();
 
-// Moving between the light-only website and the panels re-applies the theme.
+// Moving between the light-only website (including auth pages) and the panels re-applies the theme.
 router.on('navigate', (event) => {
-    const website = event.detail.page.component.startsWith('website/');
+    const website =
+        event.detail.page.component.startsWith('website/') ||
+        event.detail.page.component.startsWith('auth/');
 
     if (document.documentElement.classList.contains('website') !== website) {
         document.documentElement.classList.toggle('website', website);

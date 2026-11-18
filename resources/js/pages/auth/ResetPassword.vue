@@ -3,16 +3,15 @@ import { Form, Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
+import SiteArrow from '@/components/website/SiteArrow.vue';
+import { fieldClass } from '@/components/website/form';
 import { update } from '@/routes/password';
 
 defineOptions({
     layout: {
-        title: 'Reset password',
-        description: 'Please enter your new password below',
+        title: 'Choose a new password',
+        description:
+            'Please enter your new password to regain access to your account',
     },
 });
 
@@ -33,58 +32,83 @@ const inputEmail = ref(props.email);
         :transform="(data) => ({ ...data, token, email })"
         :reset-on-success="['password', 'password_confirmation']"
         v-slot="{ errors, processing }"
+        class="flex flex-col gap-5"
     >
-        <div class="grid gap-6">
-            <div class="grid gap-2">
-                <Label for="email">Email</Label>
-                <Input
-                    id="email"
-                    type="email"
-                    name="email"
-                    autocomplete="email"
-                    v-model="inputEmail"
-                    class="mt-1 block w-full"
-                    readonly
-                />
-                <InputError :message="errors.email" class="mt-2" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="password">Password</Label>
-                <PasswordInput
-                    id="password"
-                    name="password"
-                    autocomplete="new-password"
-                    class="mt-1 block w-full"
-                    autofocus
-                    placeholder="Password"
-                    :passwordrules="passwordRules"
-                />
-                <InputError :message="errors.password" />
-            </div>
-
-            <div class="grid gap-2">
-                <Label for="password_confirmation"> Confirm password </Label>
-                <PasswordInput
-                    id="password_confirmation"
-                    name="password_confirmation"
-                    autocomplete="new-password"
-                    class="mt-1 block w-full"
-                    placeholder="Confirm password"
-                    :passwordrules="passwordRules"
-                />
-                <InputError :message="errors.password_confirmation" />
-            </div>
-
-            <Button
-                type="submit"
-                class="mt-4 w-full"
-                :disabled="processing"
-                data-test="reset-password-button"
+        <div>
+            <label
+                for="email"
+                class="mb-2 block text-sm font-medium text-site-ink"
             >
-                <Spinner v-if="processing" />
-                Reset password
-            </Button>
+                Email address
+            </label>
+            <input
+                id="email"
+                type="email"
+                name="email"
+                autocomplete="email"
+                v-model="inputEmail"
+                readonly
+                :class="[fieldClass, 'cursor-not-allowed opacity-75']"
+            />
+            <InputError :message="errors.email" class="mt-1.5 text-site-red" />
         </div>
+
+        <div>
+            <label
+                for="password"
+                class="mb-2 block text-sm font-medium text-site-ink"
+            >
+                New password
+            </label>
+            <PasswordInput
+                id="password"
+                name="password"
+                autocomplete="new-password"
+                v-focus
+                placeholder="Enter new password"
+                :passwordrules="passwordRules"
+                :class="fieldClass"
+                :aria-invalid="!!errors.password || undefined"
+            />
+            <InputError
+                :message="errors.password"
+                class="mt-1.5 text-site-red"
+            />
+        </div>
+
+        <div>
+            <label
+                for="password_confirmation"
+                class="mb-2 block text-sm font-medium text-site-ink"
+            >
+                Confirm new password
+            </label>
+            <PasswordInput
+                id="password_confirmation"
+                name="password_confirmation"
+                autocomplete="new-password"
+                placeholder="Confirm new password"
+                :passwordrules="passwordRules"
+                :class="fieldClass"
+                :aria-invalid="!!errors.password_confirmation || undefined"
+            />
+            <InputError
+                :message="errors.password_confirmation"
+                class="mt-1.5 text-site-red"
+            />
+        </div>
+
+        <button
+            type="submit"
+            class="mt-2 flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
+            :disabled="processing"
+            data-test="reset-password-button"
+        >
+            <span v-if="processing">Resetting password…</span>
+            <template v-else>
+                <span>Reset password</span>
+                <SiteArrow glyph="→" />
+            </template>
+        </button>
     </Form>
 </template>

@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
+import PasskeyVerify from '@/components/PasskeyVerify.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Spinner } from '@/components/ui/spinner';
+import SiteArrow from '@/components/website/SiteArrow.vue';
+import { fieldClass } from '@/components/website/form';
 import { store } from '@/routes/password/confirm';
 import {
     index as confirmOptions,
     store as confirmStore,
 } from '@/actions/Laravel/Passkeys/Http/Controllers/PasskeyConfirmationController';
-import PasskeyVerify from '@/components/PasskeyVerify.vue';
 
 defineOptions({
     layout: {
@@ -32,38 +31,49 @@ defineOptions({
         label="Confirm with passkey"
         loading-label="Confirming..."
         separator="Or confirm with password"
+        class="mb-6"
     />
 
     <Form
         v-bind="store.form()"
         reset-on-success
         v-slot="{ errors, processing }"
+        class="flex flex-col gap-5"
     >
-        <div class="space-y-6">
-            <div class="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <PasswordInput
-                    id="password"
-                    name="password"
-                    class="mt-1 block w-full"
-                    required
-                    autocomplete="current-password"
-                    autofocus
-                />
-
-                <InputError :message="errors.password" />
-            </div>
-
-            <div class="flex items-center">
-                <Button
-                    class="w-full"
-                    :disabled="processing"
-                    data-test="confirm-password-button"
-                >
-                    <Spinner v-if="processing" />
-                    Confirm password
-                </Button>
-            </div>
+        <div>
+            <label
+                for="password"
+                class="mb-2 block text-sm font-medium text-site-ink"
+            >
+                Password
+            </label>
+            <PasswordInput
+                id="password"
+                name="password"
+                required
+                autocomplete="current-password"
+                v-focus
+                placeholder="Enter your password"
+                :class="fieldClass"
+                :aria-invalid="!!errors.password || undefined"
+            />
+            <InputError
+                :message="errors.password"
+                class="mt-1.5 text-site-red"
+            />
         </div>
+
+        <button
+            type="submit"
+            class="mt-2 flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
+            :disabled="processing"
+            data-test="confirm-password-button"
+        >
+            <span v-if="processing">Confirming…</span>
+            <template v-else>
+                <span>Confirm password</span>
+                <SiteArrow glyph="→" />
+            </template>
+        </button>
     </Form>
 </template>

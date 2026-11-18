@@ -7,6 +7,8 @@ use App\Enums\Role;
 use App\Enums\UserStatus;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
+use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
+use Illuminate\Auth\Notifications\VerifyEmail as VerifyEmailNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -17,12 +19,15 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 use Spatie\Permission\Traits\HasRoles;
+use Throwable;
 
 /**
  * @property int $id
@@ -184,5 +189,76 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         }
 
         return null;
+    }
+
+    /**
+     * Send the password reset notification safely.
+     *
+     * In local development or for RFC 2606 example domains (e.g. super-admin@example.com),
+     * write the reset link directly to the log so developers/testers can test without
+     * attempting to deliver to non-existent domains on a live SMTP server.
+     *
+     * If the mail server rejects delivery (e.g. 550 invalid domain, connection failure),
+     * catch the exception and display a clear validation error instead of crashing.
+     *
+     * @param  string  $token
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $resetUrl = route('password.reset', ['token' => $token, 'email' => $this->email]);
+
+        if (app()->environment('local', 'testing') && preg_match('/@example\.(com|net|org)$/i', $this->email)) {
+            Log::info("Password reset requested for {$this->email}. Reset URL: {$resetUrl}");
+
+            if (request()->hasSession()) {
+                request()->session()->flash('toast', [
+                    'type' => 'info',
+                    'message' => __('Local dev: password reset link written to storage/logs/laravel.log'),
+                ]);
+            }
+
+            // Live SMTP connections reject @example.com with 550. In local development,
+            // record the URL in the log and return smoothly so the UI can proceed.
+            if (config('mail.default') === 'smtp') {
+                return;
+            }
+        }
+
+        try {
+            $this->notify(new ResetPasswordNotification($token));
+        } catch (Throwable $e) {
+            report($e);
+            Log::warning("Failed to deliver password reset email to {$this->email}: {$e->getMessage()}", [
+                'reset_url' => $resetUrl,
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => __('We could not deliver the email to this address. Please ensure the email address is valid and can receive incoming mail.'),
+            ]);
+        }
+    }
+
+    /**
+     * Send the email verification notification safely.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        if (app()->environment('local', 'testing') && preg_match('/@example\.(com|net|org)$/i', $this->email)) {
+            Log::info("Email verification requested for {$this->email}.");
+
+            if (config('mail.default') === 'smtp') {
+                return;
+            }
+        }
+
+        try {
+            $this->notify(new VerifyEmailNotification);
+        } catch (Throwable $e) {
+            report($e);
+
+            throw ValidationException::withMessages([
+                'email' => __('We could not deliver the verification email to this address. Please ensure the email address is valid and can receive incoming mail.'),
+            ]);
+        }
     }
 }
