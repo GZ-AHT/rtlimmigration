@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { index, reorder } from '@/routes/admin/cms/menus';
 import { destroy, store, update } from '@/routes/admin/cms/menus/items';
 import type { Option } from '@/types';
+import { clone } from '@/lib/clone';
 
 type Item = {
     id: number;
@@ -60,10 +61,10 @@ watch(tab, (v) =>
     ),
 );
 
-const tree = ref<Item[]>(structuredClone(props.items));
+const tree = ref<Item[]>(clone(props.items));
 watch(
     () => props.items,
-    (v) => (tree.value = structuredClone(v)),
+    (v) => (tree.value = clone(v)),
 );
 
 const visibilityLabels: Record<string, string> = {

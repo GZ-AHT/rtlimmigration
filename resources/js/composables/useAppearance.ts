@@ -15,6 +15,13 @@ export function updateTheme(value: Appearance): void {
         return;
     }
 
+    // The public website is light-only (roadmap Q9); the server marks its pages.
+    if (document.documentElement.classList.contains('website')) {
+        document.documentElement.classList.remove('dark');
+
+        return;
+    }
+
     if (value === 'system') {
         const mediaQueryList = window.matchMedia(
             '(prefers-color-scheme: dark)',

@@ -301,13 +301,6 @@ class PageController extends Controller
      */
     private function mediaMap(array $sections): array
     {
-        $ids = [];
-        array_walk_recursive($sections, function ($v, $k) use (&$ids) {
-            if ($k === 'image' && is_numeric($v)) {
-                $ids[] = (int) $v;
-            }
-        });
-
-        return Media::query()->whereKey(array_unique($ids))->get()->mapWithKeys(fn (Media $m) => [$m->id => $m->present()])->all();
+        return Media::query()->whereKey(SectionTypes::mediaIds($sections))->get()->mapWithKeys(fn (Media $m) => [$m->id => $m->present()])->all();
     }
 }

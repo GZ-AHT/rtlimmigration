@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Partners;
 
 use App\Http\Controllers\Controller;
+use App\Models\Country;
 use App\Models\Partner;
 use App\Models\PartnerApplication;
 use App\Models\PartnerDocument;
@@ -60,6 +61,10 @@ class PartnerApplicationController extends Controller
                 'city' => $application->city,
                 'website' => $application->website,
                 'students_per_year' => $application->students_per_year,
+                'job_title' => $application->job_title,
+                'partnership_interest' => PartnerApplication::INTERESTS[$application->partnership_interest ?? ''] ?? null,
+                'years_in_operation' => PartnerApplication::YEARS[$application->years_in_operation ?? ''] ?? null,
+                'destinations' => Country::query()->whereKey($application->destinations ?? [])->orderBy('name')->pluck('name')->values(),
                 'message' => $application->message,
                 'reviewer' => $application->reviewer?->name,
                 'reviewed_at' => $application->reviewed_at?->toIso8601String(),

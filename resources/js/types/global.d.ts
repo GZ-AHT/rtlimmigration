@@ -32,6 +32,16 @@ declare module '@inertiajs/core' {
             /** Website chat popup: on for visitors and students while website chat is enabled. */
             guestChat: boolean;
             site: Record<string, Record<string, unknown>>;
+            /** Public website pages only (ShareWebsiteData). */
+            menus?: import('@/types/website').SiteMenus;
+            siteMedia?: Record<
+                | 'logo'
+                | 'logo_light'
+                | 'logo_mobile'
+                | 'favicon'
+                | 'apple_icon',
+                import('@/types/website').SiteImage | null
+            > & { payment_logos: import('@/types/website').SiteImage[] };
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

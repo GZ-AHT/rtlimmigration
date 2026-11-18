@@ -9,6 +9,8 @@ export type MediaItem = {
     height: number | null;
     name: string;
     size: number;
+    kind?: 'image' | 'video';
+    mime?: string;
 };
 
 export type LinkValue = { label: string; url: string };
@@ -36,6 +38,7 @@ export type FieldDef = {
         | 'textarea'
         | 'richtext'
         | 'image'
+        | 'video'
         | 'images'
         | 'link'
         | 'toggle'

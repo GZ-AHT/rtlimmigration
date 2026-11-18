@@ -1,4 +1,4 @@
-import { createInertiaApp } from '@inertiajs/vue3';
+import { createInertiaApp, router } from '@inertiajs/vue3';
 import { initializeTheme } from '@/composables/useAppearance';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import PanelLayout from '@/layouts/PanelLayout.vue';
@@ -10,11 +10,15 @@ import { initializeChatWidget } from '@/lib/tawk';
 const appName = import.meta.env.VITE_APP_NAME || 'RTL Immigration';
 
 void createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    // Website pages send a complete title ("Page | Site name") from the server.
+    title: (title) =>
+        title
+            ? title.includes(' | ')
+                ? title
+                : `${title} - ${appName}`
+            : appName,
     layout: (name) => {
         switch (true) {
-            case name === 'Welcome':
-                return null;
             case name.startsWith('website/'):
                 return WebsiteLayout;
             case name.startsWith('auth/'):
@@ -42,6 +46,16 @@ void createInertiaApp({
 
 // This will set light / dark mode on page load...
 initializeTheme();
+
+// Moving between the light-only website and the panels re-applies the theme.
+router.on('navigate', (event) => {
+    const website = event.detail.page.component.startsWith('website/');
+
+    if (document.documentElement.classList.contains('website') !== website) {
+        document.documentElement.classList.toggle('website', website);
+        initializeTheme();
+    }
+});
 
 // This will listen for flash toast data from the server...
 initializeFlashToast();

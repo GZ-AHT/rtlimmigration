@@ -7,9 +7,11 @@ use App\Http\Controllers\NotificationController;
 use App\Models\User;
 use App\Support\Chat\ChatSecuritySettings;
 use App\Support\Chat\ChatSettings;
+use App\Support\Cms\SiteSettings;
 use App\Support\Navigation;
 use App\Support\Settings\SettingsRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -67,7 +69,8 @@ class HandleInertiaRequests extends Middleware
             'chat' => fn () => app(ChatSettings::class)->widgetFor($user),
             // REQ §11 F: show the website chat button to visitors and students (staff answer from the panel).
             'guestChat' => fn () => app(ChatSecuritySettings::class)->guestChatEnabled() && ($user === null || $user->homeArea() === Area::Portal),
-            'site' => fn () => app(SettingsRepository::class)->public(),
+            // Website settings, with the Figma defaults for anything an admin hasn't saved yet.
+            'site' => fn () => array_replace_recursive(Arr::undot(SiteSettings::defaults()), app(SettingsRepository::class)->public()),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

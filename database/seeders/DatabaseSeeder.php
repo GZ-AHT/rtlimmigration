@@ -21,6 +21,8 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             SettingsSeeder::class,
             ReferenceDataSeeder::class,
+            WebsiteContentSeeder::class,
+            SkillAssessmentSeeder::class,
         ]);
 
         // Local demo accounts, one per role. Never created in production.

@@ -1,72 +1,108 @@
 <script setup lang="ts">
-import { Link, usePage } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
-import ChatLauncher from '@/components/chat/ChatLauncher.vue';
+import SiteFooter from '@/components/website/SiteFooter.vue';
+import SiteHeader from '@/components/website/SiteHeader.vue';
+import SiteLaunchers from '@/components/website/SiteLaunchers.vue';
 import { Toaster } from '@/components/ui/sonner';
-import { home } from '@/routes';
+import { useSite } from '@/composables/useSite';
 
 /**
- * Public website shell. Interim version: the full Figma header, navigation
- * and footer (driven by the CMS menus and settings) are built in Phase 9.
- * Text comes from database settings, not hardcoded values (REQ §31.4).
+ * Public website shell (Figma RTLIMMIG): header, page, footer and the
+ * WhatsApp / live chat buttons. Brand colours, fonts and button corners
+ * come from Site settings → Logo & branding and Theme (REQ §21.5, §21.6).
  */
-const page = usePage();
-const general = computed(
-    () =>
-        (page.props.site?.general ?? {}) as Record<string, string | undefined>,
-);
+const { text, media } = useSite();
+
+// Fonts bundled with the app; any other choice loads from Bunny Fonts.
+const BUNDLED = ['Inter', 'DM Sans', 'Manrope'];
+const RADIUS: Record<string, string> = {
+    rounded: '14px',
+    pill: '999px',
+    square: '4px',
+};
+
+const headingFont = computed(() => text('branding', 'heading_font') || 'Inter');
+const bodyFont = computed(() => text('branding', 'body_font') || 'Inter');
+
+const fontHref = computed(() => {
+    const extra = [...new Set([headingFont.value, bodyFont.value])].filter(
+        (font) => !BUNDLED.includes(font),
+    );
+
+    return extra.length
+        ? `https://fonts.bunny.net/css?family=${extra
+              .map(
+                  (f) =>
+                      `${f.toLowerCase().replace(/\s+/g, '-')}:400,500,600,700`,
+              )
+              .join('|')}&display=swap`
+        : null;
+});
+
+/** Darkens a #rrggbb colour for hover states. */
+function darken(hex: string, amount = 0.16): string {
+    const n = parseInt(hex.slice(1), 16);
+    const c = [n >> 16, (n >> 8) & 255, n & 255].map((v) =>
+        Math.round(v * (1 - amount)),
+    );
+
+    return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+const theme = computed(() => {
+    const vars: Record<string, string> = {
+        '--site-body-font': `'${bodyFont.value}'`,
+        '--site-heading-font': `'${headingFont.value}'`,
+        '--site-btn-radius': RADIUS[text('theme', 'button_style')] ?? '14px',
+    };
+    const primary = text('branding', 'primary_color');
+    const secondary = text('branding', 'secondary_color');
+
+    if (/^#[0-9a-f]{6}$/i.test(primary)) {
+        vars['--site-primary'] = primary;
+        vars['--site-primary-dark'] = darken(primary);
+    }
+
+    if (/^#[0-9a-f]{6}$/i.test(secondary)) {
+        vars['--site-secondary'] = secondary;
+    }
+
+    return vars;
+});
 </script>
 
 <template>
-    <div class="min-h-screen bg-white font-site text-site-ink antialiased">
-        <div class="bg-site-ink text-xs font-medium text-white">
-            <div
-                class="mx-auto flex h-[38px] max-w-[1248px] items-center gap-6 px-4 sm:px-6"
-            >
-                <a
-                    v-if="general.contact_email"
-                    :href="`mailto:${general.contact_email}`"
-                    class="truncate hover:text-site-blush"
-                    >{{ general.contact_email }}</a
-                >
-                <a
-                    v-if="general.phone"
-                    :href="`tel:${general.phone}`"
-                    class="hidden hover:text-site-blush sm:inline"
-                    >{{ general.phone }}</a
-                >
-            </div>
-        </div>
-        <header class="border-b border-site-line bg-white">
-            <div
-                class="mx-auto flex h-[94px] max-w-[1248px] items-center px-4 sm:px-6"
-            >
-                <Link
-                    :href="home()"
-                    class="flex items-center gap-1.5"
-                    :aria-label="general.site_name ?? 'Home'"
-                >
-                    <span
-                        class="text-[43px] leading-none font-bold text-site-red"
-                        >RTL</span
-                    >
-                    <span
-                        class="w-[110px] text-[10px] leading-[15px] font-bold uppercase"
-                        >{{ general.tagline }}</span
-                    >
-                </Link>
-            </div>
-        </header>
-        <main>
+    <Head>
+        <link
+            v-if="media?.favicon"
+            head-key="favicon"
+            rel="icon"
+            :href="media.favicon.url"
+        />
+        <link
+            v-if="media?.apple_icon"
+            head-key="apple-icon"
+            rel="apple-touch-icon"
+            :href="media.apple_icon.url"
+        />
+        <link
+            v-if="fontHref"
+            head-key="site-fonts"
+            rel="stylesheet"
+            :href="fontHref"
+        />
+    </Head>
+    <div
+        class="flex min-h-screen flex-col bg-white font-site text-site-ink antialiased [&_h1]:font-site-heading [&_h2]:font-site-heading [&_h3]:font-site-heading"
+        :style="theme"
+    >
+        <SiteHeader />
+        <main id="main" class="flex-1" tabindex="-1">
             <slot />
         </main>
-        <footer class="bg-site-navy py-8 text-xs text-site-on-dark">
-            <div class="mx-auto max-w-[1248px] px-4 sm:px-6">
-                © {{ new Date().getFullYear() }} {{ general.site_name }}.
-                {{ general.address }}
-            </div>
-        </footer>
-        <ChatLauncher />
+        <SiteFooter />
+        <SiteLaunchers />
         <Toaster />
     </div>
 </template>

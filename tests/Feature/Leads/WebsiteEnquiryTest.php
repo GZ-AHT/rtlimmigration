@@ -7,8 +7,10 @@ use App\Models\Lead;
 use App\Models\Service;
 use App\Notifications\NewLeadReceived;
 use Database\Seeders\ReferenceDataSeeder;
+use Database\Seeders\WebsiteContentSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -26,8 +28,14 @@ function enquiry(array $overrides = []): array
     ], $overrides);
 }
 
-it('shows the enquiry form', function () {
-    $this->get(route('contact'))->assertOk()->assertInertia(fn ($page) => $page->component('website/Contact')->has('services', 4));
+it('shows the enquiry form on the CMS contact page', function () {
+    Storage::fake('public');
+    $this->seed(WebsiteContentSeeder::class);
+
+    $this->get(route('contact'))->assertOk()->assertInertia(fn ($page) => $page
+        ->component('website/Page')
+        ->where('sections.1.type', 'contact')
+        ->has('sections.1.records.services', 4));
 });
 
 it('turns a website enquiry into a new lead and alerts lead managers', function () {

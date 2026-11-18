@@ -49,7 +49,23 @@ function setImage(key: string, item: MediaItem | null): void {
         props.media[item.id] = item;
     }
 
-    set(key, props.imagesAsObjects ? item : (item?.id ?? null));
+    const value = props.imagesAsObjects ? item : (item?.id ?? null);
+
+    // Banners: choosing a video switches "Background" to Video (and removing it back to
+    // Image), so an uploaded video always plays. Both change in ONE update: model.value
+    // only reflects a change after the parent re-renders, so a second set() here would
+    // overwrite the first and lose the chosen video.
+    if (props.fields[key]?.type === 'video' && 'media_type' in props.fields) {
+        model.value = {
+            ...model.value,
+            [key]: value,
+            media_type: item ? 'video' : 'image',
+        };
+
+        return;
+    }
+
+    set(key, value);
 }
 
 const items = (key: string) =>
@@ -257,10 +273,11 @@ const optionList = (o?: Record<string, string>) =>
                 {{ field.label }}
             </label>
 
-            <div v-else-if="field.type === 'image'">
+            <div v-else-if="field.type === 'image' || field.type === 'video'">
                 <ImageField
                     :label="field.label"
                     :hint="field.hint"
+                    :kind="field.type"
                     :model-value="image(String(key))"
                     @update:model-value="(v) => setImage(String(key), v)"
                 />

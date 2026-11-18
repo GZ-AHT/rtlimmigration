@@ -4,8 +4,11 @@ import AppIcon from '@/components/panel/AppIcon.vue';
 import MediaPicker from '@/components/cms/MediaPicker.vue';
 import type { MediaItem } from '@/types';
 
-/** One image chosen from the media library (stored as its id). */
-const props = defineProps<{ label: string; hint?: string }>();
+/** One image (or video) chosen from the media library (stored as its id). */
+const props = withDefaults(
+    defineProps<{ label: string; hint?: string; kind?: 'image' | 'video' }>(),
+    { kind: 'image' },
+);
 const model = defineModel<MediaItem | null>({ default: null });
 const picking = ref(false);
 void props;
@@ -23,13 +26,28 @@ void props;
                 :aria-label="model ? `Change ${label}` : `Choose ${label}`"
                 @click="picking = true"
             >
+                <video
+                    v-if="model && kind === 'video'"
+                    :src="model.url"
+                    class="size-full object-cover"
+                    muted
+                    preload="metadata"
+                />
+
                 <img
-                    v-if="model"
+                    v-else-if="model"
                     :src="model.url"
                     :alt="model.alt ?? ''"
                     class="size-full object-cover"
                 />
-                <AppIcon v-else name="add_photo_alternate" :size="24" />
+
+                <AppIcon
+                    v-else
+                    :name="
+                        kind === 'video' ? 'video_call' : 'add_photo_alternate'
+                    "
+                    :size="24"
+                />
             </button>
             <div class="flex flex-col items-start gap-1 text-[12px]">
                 <button
@@ -37,7 +55,13 @@ void props;
                     class="font-semibold text-primary hover:underline"
                     @click="picking = true"
                 >
-                    {{ model ? 'Change' : 'Choose image' }}
+                    {{
+                        model
+                            ? 'Change'
+                            : kind === 'video'
+                              ? 'Choose video'
+                              : 'Choose image'
+                    }}
                 </button>
                 <button
                     v-if="model"
@@ -54,6 +78,7 @@ void props;
         </div>
         <MediaPicker
             v-model:open="picking"
+            :kind="kind"
             @select="(items) => (model = items[0] ?? null)"
         />
     </div>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\PublishStatus;
 use App\Models\Concerns\HasSeo;
+use App\Support\Cms\WebsiteMenus;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -37,6 +38,13 @@ class Page extends Model
     use HasSeo, SoftDeletes;
 
     public const VISIBILITY = ['public' => 'Everyone', 'members' => 'Signed-in users only', 'hidden' => 'Hidden (direct link only)'];
+
+    protected static function booted(): void
+    {
+        // The website caches its menus (App\Support\Cms\WebsiteMenus).
+        static::saved(fn () => WebsiteMenus::forget());
+        static::deleted(fn () => WebsiteMenus::forget());
+    }
 
     protected function casts(): array
     {

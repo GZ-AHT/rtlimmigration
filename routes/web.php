@@ -7,16 +7,40 @@ use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Payments\GatewayController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\Website\BlogController;
 use App\Http\Controllers\Website\EnquiryController;
 use App\Http\Controllers\Website\GuestChatController;
+use App\Http\Controllers\Website\NewsletterController;
+use App\Http\Controllers\Website\PageController;
+use App\Http\Controllers\Website\PartnerApplicationController;
+use App\Http\Controllers\Website\SkillMigrationController;
+use App\Http\Controllers\Website\UniversityController;
+use App\Http\Middleware\ShareWebsiteData;
 use Illuminate\Support\Facades\Route;
 
-// Placeholder until the Figma website is built in Phase 9.
-Route::inertia('/', 'Welcome')->name('home');
+// Public website (REQ §21, Figma RTLIMMIG). Pages are built in the CMS; a
+// catch-all for custom page slugs is registered last, at the end of this file.
+Route::middleware(ShareWebsiteData::class)->group(function () {
+    Route::get('/', [PageController::class, 'home'])->name('home');
+    Route::get('contact', [PageController::class, 'contact'])->name('contact');
+    Route::get('blog/{slug}', [BlogController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('blog.show');
+    Route::get('universities/{slug}', [UniversityController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('universities.show');
 
-// REQ §7 website lead form (full Figma Contact page arrives in Phase 9).
-Route::get('contact', [EnquiryController::class, 'show'])->name('contact');
+    // Country-based skill migration self-assessment.
+    Route::get('skill-migration', [SkillMigrationController::class, 'index'])->name('skill-migration.index');
+    Route::get('skill-migration/take/{token}', [SkillMigrationController::class, 'take'])->where('token', '[A-Za-z0-9]{48}')->name('skill-migration.take');
+    Route::get('skill-migration/result/{token}', [SkillMigrationController::class, 'result'])->where('token', '[A-Za-z0-9]{48}')->name('skill-migration.result');
+    Route::get('skill-migration/{slug}', [SkillMigrationController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('skill-migration.show');
+});
+Route::post('skill-migration/{slug}/start', [SkillMigrationController::class, 'start'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1')->name('skill-migration.start');
+Route::post('skill-migration/take/{token}', [SkillMigrationController::class, 'submit'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:20,1')->name('skill-migration.submit');
+
+// REQ §7 website lead form: every enquiry becomes a lead.
 Route::post('enquiry', [EnquiryController::class, 'store'])->middleware('throttle:5,1')->name('enquiry.store');
+Route::post('blog/{slug}/comments', [BlogController::class, 'comment'])->where('slug', '[a-z0-9-]+')->middleware('throttle:5,1')->name('blog.comments.store');
+Route::post('partners/apply', [PartnerApplicationController::class, 'store'])->middleware('throttle:5,1')->name('partners.apply');
+Route::post('newsletter', [NewsletterController::class, 'store'])->middleware('throttle:5,1')->name('newsletter.store');
+Route::get('newsletter/unsubscribe/{token}', [NewsletterController::class, 'unsubscribe'])->where('token', '[A-Za-z0-9]{20,64}')->middleware('throttle:20,1')->name('newsletter.unsubscribe');
 
 // Signed account invitation link (REQ §11.2).
 Route::get('invitation/{user}/{hash}', InvitationController::class)
@@ -42,7 +66,7 @@ Route::get('email/c/{message}', [EmailTrackingController::class, 'click'])->midd
 
 // REQ §11 website chat for visitors without an account. CSRF-protected like
 // every web route; the visitor's chat is found from their session cookie.
-Route::get('chat', [GuestChatController::class, 'show'])->name('chat.guest');
+Route::get('chat', [GuestChatController::class, 'show'])->middleware(ShareWebsiteData::class)->name('chat.guest');
 Route::get('chat/widget', [GuestChatController::class, 'widget'])->middleware('throttle:60,1')->name('chat.guest.widget');
 Route::post('chat/start', [GuestChatController::class, 'start'])->middleware('throttle:10,1')->name('chat.guest.start');
 Route::get('chat/messages', [GuestChatController::class, 'messages'])->middleware('throttle:120,1')->name('chat.guest.messages.index');
@@ -62,3 +86,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__.'/areas.php';
 require __DIR__.'/settings.php';
+
+// Custom CMS pages (/about-us, /faq, /student-visa…). Registered last so
+// every other route wins; single-segment slugs only.
+Route::get('{slug}', [PageController::class, 'show'])
+    ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
+    ->middleware(ShareWebsiteData::class)
+    ->name('page');

@@ -31,6 +31,10 @@ type Application = {
     website: string | null;
     type: string;
     students_per_year: number | null;
+    job_title: string | null;
+    partnership_interest: string | null;
+    years_in_operation: string | null;
+    destinations: string[];
     message: string | null;
     status: string;
     status_label: string;
@@ -115,9 +119,25 @@ const a = props.application;
                         ><span v-else>—</span>
                     </dd>
                 </div>
-                <div>
+                <div v-if="a.job_title">
+                    <dt class="text-muted-foreground">Job title</dt>
+                    <dd>{{ a.job_title }}</dd>
+                </div>
+                <div v-if="a.partnership_interest">
+                    <dt class="text-muted-foreground">Partnership interest</dt>
+                    <dd>{{ a.partnership_interest }}</dd>
+                </div>
+                <div v-if="a.years_in_operation">
+                    <dt class="text-muted-foreground">Years in operation</dt>
+                    <dd>{{ a.years_in_operation }}</dd>
+                </div>
+                <div v-if="a.destinations.length">
+                    <dt class="text-muted-foreground">Study destinations</dt>
+                    <dd>{{ a.destinations.join(', ') }}</dd>
+                </div>
+                <div v-if="a.students_per_year !== null">
                     <dt class="text-muted-foreground">Students per year</dt>
-                    <dd>{{ a.students_per_year ?? '—' }}</dd>
+                    <dd>{{ a.students_per_year }}</dd>
                 </div>
                 <div>
                     <dt class="text-muted-foreground">Received</dt>

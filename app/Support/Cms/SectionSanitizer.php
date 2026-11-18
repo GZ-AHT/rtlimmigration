@@ -16,7 +16,7 @@ class SectionSanitizer
 {
     public const MAX_SECTIONS = 40;
 
-    /** @var array<int, true> */
+    /** @var array<int, string> media id => 'image' or 'video' */
     private array $knownMedia = [];
 
     /**
@@ -29,7 +29,8 @@ class SectionSanitizer
             throw ValidationException::withMessages(['sections' => __('A page can have at most :max sections.', ['max' => self::MAX_SECTIONS])]);
         }
 
-        $this->knownMedia = array_fill_keys(Media::query()->whereKey($this->mediaIds($sections))->pluck('id')->all(), true);
+        $this->knownMedia = Media::query()->whereKey(SectionTypes::mediaIds($sections))->pluck('mime_type', 'id')
+            ->map(fn (string $mime) => str_starts_with($mime, 'video/') ? 'video' : 'image')->all();
         $clean = [];
 
         foreach (array_values($sections) as $section) {
@@ -76,7 +77,8 @@ class SectionSanitizer
                 'toggle' => (bool) ($value ?? $field['default'] ?? false),
                 'number' => max((int) ($field['min'] ?? 0), min((int) ($field['max'] ?? 1000), (int) (is_numeric($value) ? $value : ($field['default'] ?? 0)))),
                 'select' => is_string($value) && array_key_exists($value, $field['options']) ? $value : (string) ($field['default'] ?? array_key_first($field['options'])),
-                'image' => is_numeric($value) && isset($this->knownMedia[(int) $value]) ? (int) $value : null,
+                // An image field only takes an image, a video field only a video.
+                'image', 'video' => is_numeric($value) && ($this->knownMedia[(int) $value] ?? null) === $field['type'] ? (int) $value : null,
                 'link' => $this->link(is_array($value) ? $value : []),
                 'repeater' => array_values(array_map(
                     fn (array $item) => $this->fields($field['fields'], $item),
@@ -111,23 +113,5 @@ class SectionSanitizer
         }
 
         return (bool) preg_match('~^(/(?!/)|#|https?://|mailto:|tel:)~i', $url) && ! preg_match('/[\s<>"\']/', $url);
-    }
-
-    /**
-     * Every media id referenced anywhere in the sections, for one lookup.
-     *
-     * @param  array<int|string, mixed>  $value
-     * @return list<int>
-     */
-    private function mediaIds(array $value): array
-    {
-        $ids = [];
-        array_walk_recursive($value, function ($v, $k) use (&$ids) {
-            if (is_string($k) && $k === 'image' && is_numeric($v)) {
-                $ids[] = (int) $v;
-            }
-        });
-
-        return array_values(array_unique($ids));
     }
 }

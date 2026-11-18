@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { computed, nextTick, reactive, ref, watch } from 'vue';
+import BannerDesignPicker from '@/components/cms/BannerDesignPicker.vue';
 import SchemaFields from '@/components/cms/SchemaFields.vue';
 import SeoPanel from '@/components/cms/SeoPanel.vue';
 import SortableList from '@/components/cms/SortableList.vue';
@@ -32,6 +33,7 @@ import type {
     SectionTypeDef,
     SeoValue,
 } from '@/types';
+import { clone } from '@/lib/clone';
 
 type Revision = {
     id: number;
@@ -97,9 +99,7 @@ const form = useForm({
 });
 
 // Sections live outside useForm: their free-form data doesn't fit Inertia's form typing.
-const sections = ref<PageSection[]>(
-    structuredClone(props.page?.sections ?? []),
-);
+const sections = ref<PageSection[]>(clone(props.page?.sections ?? []));
 const sectionsDirty = ref(false);
 watch(sections, () => (sectionsDirty.value = true), { deep: true });
 
@@ -115,12 +115,34 @@ function newId(): string {
         : `s-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+/** Adds a banner design next to the existing one, hidden until it is chosen. */
+function addBanner(type: string): void {
+    const at = sections.value.findIndex(
+        (s) => s.type === 'hero' || s.type === 'hero_cover',
+    );
+    addSection(type);
+    const added = sections.value.pop()!;
+    added.enabled = false;
+    added.settings.background = type === 'hero' ? 'sand' : 'white';
+    added.settings.spacing = 'none';
+    sections.value.splice(at === -1 ? 0 : at + 1, 0, added);
+}
+
+function editSection(id: string): void {
+    expanded.value = id;
+    void nextTick(() =>
+        document
+            .getElementById(`section-${id}`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+    );
+}
+
 function addSection(type: string): void {
     const section: PageSection = {
         id: newId(),
         type,
         enabled: true,
-        data: structuredClone(props.sectionDefaults[type] ?? {}),
+        data: clone(props.sectionDefaults[type] ?? {}),
         settings: {
             background: 'white',
             spacing: 'default',
@@ -134,7 +156,7 @@ function addSection(type: string): void {
 }
 
 function duplicate(index: number): void {
-    const copy = structuredClone(sections.value[index]);
+    const copy = clone(sections.value[index]);
     copy.id = newId();
     sections.value.splice(index + 1, 0, copy);
 }
@@ -156,8 +178,10 @@ const err = (k: string) =>
     (form.errors as Record<string, string | undefined>)[k];
 
 function save(): void {
+    // Sections live outside useForm, so they are added to the payload here.
     const payload = form.transform((d) => ({
         ...d,
+        sections: clone(sections.value),
         slug: d.slug || null,
         category: d.category || null,
         published_at: d.published_at || null,
@@ -169,7 +193,10 @@ function save(): void {
     }));
 
     if (props.page) {
-        payload.put(update(props.page.id).url, { preserveScroll: true });
+        payload.put(update(props.page.id).url, {
+            preserveScroll: true,
+            onSuccess: () => void nextTick(() => (sectionsDirty.value = false)),
+        });
     } else {
         payload.post(store().url);
     }
@@ -184,7 +211,7 @@ function doRestore(): void {
             preserveScroll: true,
             onSuccess: () => {
                 form.title = props.page!.title;
-                sections.value = structuredClone(props.page!.sections);
+                sections.value = clone(props.page!.sections);
                 void nextTick(() => (sectionsDirty.value = false));
             },
             onFinish: () => (restoring.value = null),
@@ -273,6 +300,16 @@ function doRestore(): void {
                 </div>
             </PanelCard>
 
+            <BannerDesignPicker
+                v-if="isHome && page"
+                v-model="sections"
+                :path="page.path"
+                :editable="can.manage"
+                :dirty="sectionsDirty || form.isDirty"
+                @add="addBanner"
+                @edit="editSection"
+            />
+
             <PanelCard
                 :title="`Sections (${sections.length})`"
                 description="Drag to reorder. Hidden sections stay saved but don't show on the website."
@@ -295,7 +332,10 @@ function doRestore(): void {
                     @reorder="(next) => (sections = next)"
                 >
                     <template #default="{ item, index }">
-                        <div class="pr-2">
+                        <div
+                            :id="`section-${item.id}`"
+                            class="scroll-mt-24 pr-2"
+                        >
                             <div class="flex items-center gap-2">
                                 <AppIcon
                                     :name="

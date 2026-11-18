@@ -18,7 +18,12 @@ import type { MediaItem, Paginated } from '@/types';
 const props = defineProps<{
     media: Paginated<MediaItem>;
     filters: { search: string };
-    limits: { max_mb: number; extensions: string[] };
+    limits: {
+        max_mb: number;
+        extensions: string[];
+        video_max_mb: number;
+        video_extensions: string[];
+    };
     canManage: boolean;
 }>();
 
@@ -103,12 +108,16 @@ const kb = (b: number) =>
                 :class="uploading ? 'pointer-events-none opacity-60' : ''"
             >
                 <AppIcon name="upload" :size="18" />
-                {{ uploading ? 'Uploading…' : 'Upload images' }}
+                {{ uploading ? 'Uploading…' : 'Upload' }}
                 <input
                     type="file"
                     class="sr-only"
                     multiple
-                    :accept="limits.extensions.map((e) => `.${e}`).join(',')"
+                    :accept="
+                        [...limits.extensions, ...limits.video_extensions]
+                            .map((e) => `.${e}`)
+                            .join(',')
+                    "
                     @change="onUpload"
                 />
             </label>
@@ -127,7 +136,7 @@ const kb = (b: number) =>
                 v-if="media.data.length === 0"
                 icon="perm_media"
                 title="No images yet"
-                :description="`${limits.extensions.join(', ').toUpperCase()}, up to ${limits.max_mb} MB each.`"
+                :description="`Images: ${limits.extensions.join(', ').toUpperCase()}, up to ${limits.max_mb} MB. Videos: ${limits.video_extensions.join(', ').toUpperCase()}, up to ${limits.video_max_mb} MB.`"
             />
             <ul class="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
                 <li v-for="item in media.data" :key="item.id">
@@ -142,7 +151,16 @@ const kb = (b: number) =>
                         :title="item.name"
                         @click="pick(item)"
                     >
+                        <video
+                            v-if="item.kind === 'video'"
+                            :src="item.url"
+                            class="size-full object-cover"
+                            muted
+                            preload="metadata"
+                        />
+
                         <img
+                            v-else
                             :src="item.url"
                             :alt="item.alt ?? item.name"
                             class="size-full object-cover"
@@ -159,14 +177,29 @@ const kb = (b: number) =>
                 Choose an image to see its details.
             </p>
             <div v-else class="flex flex-col gap-3 text-[13px]">
+                <video
+                    v-if="selected.kind === 'video'"
+                    :src="selected.url"
+                    class="w-full rounded-md border border-border"
+                    controls
+                    muted
+                    preload="metadata"
+                />
+
                 <img
+                    v-else
                     :src="selected.url"
                     :alt="selected.alt ?? ''"
                     class="w-full rounded-md border border-border"
                 />
                 <p class="font-semibold break-all">{{ selected.name }}</p>
                 <p class="text-muted-foreground">
-                    {{ selected.width }} × {{ selected.height }} px ·
+                    <template v-if="selected.width"
+                        >{{ selected.width }} × {{ selected.height }} px ·
+                    </template>
+                    <template v-else-if="selected.kind === 'video'"
+                        >Video ·
+                    </template>
                     {{ kb(selected.size) }}
                 </p>
                 <a

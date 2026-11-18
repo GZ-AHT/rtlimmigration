@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Cms\WebsiteMenus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['menu_id', 'parent_id', 'label', 'link_type', 'page_id', 'url', 'new_tab', 'is_active', 'visibility', 'roles', 'sort_order'])]
 class MenuItem extends Model
 {
+    protected static function booted(): void
+    {
+        // The website caches its menus (App\Support\Cms\WebsiteMenus).
+        static::saved(fn () => WebsiteMenus::forget());
+        static::deleted(fn () => WebsiteMenus::forget());
+    }
+
     protected function casts(): array
     {
         return ['new_tab' => 'boolean', 'is_active' => 'boolean', 'roles' => 'array', 'sort_order' => 'integer'];

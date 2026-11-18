@@ -10,9 +10,10 @@ export function useMediaLibrary() {
     async function list(
         page = 1,
         search = '',
+        kind: 'image' | 'video' = 'image',
     ): Promise<{ data: MediaItem[]; last_page: number }> {
         const url = index.url({
-            query: { page: String(page), ...(search ? { search } : {}) },
+            query: { page: String(page), kind, ...(search ? { search } : {}) },
         });
         const response = await fetch(url, {
             headers: headers(),
@@ -20,7 +21,7 @@ export function useMediaLibrary() {
         });
 
         if (!response.ok) {
-            throw new Error('Could not load images.');
+            throw new Error('Could not load the media library.');
         }
 
         return response.json();

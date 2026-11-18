@@ -212,6 +212,23 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::get('countries', [Admin\Universities\CountryController::class, 'index'])->name('countries.index');
         Route::patch('countries/{country}', [Admin\Universities\CountryController::class, 'update'])->name('countries.update');
 
+        // Country-based skill migration assessments
+        Route::get('skill-assessments', [Admin\SkillAssessments\AssessmentController::class, 'index'])->name('skill-assessments.index');
+        Route::post('skill-assessments', [Admin\SkillAssessments\AssessmentController::class, 'store'])->name('skill-assessments.store');
+        Route::get('skill-assessments/questions', [Admin\SkillAssessments\QuestionController::class, 'index'])->name('skill-assessments.questions.index');
+        Route::post('skill-assessments/questions', [Admin\SkillAssessments\QuestionController::class, 'store'])->name('skill-assessments.questions.store');
+        Route::put('skill-assessments/questions/{question}', [Admin\SkillAssessments\QuestionController::class, 'update'])->name('skill-assessments.questions.update');
+        Route::delete('skill-assessments/questions/{question}', [Admin\SkillAssessments\QuestionController::class, 'destroy'])->name('skill-assessments.questions.destroy');
+        Route::post('skill-assessments/categories', [Admin\SkillAssessments\CategoryController::class, 'store'])->name('skill-assessments.categories.store');
+        Route::put('skill-assessments/categories/{category}', [Admin\SkillAssessments\CategoryController::class, 'update'])->name('skill-assessments.categories.update');
+        Route::delete('skill-assessments/categories/{category}', [Admin\SkillAssessments\CategoryController::class, 'destroy'])->name('skill-assessments.categories.destroy');
+        Route::get('skill-assessments/submissions', [Admin\SkillAssessments\SubmissionController::class, 'index'])->name('skill-assessments.submissions.index');
+        Route::get('skill-assessments/submissions/{submission}', [Admin\SkillAssessments\SubmissionController::class, 'show'])->name('skill-assessments.submissions.show');
+        Route::get('skill-assessments/{assessment}/edit', [Admin\SkillAssessments\AssessmentController::class, 'edit'])->name('skill-assessments.edit');
+        Route::put('skill-assessments/{assessment}', [Admin\SkillAssessments\AssessmentController::class, 'update'])->name('skill-assessments.update');
+        Route::delete('skill-assessments/{assessment}', [Admin\SkillAssessments\AssessmentController::class, 'destroy'])->name('skill-assessments.destroy');
+        Route::post('countries', [Admin\Universities\CountryController::class, 'store'])->name('countries.store');
+
         // REQ §16 Partner Application Management
         Route::get('partner-applications', [Admin\Partners\PartnerApplicationController::class, 'index'])->name('partner-applications.index');
         Route::get('partner-applications/{application}', [Admin\Partners\PartnerApplicationController::class, 'show'])->name('partner-applications.show');

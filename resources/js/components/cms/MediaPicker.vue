@@ -14,10 +14,11 @@ import {
 import { useMediaLibrary } from '@/composables/useMediaLibrary';
 import type { MediaItem } from '@/types';
 
-/** Choose one or more images from the media library, or upload new ones. */
-const props = withDefaults(defineProps<{ multiple?: boolean }>(), {
-    multiple: false,
-});
+/** Choose one or more images (or a video) from the media library, or upload new ones. */
+const props = withDefaults(
+    defineProps<{ multiple?: boolean; kind?: 'image' | 'video' }>(),
+    { multiple: false, kind: 'image' },
+);
 const open = defineModel<boolean>('open', { default: false });
 const emit = defineEmits<{ select: [items: MediaItem[]] }>();
 
@@ -40,7 +41,7 @@ async function load(reset = true): Promise<void> {
             page.value = 1;
         }
 
-        const result = await list(page.value, search.value);
+        const result = await list(page.value, search.value, props.kind);
         items.value = reset ? result.data : [...items.value, ...result.data];
         lastPage.value = result.last_page;
     } catch (e) {
@@ -112,17 +113,30 @@ function confirm(): void {
         <DialogContent class="rounded-[14px] sm:max-w-[760px]">
             <DialogHeader>
                 <DialogTitle class="font-display text-xl font-extrabold"
-                    >Choose {{ multiple ? 'images' : 'an image' }}</DialogTitle
+                    >Choose
+                    {{
+                        kind === 'video'
+                            ? 'a video'
+                            : multiple
+                              ? 'images'
+                              : 'an image'
+                    }}</DialogTitle
                 >
-                <DialogDescription class="text-xs"
-                    >JPG, PNG, WEBP or GIF, up to 5 MB.</DialogDescription
-                >
+                <DialogDescription class="text-xs">{{
+                    kind === 'video'
+                        ? 'MP4 or WebM, up to 50 MB. Short, silent clips work best.'
+                        : 'JPG, PNG, WEBP or GIF, up to 5 MB.'
+                }}</DialogDescription>
             </DialogHeader>
             <div class="flex flex-wrap items-center gap-2">
                 <div class="min-w-48 flex-1">
                     <SearchInput
                         v-model="search"
-                        placeholder="Search images…"
+                        :placeholder="
+                            kind === 'video'
+                                ? 'Search videos…'
+                                : 'Search images…'
+                        "
                     />
                 </div>
                 <label
@@ -134,7 +148,11 @@ function confirm(): void {
                     <input
                         type="file"
                         class="sr-only"
-                        accept=".jpg,.jpeg,.png,.webp,.gif"
+                        :accept="
+                            kind === 'video'
+                                ? '.mp4,.webm'
+                                : '.jpg,.jpeg,.png,.webp,.gif'
+                        "
                         :multiple="multiple"
                         @change="onUpload"
                     />
@@ -148,7 +166,11 @@ function confirm(): void {
                     v-if="!loading && items.length === 0"
                     class="py-10 text-center text-[13px] text-muted-foreground"
                 >
-                    No images yet. Upload one.
+                    {{
+                        kind === 'video'
+                            ? 'No videos yet. Upload one.'
+                            : 'No images yet. Upload one.'
+                    }}
                 </p>
                 <ul class="grid grid-cols-3 gap-2 sm:grid-cols-5">
                     <li v-for="item in items" :key="item.id">
@@ -164,7 +186,16 @@ function confirm(): void {
                             :title="item.name"
                             @click="toggle(item)"
                         >
+                            <video
+                                v-if="item.kind === 'video'"
+                                :src="item.url"
+                                class="size-full object-cover"
+                                muted
+                                preload="metadata"
+                            />
+
                             <img
+                                v-else
                                 :src="item.url"
                                 :alt="item.alt ?? item.name"
                                 class="size-full object-cover"

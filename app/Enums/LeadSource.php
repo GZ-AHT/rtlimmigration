@@ -16,6 +16,7 @@ enum LeadSource: string
     case Referral = 'referral';
     case Partner = 'partner';
     case SocialMedia = 'social_media';
+    case SkillAssessment = 'skill_assessment';
 
     public function label(): string
     {
@@ -28,6 +29,7 @@ enum LeadSource: string
             self::Referral => 'Referral',
             self::Partner => 'Partner',
             self::SocialMedia => 'Social media',
+            self::SkillAssessment => 'Skill migration assessment',
         };
     }
 }

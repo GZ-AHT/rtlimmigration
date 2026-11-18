@@ -120,7 +120,7 @@ class SiteSettings
             'footer.cta_title' => 'Your next chapter starts with a conversation.',
             'footer.cta_text' => 'Let’s find the right way forward, together.',
             'footer.cta_button' => ['label' => 'Book a consultation', 'url' => '/contact'],
-            'footer.description' => 'Personal guidance for your global journey. A concentrated team helping students and families plan study abroad with clarity.',
+            'footer.description' => "Personal guidance for your global journey.\nA concern of RTBL Group.",
             'footer.show_newsletter' => false,
             'footer.payment_logos' => [],
             'general.copyright' => '© {year} RTL Bangladesh. All rights reserved.',

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { settings as settingsRoute } from '@/routes/admin/cms';
 import { update } from '@/routes/admin/cms/settings';
 import type { FieldDef, MediaItem } from '@/types';
+import { clone } from '@/lib/clone';
 
 type Group = {
     label: string;
@@ -42,7 +43,7 @@ const media = reactive<Record<number, MediaItem>>({});
 
 // Values per group; saving a tab sends only that group, so it never overwrites another tab.
 const values = reactive(
-    structuredClone(props.values) as Record<string, Record<string, unknown>>,
+    clone(props.values) as Record<string, Record<string, unknown>>,
 );
 const saving = ref<string | null>(null);
 const errors = ref<Record<string, string>>({});

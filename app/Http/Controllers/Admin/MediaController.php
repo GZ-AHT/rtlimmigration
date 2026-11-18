@@ -16,7 +16,8 @@ use Inertia\Response;
 /**
  * Website images (REQ §21 "Image Upload", §23.4 File & Media). The picker in
  * every editor uses the JSON endpoints; the library page manages them.
- * Raster images only: SVG can carry scripts, so it is refused.
+ * Raster images and MP4 / WebM videos only: SVG can carry scripts, so it is
+ * refused. File types are checked from the contents, not the name.
  */
 class MediaController extends Controller
 {
@@ -24,13 +25,22 @@ class MediaController extends Controller
 
     public const MIMES = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
+    /** Banner background videos (homepage hero designs). */
+    public const VIDEO_MAX_KB = 51200;
+
+    public const VIDEO_MIMES = ['mp4', 'webm'];
+
     public function index(Request $request): Response|JsonResponse
     {
         Gate::authorize('media.view');
 
-        $search = (string) ($request->validate(['search' => ['nullable', 'string', 'max:100']])['search'] ?? '');
+        $filters = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'kind' => ['nullable', 'in:image,video']]);
+        $search = (string) ($filters['search'] ?? '');
+        $kind = $filters['kind'] ?? null;
 
         $media = Media::query()
+            ->when($kind === 'video', fn (Builder $q) => $q->where('mime_type', 'like', 'video/%'))
+            ->when($kind === 'image', fn (Builder $q) => $q->where('mime_type', 'not like', 'video/%'))
             ->when($search !== '', fn (Builder $q) => $q->where(fn (Builder $q) => $q->where('original_name', 'like', '%'.addcslashes($search, '%_\\').'%')->orWhere('alt', 'like', '%'.addcslashes($search, '%_\\').'%')))
             ->latest('id')
             ->paginate($request->wantsJson() ? 24 : 36)
@@ -44,7 +54,7 @@ class MediaController extends Controller
         return Inertia::render('admin/media/Index', [
             'media' => $media,
             'filters' => ['search' => $search],
-            'limits' => ['max_mb' => self::MAX_KB / 1024, 'extensions' => self::MIMES],
+            'limits' => ['max_mb' => self::MAX_KB / 1024, 'extensions' => self::MIMES, 'video_max_mb' => self::VIDEO_MAX_KB / 1024, 'video_extensions' => self::VIDEO_MIMES],
             'canManage' => $request->user()->can('media.manage'),
         ]);
     }
@@ -55,13 +65,21 @@ class MediaController extends Controller
         // Editors that use images can upload without full media rights.
         abort_unless($request->user()->canAny(['media.manage', 'blog.manage', 'pages.manage', 'cms.manage', 'universities.manage']), 403);
 
+        $isVideo = $request->hasFile('file') && in_array(strtolower((string) $request->file('file')?->getClientOriginalExtension()), self::VIDEO_MIMES, true);
+
         $data = $request->validate([
-            'file' => ['required', 'file', 'max:'.self::MAX_KB, 'mimes:'.implode(',', self::MIMES), 'dimensions:max_width=8000,max_height=8000'],
+            'file' => $isVideo
+                ? ['required', 'file', 'max:'.self::VIDEO_MAX_KB, 'mimes:'.implode(',', self::VIDEO_MIMES), 'mimetypes:video/mp4,video/webm']
+                : ['required', 'file', 'max:'.self::MAX_KB, 'mimes:'.implode(',', self::MIMES), 'dimensions:max_width=8000,max_height=8000'],
             'alt' => ['nullable', 'string', 'max:255'],
-        ], ['file.mimes' => __('Upload a JPG, PNG, WEBP or GIF image.')]);
+        ], [
+            'file.mimes' => $isVideo ? __('Upload an MP4 or WebM video.') : __('Upload a JPG, PNG, WEBP or GIF image, or an MP4 or WebM video.'),
+            'file.mimetypes' => __('Upload an MP4 or WebM video.'),
+            'file.max' => $isVideo ? __('Videos can be up to :mb MB.', ['mb' => self::VIDEO_MAX_KB / 1024]) : __('Images can be up to :mb MB.', ['mb' => self::MAX_KB / 1024]),
+        ]);
 
         $file = $data['file'];
-        $size = @getimagesize($file->getRealPath()) ?: [null, null];
+        $size = $isVideo ? [null, null] : (@getimagesize($file->getRealPath()) ?: [null, null]);
         $path = $file->storeAs('media/'.now()->format('Y/m'), Str::random(32).'.'.$file->extension(), 'public');
 
         $media = Media::create([
@@ -80,7 +98,7 @@ class MediaController extends Controller
             return response()->json($media->present(), 201);
         }
 
-        $this->toast(['type' => 'success', 'message' => __('Image uploaded.')]);
+        $this->toast(['type' => 'success', 'message' => $media->isVideo() ? __('Video uploaded.') : __('Image uploaded.')]);
 
         return back();
     }
@@ -99,7 +117,7 @@ class MediaController extends Controller
         Gate::authorize('media.manage');
 
         $media->delete();
-        $this->toast(['type' => 'success', 'message' => __('Image deleted.')]);
+        $this->toast(['type' => 'success', 'message' => __('File deleted.')]);
 
         return back();
     }

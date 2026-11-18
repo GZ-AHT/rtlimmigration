@@ -1,5 +1,11 @@
+@php
+    // Public website pages are light-only (roadmap Q9) and carry the
+    // Super Admin's site-wide custom code (Q16); admin and portal pages don't.
+    $isWebsite = str_starts_with($page['component'] ?? '', 'website/');
+    $siteCode = $isWebsite ? app(\App\Support\Settings\SettingsRepository::class) : null;
+@endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ($appearance ?? 'system') == 'dark'])>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"  @class(['dark' => ! $isWebsite && ($appearance ?? 'system') == 'dark', 'website' => $isWebsite])>
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,7 +13,7 @@
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
             (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
+                const appearance = '{{ $isWebsite ? "light" : ($appearance ?? "system") }}';
 
                 if (appearance === 'system') {
                     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -25,6 +31,10 @@
                 background-color: #f7f8fa;
             }
 
+            html.website {
+                background-color: #ffffff;
+            }
+
             html.dark {
                 background-color: #111318;
             }
@@ -40,8 +50,17 @@
         <x-inertia::head>
             <title>{{ config('app.name', 'Laravel') }}</title>
         </x-inertia::head>
+        @if ($siteCode)
+            @if ($css = $siteCode->get('code.css'))
+                <style>{!! str_ireplace('</style', '', $css) !!}</style>
+            @endif
+            {!! $siteCode->get('code.head_js') !!}
+        @endif
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />
+        @if ($siteCode)
+            {!! $siteCode->get('code.body_js') !!}
+        @endif
     </body>
 </html>

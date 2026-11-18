@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Cms\WebsiteMenus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -24,6 +25,13 @@ class Menu extends Model
         'footer_services' => 'Footer: Our services',
         'footer_legal' => 'Footer: Legal links',
     ];
+
+    protected static function booted(): void
+    {
+        // The website caches its menus (App\Support\Cms\WebsiteMenus).
+        static::saved(fn () => WebsiteMenus::forget());
+        static::deleted(fn () => WebsiteMenus::forget());
+    }
 
     /** @return HasMany<MenuItem, $this> */
     public function items(): HasMany

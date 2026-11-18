@@ -115,10 +115,8 @@ watch(enabled, (value) => {
 </script>
 
 <template>
-    <div
-        v-if="enabled"
-        class="fixed right-4 bottom-4 z-50 sm:right-6 sm:bottom-6"
-    >
+    <!-- Placed by SiteLaunchers, which stacks it under the WhatsApp button. -->
+    <div v-if="enabled" class="relative">
         <div
             v-show="open"
             id="chat-popup"
@@ -127,7 +125,7 @@ watch(enabled, (value) => {
             aria-modal="false"
             aria-labelledby="chat-popup-heading"
             tabindex="-1"
-            class="fixed inset-0 flex flex-col bg-white outline-none sm:absolute sm:inset-auto sm:right-0 sm:bottom-[76px] sm:max-h-[min(640px,calc(100vh-120px))] sm:w-[380px] sm:rounded-[18px] sm:border sm:border-site-line sm:shadow-2xl"
+            class="fixed inset-0 flex flex-col bg-white outline-none sm:absolute sm:inset-auto sm:right-0 sm:bottom-[64px] sm:max-h-[min(640px,calc(100vh-120px))] sm:w-[380px] sm:rounded-[18px] sm:border sm:border-site-line sm:shadow-2xl"
         >
             <div
                 class="flex items-center justify-between gap-3 bg-site-red px-4 py-3 text-white sm:rounded-t-[18px]"
@@ -176,17 +174,30 @@ watch(enabled, (value) => {
             </div>
         </div>
 
+        <!-- Figma "Live chat launcher" (node 12:54). -->
         <button
             ref="button"
             type="button"
-            class="grid size-[60px] place-items-center rounded-full bg-site-red text-white shadow-xl transition-transform hover:scale-105 hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none"
-            :class="open ? 'hidden sm:grid' : ''"
+            class="flex h-[52px] items-center gap-3 rounded-full border border-site-tab-line bg-white pr-5 pl-[17px] text-[14px] leading-5 font-semibold text-site-ink shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-transform hover:scale-[1.03] focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none sm:w-[178px]"
+            :class="open ? 'hidden sm:flex' : ''"
             :aria-expanded="open"
             aria-controls="chat-popup"
-            :aria-label="open ? 'Close chat' : 'Chat with us'"
+            :aria-label="open ? 'Close chat' : 'Live chat'"
             @click="toggle"
         >
-            <AppIcon :name="open ? 'close' : 'chat'" :size="28" />
+            <span class="grid size-6 shrink-0 place-items-center">
+                <AppIcon v-if="open" name="close" :size="22" />
+                <img
+                    v-else
+                    src="/images/site/icon-chat.svg"
+                    alt=""
+                    width="18.73"
+                    height="19.39"
+                />
+            </span>
+            <span class="hidden sm:inline">{{
+                open ? 'Close chat' : 'Live chat'
+            }}</span>
         </button>
     </div>
 </template>

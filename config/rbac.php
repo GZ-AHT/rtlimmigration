@@ -81,6 +81,10 @@ return [
             'universities.view' => 'View universities',
             'universities.manage' => 'Manage universities, courses and intakes',
         ],
+        'Skill migration' => [
+            'assessments.view' => 'View skill migration assessment submissions',
+            'assessments.manage' => 'Manage country assessments, questions, scoring and recommendations',
+        ],
         'Partners' => [
             'partners.view' => 'View partner applications and partners',
             'partners.manage' => 'Manage partners',
@@ -166,6 +170,7 @@ return [
             'leads.view', 'leads.create', 'leads.update', 'leads.assign', 'leads.transfer', 'leads.convert',
             'counselors.view',
             'tickets.view', 'tickets.manage', 'tickets.assign',
+            'assessments.view',
             'email.access', 'chat.access', 'chat.view-all',
             'reports.view',
         ],

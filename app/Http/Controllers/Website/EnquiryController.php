@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Website;
 
 use App\Actions\Leads\CaptureLead;
-use App\Enums\ContactChannel;
 use App\Enums\LeadSource;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
@@ -11,31 +10,18 @@ use App\Models\Country;
 use App\Models\Service;
 use App\Models\User;
 use App\Notifications\NewLeadReceived;
-use App\Support\Chat\ChatSecuritySettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\Rule;
-use Inertia\Inertia;
-use Inertia\Response;
 
 /**
  * Public consultation enquiry (REQ §7 "Website Lead Form", §11 step 1).
- * Fields follow the Figma Contact page form. The full Figma page is built
- * in Phase 9; this delivers a working form so real leads flow in now.
+ * Fields follow the Figma Contact page form; the form itself is the
+ * "contact" CMS section on the Contact page.
  */
 class EnquiryController extends Controller
 {
-    public function show(): Response
-    {
-        return Inertia::render('website/Contact', [
-            'services' => Service::active()->get(['id', 'name'])->map(fn ($s) => ['value' => (string) $s->id, 'label' => $s->name])->values(),
-            'countries' => Country::destinations()->get(['id', 'name'])->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name])->values(),
-            'channels' => array_values(array_filter(ContactChannel::options(), fn ($o) => in_array($o['value'], ['phone', 'email', 'whatsapp', 'video', 'in_person'], true))),
-            'chatEnabled' => app(ChatSecuritySettings::class)->guestChatEnabled(),
-        ]);
-    }
-
     public function store(Request $request, CaptureLead $capture): RedirectResponse
     {
         // Honeypot: real visitors never see or fill this field.

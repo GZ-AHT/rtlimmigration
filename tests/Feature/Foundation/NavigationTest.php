@@ -12,14 +12,16 @@ function navTitles(array $groups): array
     return collect($groups)->flatMap(fn ($g) => collect($g['items'])->pluck('title'))->all();
 }
 
-it('shows super admin all 26 admin modules from REQ §25 when planned items are visible', function () {
+// REQ §25 lists 26 modules; Skill Migration (owner's request, 2026-11-18) is the 27th.
+it('shows super admin all 26 REQ §25 admin modules plus Skill Migration when planned items are visible', function () {
     config(['navigation.show_planned' => true]);
 
     $titles = navTitles(app(Navigation::class)->for(Area::Admin, $this->userWithRole(Role::SuperAdmin)));
 
-    expect($titles)->toHaveCount(26)
+    expect($titles)->toHaveCount(27)
+        ->and($titles)->toContain('Skill Migration')
         ->and($titles[0])->toBe('Dashboard')
-        ->and($titles[25])->toBe('Security & Audit Logs');
+        ->and($titles[26])->toBe('Security & Audit Logs');
 });
 
 /** A small fixed menu so these tests don't change as modules are built. */

@@ -39,11 +39,18 @@ class Media extends Model
         return Storage::disk($this->disk)->url($this->path);
     }
 
-    /** @return array{id: int, url: string, alt: string|null, width: int|null, height: int|null, name: string, size: int} */
+    public function isVideo(): bool
+    {
+        return str_starts_with($this->mime_type, 'video/');
+    }
+
+    /** @return array{id: int, url: string, alt: string|null, width: int|null, height: int|null, name: string, size: int, kind: string, mime: string} */
     public function present(): array
     {
         return [
             'id' => $this->id,
+            'kind' => $this->isVideo() ? 'video' : 'image',
+            'mime' => $this->mime_type,
             'url' => $this->url(),
             'alt' => $this->alt,
             'width' => $this->width,

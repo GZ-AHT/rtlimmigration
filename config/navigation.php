@@ -83,6 +83,12 @@ return [
                     ['title' => 'Add university', 'route' => 'admin.universities.create', 'permission' => 'universities.manage', 'phase' => 9],
                     ['title' => 'Countries', 'route' => 'admin.countries.index', 'permission' => 'universities.view', 'phase' => 9],
                 ]],
+                ['title' => 'Skill Migration', 'icon' => 'quiz', 'children' => [
+                    ['title' => 'Country assessments', 'route' => 'admin.skill-assessments.index', 'permission' => 'assessments.view', 'phase' => 9],
+                    ['title' => 'Question bank', 'route' => 'admin.skill-assessments.questions.index', 'permission' => 'assessments.manage', 'phase' => 9],
+                    ['title' => 'Submissions', 'route' => 'admin.skill-assessments.submissions.index', 'permission' => 'assessments.view', 'phase' => 9],
+                    ['title' => 'Countries', 'route' => 'admin.countries.index', 'permission' => 'assessments.manage', 'phase' => 9],
+                ]],
                 ['title' => 'Partner Management', 'icon' => 'handshake', 'children' => [
                     ['title' => 'Applications', 'route' => 'admin.partner-applications.index', 'permission' => 'partners.view', 'phase' => 9],
                     ['title' => 'Partners', 'route' => 'admin.partners.index', 'permission' => 'partners.view', 'phase' => 9],

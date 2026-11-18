@@ -7,6 +7,7 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A reader's comment, shown only once approved (REQ §4 Blog Comments).
@@ -36,5 +37,11 @@ class BlogComment extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(BlogPost::class, 'blog_post_id');
+    }
+
+    /** @return HasMany<BlogComment, $this> */
+    public function replies(): HasMany
+    {
+        return $this->hasMany(BlogComment::class, 'parent_id');
     }
 }
