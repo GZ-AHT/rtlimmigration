@@ -242,7 +242,6 @@
 }
 
 @layer components {
-
     /* Material Symbols, tuned like admin-demo.html (.nav .ico) */
     .icon {
         font-family: 'Material Symbols Outlined';
@@ -305,15 +304,25 @@
     .tingle-modal:not(:has(iframe)),
     .tingle-modal:has(iframe[src='about:blank']),
     .tingle-modal:not(:has(iframe)),
-    .tingle-modal:has(iframe[src="about:blank"]),
+    .tingle-modal:has(iframe[src='about:blank']),
     body:not(:has(.tingle-modal.tingle-modal--visible iframe)) .tingle-modal,
     body:not(:has(.tingle-modal.tingle-modal--visible iframe)) .client_logo,
-    body:not( :has(iframe[src*='sslcommerz' i],
-            iframe[src*='EasyCheckOut' i],
-            iframe[src*='easycheckout' i])) .modal-backdrop,
-    body:not( :has(iframe[src*='sslcommerz' i],
-            iframe[src*='EasyCheckOut' i],
-            iframe[src*='easycheckout' i])) .modal:not(#app *) {
+    body:not(
+            :has(
+                iframe[src*='sslcommerz' i],
+                iframe[src*='EasyCheckOut' i],
+                iframe[src*='easycheckout' i]
+            )
+        )
+        .modal-backdrop,
+    body:not(
+            :has(
+                iframe[src*='sslcommerz' i],
+                iframe[src*='EasyCheckOut' i],
+                iframe[src*='easycheckout' i]
+            )
+        )
+        .modal:not(#app *) {
         display: none !important;
         opacity: 0 !important;
         visibility: hidden !important;

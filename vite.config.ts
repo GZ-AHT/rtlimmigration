@@ -40,17 +40,6 @@ export default defineConfig({
             formVariants: true,
         }),
     ]),
-    server: {
-        watch: {
-            ignored: [
-                '**/.agents/**',
-                '**/.claude/**',
-                '**/.cursor/**',
-                '**/.junie/**',
-                '**/vendor/**',
-            ],
-        },
-    },
     lint: {
         ignorePatterns: [
             'vendor/**',
@@ -95,6 +84,15 @@ export default defineConfig({
         strictPort: true,
         hmr: {
             host: '192.168.1.136',
+        },
+        watch: {
+            ignored: [
+                '**/.agents/**',
+                '**/.claude/**',
+                '**/.cursor/**',
+                '**/.junie/**',
+                '**/vendor/**',
+            ],
         },
     },
 });

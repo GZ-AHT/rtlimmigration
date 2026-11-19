@@ -127,7 +127,7 @@ function step(by: number): void {
                 leave-active-class="transition-opacity duration-200"
                 leave-to-class="opacity-0"
             >
-                <div :key="current.id">
+                <figure :key="current.id" class="m-0">
                     <blockquote
                         class="mt-[6px] max-w-[644px] text-[19px] leading-[28px] font-medium text-site-ink sm:text-[23px] sm:leading-[32px]"
                     >
@@ -152,7 +152,7 @@ function step(by: number): void {
                             >
                         </span>
                     </figcaption>
-                </div>
+                </figure>
             </Transition>
             <div
                 v-if="items.length > 1"
