@@ -348,7 +348,7 @@
 
 /* Public website page container: the Figma frames are 1440 wide with 96px gutters. */
 @utility site-container {
-    @apply mx-auto w-full max-w-360 px-4 sm:px-6 lg:px-24;
+    @apply mx-auto w-full max-w-360 min-w-0 px-4 sm:px-6 lg:px-24;
 }
 
 /* Hide scrollbars on horizontal swipe containers while keeping native scroll */

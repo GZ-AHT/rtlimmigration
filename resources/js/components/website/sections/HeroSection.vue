@@ -56,27 +56,27 @@ onBeforeUnmount(() => window.clearInterval(timer));
 
 <template>
     <div
-        class="site-container pt-6 pb-10 lg:pt-9"
+        class="site-container w-full min-w-0 pt-4 pb-8 sm:pt-6 sm:pb-10 lg:pt-9"
         :class="
             data.height === 'screen' &&
             'flex flex-col justify-center lg:min-h-[calc(100svh-132px)]'
         "
     >
         <div
-            class="grid items-start gap-10 lg:grid-cols-[minmax(0,650px)_minmax(0,554px)] lg:justify-between lg:gap-8"
+            class="grid w-full min-w-0 items-start gap-6 sm:gap-10 lg:grid-cols-[minmax(0,650px)_minmax(0,554px)] lg:justify-between lg:gap-8"
         >
             <div
-                class="lg:pt-[15px]"
+                class="w-full min-w-0 lg:pt-[15px]"
                 :class="centered && 'text-center lg:self-center'"
             >
                 <p
                     v-if="data.eyebrow"
-                    class="text-[11px] leading-[15.6px] font-semibold tracking-[1.2px] text-site-red-text uppercase"
+                    class="text-[10px] font-bold tracking-[1px] text-site-red-text uppercase sm:text-[11px] sm:leading-[15.6px] sm:tracking-[1.2px]"
                 >
                     {{ data.eyebrow }}
                 </p>
                 <h1
-                    class="mt-6 text-[36px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-site-ink sm:text-[54px] sm:leading-[1.05] sm:tracking-[-0.04em] lg:mt-8.25 lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
+                    class="mt-2.5 text-[28px] leading-[1.12] font-bold tracking-[-0.02em] whitespace-pre-line text-site-ink sm:mt-6 sm:text-[54px] sm:leading-[1.05] sm:tracking-[-0.04em] lg:mt-8.25 lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
                 >
                     <template v-if="current === 0 || !slide.title"
                         >{{ data.title
@@ -91,13 +91,13 @@ onBeforeUnmount(() => window.clearInterval(timer));
                 </h1>
                 <p
                     v-if="slide.description"
-                    class="mt-6 max-w-[530px] text-[16px] leading-[1.7] whitespace-pre-line text-site-muted sm:text-[17px] sm:leading-[28.8px] lg:mt-8"
+                    class="mt-2.5 line-clamp-2 max-w-[530px] text-[14px] leading-relaxed whitespace-pre-line text-site-muted sm:mt-6 sm:line-clamp-none sm:text-[17px] sm:leading-[28.8px] lg:mt-8"
                     :class="centered && 'mx-auto'"
                 >
                     {{ slide.description }}
                 </p>
                 <div
-                    class="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-10"
+                    class="mt-5 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-10"
                     :class="centered && 'justify-center'"
                 >
                     <SiteButton
@@ -112,7 +112,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
                         :href="data.secondary.url"
                         arrow="→"
                         tone="ink"
-                        class="text-[15px]"
+                        class="hidden text-[14px] sm:inline-flex sm:text-[15px]"
                         >{{ data.secondary.label }}</ArrowLink
                     >
                 </div>
@@ -138,7 +138,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
                         :media-type="data.media_type"
                         :mobile-video="data.mobile_video"
                         eager
-                        class="aspect-[554/526] w-full rounded-[28px]"
+                        class="aspect-[16/10] w-full rounded-2xl sm:aspect-[554/526] lg:rounded-[28px]"
                     >
                         <div
                             v-if="overlay"
@@ -152,12 +152,12 @@ onBeforeUnmount(() => window.clearInterval(timer));
                         :key="current"
                         :image="slide.image"
                         eager
-                        class="aspect-[554/526] w-full rounded-[28px]"
+                        class="aspect-[16/10] w-full rounded-2xl sm:aspect-[554/526] lg:rounded-[28px]"
                     />
                 </Transition>
                 <p
                     v-if="data.image_caption"
-                    class="absolute top-4 left-4 rounded-[12px] bg-site-navy px-3 py-[13px] text-[11px] leading-[14.3px] font-semibold tracking-[1px] text-white uppercase"
+                    class="absolute top-3 left-3 rounded-lg bg-site-navy px-2.5 py-2 text-[10px] font-semibold tracking-[0.8px] text-white uppercase sm:top-4 sm:left-4 sm:rounded-[12px] sm:px-3 sm:py-[13px] sm:text-[11px] sm:leading-[14.3px] sm:tracking-[1px]"
                 >
                     {{ data.image_caption }}
                 </p>
@@ -184,7 +184,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
             :tabs="data.finder_tabs"
             :help="data.finder_help"
             :records="records"
-            class="mt-10 lg:mt-[58px]"
+            class="mt-6 sm:mt-10 lg:mt-[58px]"
         />
     </div>
 </template>

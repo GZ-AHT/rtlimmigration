@@ -16,9 +16,9 @@ defineProps<{
 
 <template>
     <div
-        class="site-container grid gap-8 lg:grid-cols-[minmax(0,1fr)_520px] lg:items-start lg:gap-10"
+        class="site-container grid w-full min-w-0 grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_520px] lg:items-start lg:gap-10"
     >
-        <div>
+        <div class="w-full min-w-0">
             <p
                 v-if="data.eyebrow"
                 class="text-[11px] leading-[14px] font-semibold text-site-red uppercase"
@@ -39,7 +39,7 @@ defineProps<{
                 {{ data.description }}
             </p>
         </div>
-        <div class="lg:pt-[29px]">
+        <div class="w-full min-w-0 lg:pt-[29px]">
             <NewsletterForm
                 :dark="dark"
                 :button="data.button || 'Subscribe'"

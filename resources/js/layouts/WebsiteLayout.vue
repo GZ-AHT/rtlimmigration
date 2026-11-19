@@ -94,11 +94,15 @@ const theme = computed(() => {
         />
     </Head>
     <div
-        class="flex min-h-screen flex-col overflow-x-clip bg-white font-site text-site-ink antialiased [&_h1]:font-site-heading [&_h2]:font-site-heading [&_h3]:font-site-heading"
+        class="flex min-h-screen flex-col overflow-x-hidden bg-white font-site text-site-ink antialiased [&_h1]:font-site-heading [&_h2]:font-site-heading [&_h3]:font-site-heading"
         :style="theme"
     >
         <SiteHeader />
-        <main id="main" class="flex-1" tabindex="-1">
+        <main
+            id="main"
+            class="w-full min-w-0 flex-1 overflow-x-hidden"
+            tabindex="-1"
+        >
             <slot />
         </main>
         <SiteFooter />
