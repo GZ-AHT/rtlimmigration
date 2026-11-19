@@ -162,11 +162,22 @@ const columns: TableColumn<PaymentRow>[] = [
                     class="tiny-action"
                     :aria-label="`Download receipt ${row.receipt_number}`"
                     ><AppIcon name="download" :size="14" /> Receipt</a
-                ><Link :href="row.url!" class="tiny-action">{{
-                    row.status === 'pending' || row.status === 'verified'
-                        ? 'Review'
-                        : 'Open'
-                }}</Link></template
+                ><Link :href="row.url!" class="tiny-action">
+                    <AppIcon
+                        :name="
+                            row.status === 'pending' ||
+                            row.status === 'verified'
+                                ? 'rate_review'
+                                : 'visibility'
+                        "
+                        :size="13"
+                    />
+                    <span>{{
+                        row.status === 'pending' || row.status === 'verified'
+                            ? 'Review'
+                            : 'Open'
+                    }}</span>
+                </Link></template
             >
         </DataTable>
         <TablePagination :meta="payments" />

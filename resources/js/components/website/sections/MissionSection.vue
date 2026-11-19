@@ -27,11 +27,13 @@ defineProps<{
             class="[&_h2]:mt-[14px] [&_h2]:sm:text-[40px] [&_h2]:sm:leading-[48px] [&_h2]:sm:tracking-normal"
             :class="dark && '[&>p:first-child]:text-[#ff9ca2]'"
         />
-        <div class="mt-10 grid gap-6 lg:grid-cols-2">
+        <div
+            class="-mx-4 mt-10 no-scrollbar flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0"
+        >
             <article
                 v-for="(card, i) in data.cards"
                 :key="i"
-                class="rounded-[8px] px-6 pt-[30px] pb-10 sm:px-8 lg:min-h-[402px]"
+                class="w-[85vw] max-w-[400px] shrink-0 snap-start rounded-[8px] px-6 pt-7.5 pb-10 sm:w-[70vw] sm:px-8 md:w-auto md:max-w-none lg:min-h-100.5"
                 :class="i === 0 ? 'bg-site-panel' : 'bg-site-blush-panel'"
             >
                 <p

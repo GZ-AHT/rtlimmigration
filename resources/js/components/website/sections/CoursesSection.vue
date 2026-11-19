@@ -38,12 +38,12 @@ defineProps<{
         </p>
         <ul
             v-else
-            class="mt-9 grid gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6"
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:grid-cols-3 lg:gap-6"
         >
             <li
                 v-for="c in records.items"
                 :key="c.id"
-                class="flex flex-col rounded-[20px] bg-site-sand p-6"
+                class="flex w-[82vw] max-w-[340px] shrink-0 snap-start flex-col rounded-[20px] bg-site-sand p-6 sm:w-[60vw] md:w-auto md:max-w-none"
             >
                 <p class="text-[11px] font-semibold text-site-red uppercase">
                     {{ c.level

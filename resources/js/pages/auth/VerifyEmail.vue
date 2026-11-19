@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head, Link } from '@inertiajs/vue3';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 import { logout } from '@/routes';
 import { send } from '@/routes/verification';
@@ -22,7 +23,7 @@ defineProps<{
 
     <div
         v-if="status === 'verification-link-sent'"
-        class="mb-6 rounded-[12px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-800"
+        class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm font-medium text-emerald-800"
     >
         A new verification link has been sent to the email address you provided.
     </div>
@@ -40,8 +41,15 @@ defineProps<{
         <button
             type="submit"
             :disabled="processing"
-            class="flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
+            class="flex h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
         >
+            <AppIcon
+                v-if="processing"
+                name="progress_activity"
+                :size="18"
+                class="animate-spin"
+            />
+            <AppIcon v-else name="mark_email_read" :size="18" />
             <span v-if="processing">Sending verification link…</span>
             <template v-else>
                 <span>Resend verification email</span>

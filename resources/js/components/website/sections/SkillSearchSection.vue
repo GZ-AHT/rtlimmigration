@@ -109,8 +109,14 @@ function go(): void {
                 <p class="text-[11px] font-semibold text-site-muted uppercase">
                     Popular destinations
                 </p>
-                <ul class="mt-3 flex flex-wrap gap-2">
-                    <li v-for="c in records.countries" :key="c.slug">
+                <ul
+                    class="-mx-2 mt-3 no-scrollbar flex gap-2 overflow-x-auto px-2 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 sm:pb-0"
+                >
+                    <li
+                        v-for="c in records.countries"
+                        :key="c.slug"
+                        class="shrink-0 sm:shrink"
+                    >
                         <a
                             :href="c.url"
                             class="inline-flex h-10 items-center gap-2 rounded-full border border-site-line px-4 text-[14px] font-medium text-site-ink transition-colors hover:border-site-red hover:text-site-red"

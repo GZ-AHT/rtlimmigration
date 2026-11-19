@@ -21,7 +21,7 @@ const whatsapp = computed(() => whatsappUrl.value);
             :href="whatsapp"
             target="_blank"
             rel="noopener noreferrer"
-            class="pointer-events-auto flex h-[52px] items-center gap-3 rounded-full border border-site-whatsapp bg-site-whatsapp pr-5 pl-[17px] text-[14px] leading-5 font-semibold text-white shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-transform hover:scale-[1.03] sm:w-[178px]"
+            class="pointer-events-auto flex size-12 items-center justify-center gap-3 rounded-full border border-site-whatsapp bg-site-whatsapp shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-transform hover:scale-105 active:scale-95 sm:h-13 sm:w-[178px] sm:justify-start sm:px-4"
             aria-label="Chat on WhatsApp (opens WhatsApp)"
         >
             <span class="grid size-6 shrink-0 place-items-center">

@@ -71,16 +71,20 @@ function choose(index: number): void {
 
             <ul
                 v-if="groups.length > 1 || data.all"
-                class="mt-[22px] flex flex-col gap-[9px]"
+                class="-mx-4 mt-5.5 no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-col sm:overflow-visible sm:px-0 sm:pb-0"
                 role="tablist"
                 aria-label="Question topics"
             >
-                <li v-for="(g, i) in groups" :key="g.slug">
+                <li
+                    v-for="(g, i) in groups"
+                    :key="g.slug"
+                    class="shrink-0 snap-start sm:shrink sm:snap-none"
+                >
                     <button
                         type="button"
                         role="tab"
                         :aria-selected="!query && i === active"
-                        class="relative flex h-11 w-full items-center justify-between overflow-hidden rounded-[12px] pr-[15px] pl-[18px] text-left text-[14px] leading-[18.2px] transition-colors"
+                        class="relative flex h-11 items-center justify-between overflow-hidden rounded-xl pr-4 pl-4.5 text-left text-[14px] leading-[18.2px] whitespace-nowrap transition-colors sm:w-full"
                         :class="
                             !query && i === active
                                 ? 'bg-site-navy font-semibold text-white'

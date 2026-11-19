@@ -21,6 +21,7 @@ import {
     cancelEasyCheckout,
     cleanupSslCommerzArtifacts,
     easyCheckoutSupported,
+    isEasyCheckoutActive,
     loadEasyCheckout,
     openEasyCheckout,
 } from '@/lib/easyCheckout';
@@ -75,7 +76,11 @@ function stopWatchdog(): void {
 }
 
 function handleOffline(): void {
-    if (gatewayLoading.value || startingOnlineId.value !== null) {
+    if (
+        gatewayLoading.value ||
+        startingOnlineId.value !== null ||
+        isEasyCheckoutActive()
+    ) {
         cancelPaymentLoading('Internet connection lost. Payment cancelled.');
     }
 }
@@ -406,7 +411,7 @@ async function payOnline(request: RequestItem): Promise<void> {
 
     <Dialog :open="paying !== null" @update:open="(v) => !v && (paying = null)">
         <DialogContent
-            class="max-h-[90vh] overflow-y-auto rounded-[14px] sm:max-w-[520px]"
+            class="max-h-[90vh] overflow-y-auto rounded-[14px] sm:max-w-130"
         >
             <DialogHeader>
                 <DialogTitle class="font-display text-xl font-extrabold">

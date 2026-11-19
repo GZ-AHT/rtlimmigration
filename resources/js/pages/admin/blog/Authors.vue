@@ -2,6 +2,7 @@
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import ImageField from '@/components/cms/ImageField.vue';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import FormField from '@/components/panel/FormField.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
@@ -129,7 +130,8 @@ function save(): void {
                     class="tiny-action self-start"
                     @click="open(a)"
                 >
-                    Edit
+                    <AppIcon name="edit" :size="13" />
+                    <span>Edit</span>
                 </button>
             </li>
         </ul>
@@ -151,7 +153,7 @@ function save(): void {
         :open="editing !== null"
         @update:open="(v) => !v && (editing = null)"
     >
-        <DialogContent class="rounded-[14px] sm:max-w-[520px]">
+        <DialogContent class="rounded-[14px] sm:max-w-130">
             <DialogHeader>
                 <DialogTitle class="font-display text-xl font-extrabold">{{
                     editing?.name

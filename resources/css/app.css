@@ -242,6 +242,7 @@
 }
 
 @layer components {
+
     /* Material Symbols, tuned like admin-demo.html (.nav .ico) */
     .icon {
         font-family: 'Material Symbols Outlined';
@@ -273,15 +274,19 @@
             'opsz' 20;
     }
 
-    .icon-lock {
-        width: 48px;
-        height: 48px;
-        position: absolute;
-        overflow: hidden;
-        margin-left: 25px;
-        margin-bottom: 25px;
-        top: 60.4%;
-        left: 47.3%;
+    /* 
+     * Hide SSLCommerz redundant loader artifacts:
+     * PaymentLoadingModal.vue handles loading with its dedicated flight animation.
+     * Never display SSLCommerz's built-in .shaz_back_overlay, lock icons (.icon-lock), or spinning loaders (.sloader).
+     */
+    .shaz_back_overlay,
+    .icon-lock,
+    .sloader,
+    .lock-center {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 
     .mobile_popup {
@@ -292,19 +297,33 @@
         height: 100% !important;
     }
 
-    /* Prevent SSLCommerz lock icon, backdrops, and modal headers from staying visible when popup is closed */
-    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
-        .icon-lock,
-    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
-        .mobile_popup,
-    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
-        .modal-backdrop,
-    body:not(:has(iframe[src*='sslcommerz'], iframe[src*='EasyCheckOut']))
-        .modal:not(#app *) {
+    /* 
+     * Prevent SSLCommerz tingle-modal, backdrops, and modal headers from staying visible when popup is closed/inactive.
+     * Only allow tingle-modal to render when actively visible AND containing a functional gateway iframe.
+     */
+    .tingle-modal:not(.tingle-modal--visible),
+    .tingle-modal:not(:has(iframe)),
+    .tingle-modal:has(iframe[src='about:blank']),
+    .tingle-modal:not(:has(iframe)),
+    .tingle-modal:has(iframe[src="about:blank"]),
+    body:not(:has(.tingle-modal.tingle-modal--visible iframe)) .tingle-modal,
+    body:not(:has(.tingle-modal.tingle-modal--visible iframe)) .client_logo,
+    body:not( :has(iframe[src*='sslcommerz' i],
+            iframe[src*='EasyCheckOut' i],
+            iframe[src*='easycheckout' i])) .modal-backdrop,
+    body:not( :has(iframe[src*='sslcommerz' i],
+            iframe[src*='EasyCheckOut' i],
+            iframe[src*='easycheckout' i])) .modal:not(#app *) {
         display: none !important;
         opacity: 0 !important;
         visibility: hidden !important;
         pointer-events: none !important;
+    }
+
+    /* Prevent SSLCommerz tingle.js body freeze when popup is closed */
+    body.tingle-enabled:not(:has(.tingle-modal.tingle-modal--visible iframe)) {
+        position: static !important;
+        overflow: auto !important;
     }
 
     /* Small bordered row action (demo .tiny) */
@@ -320,7 +339,17 @@
 
 /* Public website page container: the Figma frames are 1440 wide with 96px gutters. */
 @utility site-container {
-    @apply mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-24;
+    @apply mx-auto w-full max-w-360 px-4 sm:px-6 lg:px-24;
+}
+
+/* Hide scrollbars on horizontal swipe containers while keeping native scroll */
+@utility no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 /* Rich text from the CMS (blog articles, legal pages, image + text sections). */
@@ -330,36 +359,47 @@
     & :where(h2) {
         @apply mt-10 mb-4 text-[26px] leading-[1.2] font-bold tracking-[-0.02em] text-site-ink;
     }
+
     & :where(h3) {
         @apply mt-8 mb-3 text-[20px] leading-[1.3] font-semibold text-site-ink;
     }
+
     & :where(p) {
         @apply my-4;
     }
+
     & :where(ul, ol) {
         @apply my-4 pl-6;
     }
+
     & :where(ul) {
         @apply list-disc;
     }
+
     & :where(ol) {
         @apply list-decimal;
     }
+
     & :where(li) {
         @apply my-1.5 pl-1 marker:text-site-red;
     }
+
     & :where(a) {
         @apply font-medium text-site-red underline underline-offset-2;
     }
+
     & :where(strong) {
         @apply font-semibold text-site-ink;
     }
+
     & :where(blockquote) {
         @apply my-6 border-l-4 border-site-red pl-5 text-[18px] text-site-ink italic;
     }
+
     & :where(img) {
         @apply my-6 h-auto max-w-full rounded-[14px];
     }
+
     & :where(> :first-child) {
         @apply mt-0;
     }

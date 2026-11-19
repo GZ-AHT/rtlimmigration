@@ -59,7 +59,7 @@ const HEIGHTS: Record<string, string> = {
                     {{ data.eyebrow }}
                 </p>
                 <h1
-                    class="mt-6 text-[44px] leading-[1.05] font-bold tracking-[-0.03em] whitespace-pre-line text-white sm:text-[58px] lg:mt-[25px] lg:text-[66px] lg:leading-[73px] lg:tracking-[-0.5px]"
+                    class="mt-6 text-[34px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-white sm:text-[48px] sm:leading-[1.05] lg:mt-6.25 lg:text-[66px] lg:leading-[73px] lg:tracking-[-0.5px]"
                 >
                     {{ data.title
                     }}<template v-if="data.title_accent"
@@ -68,19 +68,19 @@ const HEIGHTS: Record<string, string> = {
                 </h1>
                 <p
                     v-if="data.description"
-                    class="mt-6 max-w-[540px] text-[16px] leading-[1.7] text-white sm:text-[17px] sm:leading-[29px] lg:mt-[28px] lg:whitespace-pre-line"
+                    class="mt-6 max-w-[540px] text-[16px] leading-[1.7] text-white sm:text-[17px] sm:leading-[29px] lg:mt-7 lg:whitespace-pre-line"
                     :class="centered && 'mx-auto'"
                 >
                     {{ data.description }}
                 </p>
                 <div
-                    class="mt-8 flex flex-wrap items-center gap-x-[29px] gap-y-4 lg:mt-[30px]"
+                    class="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-7.5"
                     :class="centered && 'justify-center'"
                 >
                     <SiteButton
                         v-if="data.primary.url"
                         :href="data.primary.url"
-                        class="min-w-[240px] justify-start! rounded-[4px]!"
+                        class="w-full justify-center! rounded-[4px]! sm:w-auto sm:min-w-[240px] sm:justify-start!"
                         >{{ data.primary.label }}</SiteButton
                     >
                     <ArrowLink

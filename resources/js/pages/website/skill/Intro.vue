@@ -72,13 +72,17 @@ const err = (k: string) =>
                 :iso2="assessment.iso2"
                 :slug="assessment.slug"
             />
-            <div class="mt-6 flex items-start gap-4">
-                <span class="text-[52px] leading-none" aria-hidden="true">{{
-                    flag(assessment.iso2)
-                }}</span>
+            <div
+                class="mt-6 flex flex-col items-start gap-3 sm:flex-row sm:gap-4"
+            >
+                <span
+                    class="text-[44px] leading-none sm:text-[52px]"
+                    aria-hidden="true"
+                    >{{ flag(assessment.iso2) }}</span
+                >
                 <div>
                     <h1
-                        class="text-[34px] leading-[1.1] font-bold tracking-[-0.02em] sm:text-[48px] sm:leading-[54px]"
+                        class="text-[26px] leading-[1.15] font-bold tracking-[-0.02em] break-words sm:text-[36px] sm:leading-[44px] md:text-[48px] md:leading-[54px]"
                     >
                         {{ assessment.title }}
                     </h1>

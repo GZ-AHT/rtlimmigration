@@ -7,6 +7,7 @@ import { useSite } from '@/composables/useSite';
 import { guest as guestChat } from '@/routes/chat';
 import { store } from '@/routes/enquiry';
 import type { Option } from '@/types/website';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 
 /*
@@ -78,10 +79,10 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
 
 <template>
     <div
-        class="mx-auto grid max-w-[1440px] gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,804px)_424px] lg:items-start lg:gap-11 lg:pr-24 lg:pl-[72px]"
+        class="mx-auto grid max-w-360 gap-6 px-4 sm:px-6 lg:grid-cols-[minmax(0,804px)_424px] lg:items-start lg:gap-11 lg:pr-24 lg:pl-18"
     >
         <div
-            class="rounded-[20px] border border-site-line bg-white px-5 py-6 sm:px-6 sm:pt-[26px] sm:pb-[38px]"
+            class="rounded-[20px] border border-site-line bg-white px-5 py-6 sm:px-6 sm:pt-6.5 sm:pb-9.5"
         >
             <p
                 class="text-[11px] leading-[16.5px] font-semibold tracking-wide text-site-red uppercase"
@@ -89,7 +90,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                 {{ data.eyebrow }}
             </p>
             <h2
-                class="mt-[10px] text-[28px] leading-tight font-bold sm:text-[36px] sm:leading-[43.7px]"
+                class="mt-2.5 text-[28px] leading-tight font-bold sm:text-[36px] sm:leading-[43.7px]"
             >
                 {{ data.title }}
             </h2>
@@ -122,7 +123,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
 
             <form
                 v-else-if="records"
-                class="mt-[38px] grid gap-x-6 gap-y-[26px] sm:grid-cols-2"
+                class="mt-9.5 grid gap-x-6 gap-y-6.5 sm:grid-cols-2"
                 novalidate
                 @submit.prevent="submit"
             >
@@ -206,7 +207,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                             alt=""
                             width="24"
                             height="24"
-                            class="pointer-events-none absolute top-[15px] right-[15px] size-[18px]"
+                            class="pointer-events-none absolute top-3.75 right-3.75 size-4.5"
                         />
                     </div>
                 </FormField>
@@ -234,7 +235,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                             alt=""
                             width="24"
                             height="24"
-                            class="pointer-events-none absolute top-[15px] right-[15px] size-[18px]"
+                            class="pointer-events-none absolute top-3.75 right-3.75 size-4.5"
                         />
                     </div>
                 </FormField>
@@ -262,7 +263,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                             alt=""
                             width="24"
                             height="24"
-                            class="pointer-events-none absolute top-[15px] right-[15px] size-[18px]"
+                            class="pointer-events-none absolute top-3.75 right-3.75 size-4.5"
                         />
                     </div>
                 </FormField>
@@ -278,7 +279,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                         rows="5"
                         maxlength="2000"
                         placeholder="Share your goals, questions or preferred study plans…"
-                        :class="[fieldClass, 'h-[120px] resize-y py-[13px]']"
+                        :class="[fieldClass, 'h-30 resize-y py-3.25']"
                         :aria-invalid="invalid('message')"
                         :aria-describedby="
                             describedBy('message', 'enq-message')
@@ -287,7 +288,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                 </FormField>
 
                 <!-- Honeypot: hidden from people and screen readers. -->
-                <div class="absolute -left-[9999px]" aria-hidden="true">
+                <div class="absolute left-[9999px]" aria-hidden="true">
                     <label for="enq-website">Website</label>
                     <input
                         id="enq-website"
@@ -300,12 +301,12 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
 
                 <div class="sm:col-span-2">
                     <label
-                        class="flex items-start gap-3 text-xs leading-[18px] text-site-muted"
+                        class="flex items-start gap-3 text-xs leading-4.5 text-site-muted"
                     >
                         <input
                             v-model="form.consent"
                             type="checkbox"
-                            class="mt-0 size-[18px] shrink-0 rounded-[3px] border-[#dfe1e5] accent-site-red"
+                            class="border-#dfe1e5 mt-0 size-4.5 shrink-0 rounded-[3px] accent-site-red"
                             :aria-invalid="invalid('consent')"
                         />
                         <span
@@ -330,7 +331,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                     <button
                         type="submit"
                         :disabled="form.processing"
-                        class="h-[52px] rounded-[12px] bg-site-red px-5 text-sm font-semibold whitespace-pre text-white transition-colors hover:bg-site-red-dark disabled:opacity-60"
+                        class="h-13 rounded-xl bg-site-red px-5 text-sm font-semibold whitespace-pre text-white transition-colors hover:bg-site-red-dark disabled:opacity-60"
                     >
                         <template v-if="form.processing">Sending…</template
                         ><template v-else
@@ -345,7 +346,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
         </div>
 
         <!-- What to expect. Figma: the form starts 72px from the left edge, the panel ends 96px from the right. -->
-        <aside class="rounded-[20px] bg-site-ink p-8 text-white lg:mt-[30px]">
+        <aside class="rounded-[20px] bg-site-ink p-8 text-white lg:mt-7.5">
             <p
                 v-if="data.aside_eyebrow"
                 class="text-[11px] leading-[16.5px] font-semibold tracking-wide text-site-blush uppercase"
@@ -358,14 +359,14 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
             >
                 {{ data.aside_title }}
             </p>
-            <ol v-if="data.steps.length" class="mt-12 flex flex-col gap-[38px]">
+            <ol v-if="data.steps.length" class="mt-12 flex flex-col gap-9.5">
                 <li
                     v-for="(s, i) in data.steps"
                     :key="i"
                     class="grid grid-cols-[48px_1fr]"
                 >
                     <span
-                        class="pt-[5px] text-sm leading-[18px] font-semibold text-site-blush"
+                        class="pt-1.25 text-sm leading-4.5 font-semibold text-site-blush"
                         >{{ String(i + 1).padStart(2, '0') }}</span
                     >
                     <span>
@@ -374,46 +375,74 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                             >{{ s.title }}</span
                         >
                         <span
-                            class="mt-2 block text-sm leading-[21px] text-site-on-dark lg:max-w-[250px]"
+                            class="mt-2 block text-sm leading-5.25 text-site-on-dark lg:max-w-62.5"
                             >{{ s.text }}</span
                         >
                     </span>
                 </li>
             </ol>
             <template v-if="data.note_title || data.note_text">
-                <hr class="mt-[50px] border-site-divider" />
-                <p class="mt-[29px] text-xl leading-[30px] font-bold">
+                <hr class="mt-12.5 border-site-divider" />
+                <p class="mt-7.25 text-xl leading-7.5 font-bold">
                     {{ data.note_title }}
                 </p>
                 <p
-                    class="mt-3 text-sm leading-[21px] text-site-on-dark lg:max-w-[270px]"
+                    class="mt-3 text-sm leading-5.25 text-site-on-dark lg:max-w-67.5"
                 >
                     {{ data.note_text }}
                 </p>
             </template>
             <ul
                 v-if="data.show_details"
-                class="mt-6 flex flex-col gap-2 text-sm text-site-on-dark"
+                class="mt-6 flex flex-col gap-2.5 text-sm text-site-on-dark"
             >
                 <li v-if="text('general', 'phone')">
                     <a
                         :href="`tel:${text('general', 'phone').replace(/\s/g, '')}`"
-                        class="hover:text-white"
-                        >{{ text('general', 'phone') }}</a
+                        class="inline-flex items-center gap-2 hover:text-white"
                     >
+                        <AppIcon
+                            name="call"
+                            :size="16"
+                            class="shrink-0 text-site-coral"
+                        />
+                        <span>{{ text('general', 'phone') }}</span>
+                    </a>
                 </li>
                 <li v-if="text('general', 'contact_email')">
                     <a
                         :href="`mailto:${text('general', 'contact_email')}`"
-                        class="hover:text-white"
-                        >{{ text('general', 'contact_email') }}</a
+                        class="inline-flex items-center gap-2 hover:text-white"
                     >
+                        <AppIcon
+                            name="mail"
+                            :size="16"
+                            class="shrink-0 text-site-coral"
+                        />
+                        <span>{{ text('general', 'contact_email') }}</span>
+                    </a>
                 </li>
-                <li v-if="text('general', 'address')">
-                    {{ text('general', 'address') }}
+                <li
+                    v-if="text('general', 'address')"
+                    class="inline-flex items-start gap-2"
+                >
+                    <AppIcon
+                        name="location_on"
+                        :size="16"
+                        class="mt-0.5 shrink-0 text-site-coral"
+                    />
+                    <span>{{ text('general', 'address') }}</span>
                 </li>
-                <li v-if="text('general', 'business_hours')">
-                    {{ text('general', 'business_hours') }}
+                <li
+                    v-if="text('general', 'business_hours')"
+                    class="inline-flex items-start gap-2"
+                >
+                    <AppIcon
+                        name="schedule"
+                        :size="16"
+                        class="mt-0.5 shrink-0 text-site-coral"
+                    />
+                    <span>{{ text('general', 'business_hours') }}</span>
                 </li>
             </ul>
             <Link

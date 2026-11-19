@@ -94,7 +94,7 @@ const theme = computed(() => {
         />
     </Head>
     <div
-        class="flex min-h-screen flex-col bg-white font-site text-site-ink antialiased [&_h1]:font-site-heading [&_h2]:font-site-heading [&_h3]:font-site-heading"
+        class="flex min-h-screen flex-col overflow-x-clip bg-white font-site text-site-ink antialiased [&_h1]:font-site-heading [&_h2]:font-site-heading [&_h3]:font-site-heading"
         :style="theme"
     >
         <SiteHeader />

@@ -2,6 +2,7 @@
 import { Form, Head, Link } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 import { fieldClass } from '@/components/website/form';
 import { login } from '@/routes';
@@ -122,11 +123,18 @@ defineOptions({
 
         <button
             type="submit"
-            class="mt-2 flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
+            class="mt-2 flex h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
             :tabindex="5"
             :disabled="processing"
             data-test="register-user-button"
         >
+            <AppIcon
+                v-if="processing"
+                name="progress_activity"
+                :size="18"
+                class="animate-spin"
+            />
+            <AppIcon v-else name="person_add" :size="18" />
             <span v-if="processing">Creating account…</span>
             <template v-else>
                 <span>Create account</span>

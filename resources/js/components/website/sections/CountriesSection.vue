@@ -27,9 +27,13 @@ defineProps<{
         />
         <ul
             v-if="records?.items.length"
-            class="mt-9 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 lg:gap-6"
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:grid-cols-4 lg:gap-6"
         >
-            <li v-for="c in records.items" :key="c.id">
+            <li
+                v-for="c in records.items"
+                :key="c.id"
+                class="w-[74vw] max-w-[280px] shrink-0 snap-start sm:w-[48vw] md:w-auto md:max-w-none"
+            >
                 <Link
                     :href="`/universities?country=${c.id}`"
                     class="group flex h-full items-center gap-4 rounded-[20px] bg-white p-5 transition-shadow hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)]"

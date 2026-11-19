@@ -9,6 +9,7 @@
  *  - on each click it reads the button's `postdata` and `token` properties
  *    and posts them to that endpoint as `cart_json` and `_token`. We say
  *    which invoice to pay through `postdata`;
+ *  - it creates its modal popup using tingle.js (.tingle-modal) and an overlay (.shaz_back_overlay);
  *  - it keeps a reference to the button, so the button lives on <body>
  *    for the whole visit rather than inside a page component.
  *
@@ -32,6 +33,10 @@ let activeObserver: MutationObserver | null = null;
 let guardianObserver: MutationObserver | null = null;
 let guardianTimeout: number | null = null;
 
+export function isEasyCheckoutActive(): boolean {
+    return activeSessionId !== 0;
+}
+
 function stopCancellationGuardian(): void {
     if (guardianObserver) {
         guardianObserver.disconnect();
@@ -46,8 +51,8 @@ function stopCancellationGuardian(): void {
 /**
  * Temporary guardian observer that runs after cancellation:
  * If SSLCommerz's in-flight network call resolves in the background and
- * attempts to inject an iframe or lock icon into the DOM, this guardian
- * destroys it immediately before it can render or execute.
+ * attempts to inject tingle modals, shaz overlays, iframes or lock icons into the DOM,
+ * this guardian destroys them immediately before they can render or execute.
  */
 function startCancellationGuardian(): void {
     stopCancellationGuardian();
@@ -67,15 +72,24 @@ function startCancellationGuardian(): void {
                     continue;
                 }
 
-                // Destroy any lingering lock icon injected by SSLCommerz
-                if (
+                // If any SSLCommerz loading, lock, overlay, logo or modal element is added
+                const isSslElement =
+                    node.classList.contains('tingle-modal') ||
+                    node.classList.contains('tingle-modal-box') ||
+                    node.classList.contains('shaz_back_overlay') ||
+                    node.classList.contains('client_logo') ||
+                    node.classList.contains('client_logo_inner') ||
                     node.classList.contains('icon-lock') ||
-                    node.querySelector('.icon-lock')
-                ) {
-                    node.remove();
-                }
+                    node.classList.contains('sloader') ||
+                    node.classList.contains('lock-center') ||
+                    node.classList.contains('mobile_popup') ||
+                    node.classList.contains('swal2-container') ||
+                    Boolean(
+                        node.querySelector(
+                            '.tingle-modal, .tingle-modal-box, .shaz_back_overlay, .client_logo, .icon-lock, .sloader, .lock-center',
+                        ),
+                    );
 
-                // Destroy any iframe or popup injected by SSLCommerz
                 const isIframe = node.tagName === 'IFRAME';
                 const iframe = isIframe
                     ? (node as HTMLIFrameElement)
@@ -83,25 +97,28 @@ function startCancellationGuardian(): void {
                           'iframe',
                       ) as HTMLIFrameElement | null);
 
+                let isSslIframe = false;
                 if (iframe) {
                     const src = (iframe.src || '').toLowerCase();
+                    const name = (iframe.name || '').toLowerCase();
                     if (
                         src.includes('sslcommerz') ||
                         src.includes('easycheckout') ||
+                        name === 'frame' ||
                         !src
                     ) {
+                        isSslIframe = true;
                         try {
                             iframe.src = 'about:blank';
                         } catch {
                             // ignore cross-origin error
                         }
-                        node.remove();
-                        cleanupSslCommerzArtifacts();
                     }
                 }
 
-                if (node.classList.contains('mobile_popup')) {
+                if (isSslElement || isSslIframe) {
                     node.remove();
+                    cleanupSslCommerzArtifacts();
                 }
             }
         }
@@ -129,67 +146,9 @@ export function easyCheckoutSupported(): boolean {
     );
 }
 
-function injectStyles(): void {
-    if (
-        typeof document === 'undefined' ||
-        document.getElementById('sslcz-helper-styles')
-    ) {
-        return;
-    }
-    const style = document.createElement('style');
-    style.id = 'sslcz-helper-styles';
-    style.textContent = `
-        @keyframes sslcz-spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .sslcz-standalone-backdrop {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(15, 23, 42, 0.45);
-            backdrop-filter: blur(2px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            z-index: 99998;
-            pointer-events: auto;
-            transition: opacity 0.25s ease-out;
-        }
-        .sslcz-standalone-card {
-            width: 380px;
-            max-width: 92vw;
-            height: 560px;
-            max-height: 90vh;
-            background: #ffffff;
-            border-radius: 6px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            box-sizing: border-box;
-            position: relative;
-            overflow: hidden;
-        }
-        .sslcz-spinner {
-            width: 36px;
-            height: 36px;
-            border: 3.5px solid #e2e8f0;
-            border-top-color: #0284c7;
-            border-radius: 50%;
-            animation: sslcz-spin 0.8s linear infinite;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
 /**
- * Completely purges all SSLCommerz DOM artifacts (backdrops, modal containers,
- * headers, iframes, lock icons, spinners) from the document.
+ * Completely purges all SSLCommerz DOM artifacts (tingle modals, shaz backdrops,
+ * client logos, headers, iframes, lock icons, spinners) from the document.
  */
 export function cleanupSslCommerzArtifacts(): void {
     if (typeof document === 'undefined') {
@@ -222,7 +181,7 @@ export function cleanupSslCommerzArtifacts(): void {
 
     // 1. Terminate all network connections on SSLCommerz iframes and remove their top-level trees
     const iframes = document.querySelectorAll<HTMLIFrameElement>(
-        'iframe[src*="sslcommerz"], iframe[src*="EasyCheckOut"], iframe[id*="sslcz"], iframe[name*="sslcz"]',
+        'iframe[src*="sslcommerz" i], iframe[src*="easycheckout" i], iframe[name="frame"], iframe[id*="sslcz" i], iframe[name*="sslcz" i]',
     );
     iframes.forEach((iframe) => {
         try {
@@ -235,11 +194,21 @@ export function cleanupSslCommerzArtifacts(): void {
 
     // 2. Remove all modal, backdrop, and popup elements created by SSLCommerz
     const selectors = [
+        '.tingle-modal',
+        '.tingle-modal-box',
+        '.tingle-modal__close',
+        '.shaz_back_overlay',
+        '.client_logo',
+        '.client_logo_inner',
+        '.iframeWrap',
+        '.icon-lock',
+        '.lock-center',
+        '.sloader',
         '.modal-backdrop',
         '.modal:not(#app *)',
         '.modal-dialog:not(#app *)',
         '.mobile_popup',
-        '.icon-lock',
+        '.swal2-container',
         '#sslcz-standalone-backdrop',
         '[id*="sslcz-modal"]',
         '[class*="sslcz-modal"]',
@@ -257,22 +226,46 @@ export function cleanupSslCommerzArtifacts(): void {
         if (div === appRoot || div.contains(appRoot) || div === payBtn) {
             return;
         }
+        const hasTingle =
+            div.classList.contains('tingle-modal') ||
+            div.querySelector('.tingle-modal, .tingle-modal-box');
+        const hasShaz =
+            div.classList.contains('shaz_back_overlay') ||
+            div.querySelector('.shaz_back_overlay');
         const hasLogo = div.querySelector(
-            'img[src*="logo" i], img[src*="apple-touch" i], [alt="Logo" i]',
+            '.client_logo, img[src*="logo" i], img[src*="apple-touch" i], [alt="Logo" i]',
         );
-        const hasClose = div.querySelector('.close, [data-dismiss="modal"]');
-        const hasLock = div.querySelector('.icon-lock');
+        const hasClose = div.querySelector(
+            '.close, .tingle-modal__close, [data-dismiss="modal"]',
+        );
+        const hasLock = div.querySelector('.icon-lock, .sloader, .lock-center');
         const textHasLogo =
             div.textContent?.includes('Logo') &&
-            div.querySelector('button, .close, a');
+            div.querySelector('button, .close, a, .tingle-modal__close');
 
-        if (hasLock || (hasLogo && hasClose) || textHasLogo) {
+        if (
+            hasTingle ||
+            hasShaz ||
+            hasLock ||
+            (hasLogo && hasClose) ||
+            textHasLogo
+        ) {
             div.remove();
         }
     });
 
+    // 4. Remove any body classes and inline styles added by SSLCommerz or tingle
     if (document.body) {
+        document.body.classList.remove(
+            'tingle-enabled',
+            'pop_up_mobile_device',
+            'modal-open',
+            'swal2-shown',
+            'swal2-height-auto',
+        );
         document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
     }
 }
 
@@ -306,7 +299,6 @@ function observeModal(
     }
 
     stopCancellationGuardian();
-    injectStyles();
 
     let modalElement: HTMLElement | null = null;
 
@@ -324,6 +316,7 @@ function observeModal(
             activeObserver = null;
         }
         cleanupSslCommerzArtifacts();
+        startCancellationGuardian();
         if (activeSessionId === sessionId) {
             callbacks?.onClosed?.();
         }
@@ -335,29 +328,42 @@ function observeModal(
             return;
         }
 
-        // Close button click (e.g. '×' or .close)
-        const isCloseBtn = target.closest(
-            '.close, [data-dismiss="modal"], [aria-label*="Close" i], .close-button',
+        // Close button click (tingle close button, '×', .close, etc.)
+        const isCloseBtn = Boolean(
+            target.closest(
+                '.tingle-modal__close, .tingle-modal__closeIcon, .tingle-modal__closeLabel, .close, [data-dismiss="modal"], [aria-label*="Close" i], .close-button',
+            ),
         );
         const isCloseChar =
             target.textContent?.trim() === '×' ||
             target.textContent?.trim() === '\u00d7' ||
             target.textContent?.trim() === 'X';
-        const inSslModal = target.closest(
-            '.modal, .modal-dialog, .modal-content, .mobile_popup, [id*="sslcz"]',
+        const inSslModal = Boolean(
+            target.closest(
+                '.tingle-modal, .tingle-modal-box, .shaz_back_overlay, .client_logo, .modal, .modal-dialog, .modal-content, .mobile_popup, [id*="sslcz"]',
+            ),
         );
 
         if (isCloseBtn || (isCloseChar && inSslModal)) {
+            event.preventDefault();
+            event.stopPropagation();
             cleanup();
             return;
         }
 
-        // Backdrop click outside modal dialog
-        if (
+        // Backdrop click outside modal dialog / card
+        const isBackdropClick =
+            target.classList.contains('tingle-modal') ||
+            target.classList.contains('shaz_back_overlay') ||
             target.classList.contains('modal-backdrop') ||
+            (Boolean(target.closest('.tingle-modal')) &&
+                !target.closest('.tingle-modal-box')) ||
             (target.classList.contains('modal') &&
-                !target.closest('.modal-dialog, .modal-content'))
-        ) {
+                !target.closest('.modal-dialog, .modal-content'));
+
+        if (isBackdropClick) {
+            event.preventDefault();
+            event.stopPropagation();
             cleanup();
             return;
         }
@@ -380,10 +386,36 @@ function observeModal(
         }
 
         for (const mutation of mutations) {
+            // Check attribute changes on tingle modal (e.g. display: none or class removed)
+            if (mutation.type === 'attributes') {
+                const target = mutation.target as HTMLElement | null;
+                if (target && target.classList.contains('tingle-modal')) {
+                    if (
+                        !target.classList.contains('tingle-modal--visible') ||
+                        target.style.display === 'none'
+                    ) {
+                        cleanup();
+                        return;
+                    }
+                }
+            }
+
             for (let i = 0; i < mutation.addedNodes.length; i++) {
                 const node = mutation.addedNodes[i];
                 if (!(node instanceof HTMLElement)) {
                     continue;
+                }
+
+                // Instantly remove any injected lock icon or shaz overlay
+                if (
+                    node.classList.contains('icon-lock') ||
+                    node.classList.contains('shaz_back_overlay') ||
+                    node.classList.contains('sloader') ||
+                    node.querySelector(
+                        '.icon-lock, .shaz_back_overlay, .sloader',
+                    )
+                ) {
+                    node.remove();
                 }
 
                 const iframe =
@@ -405,7 +437,8 @@ function observeModal(
                         return;
                     }
 
-                    modalElement = node;
+                    modalElement =
+                        node.closest('.tingle-modal') || (node as HTMLElement);
                     callbacks?.onOpened?.();
 
                     let hasLoaded = false;
@@ -462,19 +495,18 @@ function observeModal(
                         return;
                     }
                 }
-            } else {
-                // If .icon-lock is injected when no modal is active, remove it immediately
-                const floatingLock =
-                    document.querySelector('body > .icon-lock');
-                if (floatingLock) {
-                    floatingLock.remove();
-                }
             }
         }
     });
 
-    activeObserver.observe(document.body, { childList: true, subtree: true });
+    activeObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['class', 'style'],
+    });
 
+    // Max 5 minutes safety timeout
     window.setTimeout(() => {
         if (activeObserver) {
             activeObserver.disconnect();

@@ -171,7 +171,7 @@ const selectClass =
                     class="flex items-center gap-2.5 font-semibold text-foreground hover:text-primary"
                 >
                     <span
-                        class="grid size-[30px] shrink-0 place-items-center rounded-full bg-accent text-[11px] text-accent-foreground"
+                        class="grid size-7.5 shrink-0 place-items-center rounded-full bg-accent text-[11px] text-accent-foreground"
                     >
                         {{ getInitials(row.name) }}
                     </span>
@@ -211,17 +211,18 @@ const selectClass =
                 }}
             </template>
             <template #actions="{ row }">
-                <Link
-                    :href="show(row.id)"
-                    class="rounded-md border bg-card px-2 py-1.5 text-[11px] text-secondary-foreground hover:border-ring hover:text-accent-foreground"
-                    >View</Link
-                >
+                <Link :href="show(row.id)" class="tiny-action">
+                    <AppIcon name="visibility" :size="13" />
+                    <span>View</span>
+                </Link>
                 <Link
                     v-if="row.can.update"
                     :href="edit(row.id)"
-                    class="rounded-md border bg-card px-2 py-1.5 text-[11px] text-secondary-foreground hover:border-ring hover:text-accent-foreground"
-                    >Edit</Link
+                    class="tiny-action"
                 >
+                    <AppIcon name="edit" :size="13" />
+                    <span>Edit</span>
+                </Link>
             </template>
         </DataTable>
 

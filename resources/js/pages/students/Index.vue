@@ -174,7 +174,7 @@ function onSort(key: string, direction: SortDirection): void {
                     class="flex items-center gap-2.5 hover:text-primary"
                 >
                     <span
-                        class="grid size-[30px] shrink-0 place-items-center rounded-full bg-accent text-[11px] text-accent-foreground"
+                        class="grid size-7.5 shrink-0 place-items-center rounded-full bg-accent text-[11px] text-accent-foreground"
                         >{{ getInitials(row.name) }}</span
                     >
                     <span class="min-w-0">
@@ -227,9 +227,15 @@ function onSort(key: string, direction: SortDirection): void {
                 </span>
             </template>
             <template #actions="{ row }">
-                <Link :href="row.url!" class="tiny-action">{{
-                    mode === 'profiles' ? 'Edit profile' : 'Open'
-                }}</Link>
+                <Link :href="row.url!" class="tiny-action">
+                    <AppIcon
+                        :name="mode === 'profiles' ? 'edit' : 'visibility'"
+                        :size="13"
+                    />
+                    <span>{{
+                        mode === 'profiles' ? 'Edit profile' : 'Open'
+                    }}</span>
+                </Link>
             </template>
         </DataTable>
         <TablePagination :meta="students" />

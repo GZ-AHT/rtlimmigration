@@ -114,7 +114,7 @@ const facts = computed(() =>
                     </p>
                 </div>
                 <h1
-                    class="mt-5 text-[36px] leading-[1.1] font-bold tracking-[-0.03em] text-site-ink sm:text-[52px] sm:leading-[58px]"
+                    class="mt-5 text-[28px] leading-[1.15] font-bold tracking-[-0.03em] break-words text-site-ink sm:text-[42px] sm:leading-[48px] md:text-[52px] md:leading-[58px]"
                 >
                     {{ university.name }}
                 </h1>
@@ -304,8 +304,14 @@ const facts = computed(() =>
             </section>
             <section v-if="university.gallery.length" class="mt-12">
                 <h2 class="text-[24px] font-bold">Gallery</h2>
-                <ul class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    <li v-for="(img, i) in university.gallery" :key="i">
+                <ul
+                    class="-mx-4 mt-4 no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0"
+                >
+                    <li
+                        v-for="(img, i) in university.gallery"
+                        :key="i"
+                        class="w-[60vw] max-w-[240px] shrink-0 snap-start sm:w-auto sm:max-w-none"
+                    >
                         <SiteImg
                             :image="img"
                             class="aspect-[4/3] w-full rounded-[12px]"

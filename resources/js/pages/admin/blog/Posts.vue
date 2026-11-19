@@ -211,7 +211,8 @@ const onError = (e: Record<string, string>) =>
                             )
                         "
                     >
-                        Restore
+                        <AppIcon name="restore" :size="13" />
+                        <span>Restore</span>
                     </button>
                 </template>
                 <template v-else>
@@ -219,8 +220,10 @@ const onError = (e: Record<string, string>) =>
                         v-if="can.manage"
                         :href="edit(row.id)"
                         class="tiny-action"
-                        >Edit</Link
                     >
+                        <AppIcon name="edit" :size="13" />
+                        <span>Edit</span>
+                    </Link>
                     <button
                         v-if="can.publish"
                         type="button"
@@ -233,7 +236,13 @@ const onError = (e: Record<string, string>) =>
                             )
                         "
                     >
-                        {{ row.is_featured ? 'Unfeature' : 'Feature' }}
+                        <AppIcon
+                            :name="row.is_featured ? 'star_border' : 'star'"
+                            :size="13"
+                        />
+                        <span>{{
+                            row.is_featured ? 'Unfeature' : 'Feature'
+                        }}</span>
                     </button>
                 </template>
             </template>

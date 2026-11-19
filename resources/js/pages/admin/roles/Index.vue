@@ -84,16 +84,16 @@ function confirmDelete(): void {
             <template #cell-label="{ row }">
                 <span class="flex items-center gap-2.5">
                     <span
-                        class="grid size-30px shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground"
+                        class="size-30px grid shrink-0 place-items-center rounded-lg bg-accent text-accent-foreground"
                     >
                         <AppIcon
                             :name="row.full_access ? 'shield_person' : 'badge'"
                             :size="17"
                         />
                     </span>
-                    <span class="font-semibold text-foreground">{{
-                        row.label
-                    }}</span>
+                    <span class="font-semibold text-foreground"
+                        >{{ row.label }}
+                    </span>
                     <StatusBadge
                         v-if="row.built_in"
                         label="Built-in"
@@ -121,16 +121,19 @@ function confirmDelete(): void {
                 <Link
                     v-if="row.can.update"
                     :href="edit(String(row.id))"
-                    class="rounded-md border bg-card px-2 py-1.5 text-[11px] text-secondary-foreground hover:border-ring hover:text-accent-foreground"
-                    >Edit</Link
+                    class="tiny-action"
                 >
+                    <AppIcon name="edit" :size="13" />
+                    <span>Edit</span>
+                </Link>
                 <button
                     v-if="row.can.delete"
                     type="button"
-                    class="rounded-md border bg-card px-2 py-1.5 text-[11px] text-secondary-foreground hover:border-ring hover:text-accent-foreground"
+                    class="tiny-action text-danger hover:border-danger/30"
                     @click="deleting = row"
                 >
-                    Delete
+                    <AppIcon name="delete" :size="13" />
+                    <span>Delete</span>
                 </button>
             </template>
         </DataTable>

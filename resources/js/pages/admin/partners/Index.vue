@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import DataTable from '@/components/panel/DataTable.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -110,11 +111,12 @@ const columns: TableColumn<Row>[] = [
                     />
                 </div>
             </template>
-            <template #actions="{ row }"
-                ><Link :href="show(row.id)" class="tiny-action"
-                    >Open</Link
-                ></template
-            >
+            <template #actions="{ row }">
+                <Link :href="show(row.id)" class="tiny-action">
+                    <AppIcon name="visibility" :size="13" />
+                    <span>Open</span>
+                </Link>
+            </template>
         </DataTable>
         <TablePagination v-if="partners.last_page > 1" :meta="partners" />
     </PanelCard>

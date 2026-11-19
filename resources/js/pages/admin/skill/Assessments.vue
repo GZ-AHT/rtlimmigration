@@ -154,17 +154,22 @@ function create(): void {
                     target="_blank"
                     rel="noopener"
                     class="tiny-action"
-                    >{{ row.status === 'published' ? 'View' : 'Preview' }}</a
                 >
-                <Link v-if="canManage" :href="edit(row.id)" class="tiny-action"
-                    >Edit</Link
-                >
+                    <AppIcon name="visibility" :size="13" />
+                    <span>{{
+                        row.status === 'published' ? 'View' : 'Preview'
+                    }}</span>
+                </a>
+                <Link v-if="canManage" :href="edit(row.id)" class="tiny-action">
+                    <AppIcon name="edit" :size="13" />
+                    <span>Edit</span>
+                </Link>
             </template>
         </DataTable>
     </PanelCard>
 
     <Dialog v-model:open="open">
-        <DialogContent class="rounded-[14px] sm:max-w-[480px]">
+        <DialogContent class="rounded-[14px] sm:max-w-120">
             <DialogHeader>
                 <DialogTitle class="font-display text-xl font-extrabold"
                     >New country assessment</DialogTitle

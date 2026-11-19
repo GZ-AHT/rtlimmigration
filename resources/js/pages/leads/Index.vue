@@ -315,7 +315,10 @@ function onSort(key: string, direction: SortDirection): void {
                 <span v-else class="text-muted-foreground">—</span>
             </template>
             <template #actions="{ row }">
-                <Link :href="row.url!" class="tiny-action">Open</Link>
+                <Link :href="row.url!" class="tiny-action">
+                    <AppIcon name="visibility" :size="13" />
+                    <span>Open</span>
+                </Link>
             </template>
         </DataTable>
 

@@ -105,7 +105,7 @@ function submit(): void {
                     </ol>
                 </nav>
                 <h1
-                    class="mt-8 max-w-[900px] text-[36px] leading-[1.1] font-bold tracking-[-0.03em] text-site-ink sm:text-[52px] sm:leading-[58px]"
+                    class="mt-8 max-w-[900px] text-[28px] leading-[1.15] font-bold tracking-[-0.03em] break-words text-site-ink sm:text-[42px] sm:leading-[48px] md:text-[52px] md:leading-[58px]"
                 >
                     {{ post.title }}
                 </h1>
@@ -379,8 +379,16 @@ function submit(): void {
             >
                 More insights for your next step.
             </h2>
-            <ul class="mt-9 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <li v-for="p in related" :key="p.id"><PostCard :post="p" /></li>
+            <ul
+                class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:grid-cols-3 lg:gap-6"
+            >
+                <li
+                    v-for="p in related"
+                    :key="p.id"
+                    class="w-[82vw] max-w-[340px] shrink-0 snap-start sm:w-[60vw] md:w-auto md:max-w-none"
+                >
+                    <PostCard :post="p" />
+                </li>
             </ul>
         </div>
     </section>

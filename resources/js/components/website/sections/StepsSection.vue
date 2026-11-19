@@ -33,11 +33,13 @@ defineProps<{
         >
             {{ data.description }}
         </p>
-        <ol class="mt-8 grid gap-8 md:grid-cols-3 md:gap-6 lg:mt-[34px]">
+        <ol
+            class="-mx-4 mt-8 no-scrollbar flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-8.5 lg:gap-6"
+        >
             <li
                 v-for="(step, i) in data.items"
                 :key="i"
-                class="flex gap-4 lg:gap-[30px]"
+                class="flex w-[82vw] max-w-[320px] shrink-0 snap-start gap-4 md:w-auto md:max-w-none lg:gap-7.5"
             >
                 <span
                     class="text-[24px] leading-[30px] font-bold text-site-red"

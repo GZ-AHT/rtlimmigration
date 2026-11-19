@@ -2,6 +2,7 @@
 import { Head, router } from '@inertiajs/vue3';
 import { computed } from 'vue';
 import { toast } from 'vue-sonner';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
 import PanelTabs from '@/components/panel/PanelTabs.vue';
@@ -126,10 +127,11 @@ const setStatus = (c: CommentRow, status: string) =>
                     <button
                         v-if="c.status !== 'approved'"
                         type="button"
-                        class="tiny-action"
+                        class="tiny-action text-success hover:border-success/30"
                         @click="setStatus(c, 'approved')"
                     >
-                        Approve
+                        <AppIcon name="check" :size="13" />
+                        <span>Approve</span>
                     </button>
                     <button
                         v-if="c.status !== 'pending'"
@@ -137,27 +139,30 @@ const setStatus = (c: CommentRow, status: string) =>
                         class="tiny-action"
                         @click="setStatus(c, 'pending')"
                     >
-                        Back to pending
+                        <AppIcon name="history" :size="13" />
+                        <span>Back to pending</span>
                     </button>
                     <button
                         v-if="c.status !== 'spam'"
                         type="button"
-                        class="tiny-action"
+                        class="tiny-action text-warning hover:border-warning/30"
                         @click="setStatus(c, 'spam')"
                     >
-                        Spam
+                        <AppIcon name="report" :size="13" />
+                        <span>Spam</span>
                     </button>
                     <button
                         v-if="c.status !== 'rejected'"
                         type="button"
-                        class="tiny-action"
+                        class="tiny-action text-danger hover:border-danger/30"
                         @click="setStatus(c, 'rejected')"
                     >
-                        Reject
+                        <AppIcon name="block" :size="13" />
+                        <span>Reject</span>
                     </button>
                     <button
                         type="button"
-                        class="tiny-action"
+                        class="tiny-action text-danger hover:border-danger/30"
                         @click="
                             router.delete(destroy(c.id).url, {
                                 preserveScroll: true,
@@ -165,7 +170,8 @@ const setStatus = (c: CommentRow, status: string) =>
                             })
                         "
                     >
-                        Delete
+                        <AppIcon name="delete" :size="13" />
+                        <span>Delete</span>
                     </button>
                 </div>
             </li>

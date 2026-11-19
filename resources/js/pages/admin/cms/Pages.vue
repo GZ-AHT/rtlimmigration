@@ -150,20 +150,27 @@ const columns: TableColumn<Row>[] = [
                         )
                     "
                 >
-                    Restore
+                    <AppIcon name="restore" :size="13" />
+                    <span>Restore</span>
                 </button>
                 <template v-else>
-                    <Link :href="edit(row.id)" class="tiny-action">{{
-                        can.manage ? 'Edit' : 'View'
-                    }}</Link>
+                    <Link :href="edit(row.id)" class="tiny-action">
+                        <AppIcon
+                            :name="can.manage ? 'edit' : 'visibility'"
+                            :size="13"
+                        />
+                        <span>{{ can.manage ? 'Edit' : 'View' }}</span>
+                    </Link>
                     <a
                         v-if="row.state.key === 'published'"
                         :href="row.path"
                         target="_blank"
                         rel="noopener"
                         class="tiny-action"
-                        >Open</a
                     >
+                        <AppIcon name="open_in_new" :size="13" />
+                        <span>Open</span>
+                    </a>
                 </template>
             </template>
         </DataTable>

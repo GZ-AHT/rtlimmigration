@@ -167,11 +167,12 @@ const columns: TableColumn<PaymentRequestRow>[] = [
                     row.due_date ? formatDate(row.due_date) : '—'
                 }}</span>
             </template>
-            <template #actions="{ row }"
-                ><Link :href="row.url!" class="tiny-action"
-                    >Open</Link
-                ></template
-            >
+            <template #actions="{ row }">
+                <Link :href="row.url!" class="tiny-action">
+                    <AppIcon name="visibility" :size="13" />
+                    <span>Open</span>
+                </Link>
+            </template>
         </DataTable>
         <TablePagination :meta="requests" />
     </PanelCard>

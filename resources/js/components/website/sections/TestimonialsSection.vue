@@ -43,11 +43,14 @@ function step(by: number): void {
         <p v-if="!items.length" class="mt-10 text-site-muted">
             Student reviews will appear here soon.
         </p>
-        <ul v-else class="mt-10 columns-1 gap-6 md:columns-2 lg:mt-12">
+        <ul
+            v-else
+            class="-mx-4 mt-10 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:block md:columns-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-12"
+        >
             <li
                 v-for="t in items"
                 :key="t.id"
-                class="mb-6 break-inside-avoid rounded-[24px] bg-site-sand p-7 sm:p-8"
+                class="mb-6 w-[85vw] max-w-[360px] shrink-0 snap-start break-inside-avoid rounded-[24px] bg-site-sand p-7 sm:w-[65vw] sm:p-8 md:w-auto md:max-w-none md:shrink"
             >
                 <span
                     aria-hidden="true"

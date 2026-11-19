@@ -2,6 +2,7 @@
 import { Form, Head, setLayoutProps } from '@inertiajs/vue3';
 import { computed, ref, watchEffect } from 'vue';
 import InputError from '@/components/InputError.vue';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 import { fieldClass } from '@/components/website/form';
 import {
@@ -89,9 +90,16 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
 
                 <button
                     type="submit"
-                    class="mt-2 flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
+                    class="mt-2 flex h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
                     :disabled="processing || code.length < 6"
                 >
+                    <AppIcon
+                        v-if="processing"
+                        name="progress_activity"
+                        :size="18"
+                        class="animate-spin"
+                    />
+                    <AppIcon v-else name="verified_user" :size="18" />
                     <span v-if="processing">Verifying…</span>
                     <template v-else>
                         <span>Verify & Sign in</span>
@@ -143,9 +151,16 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
 
                 <button
                     type="submit"
-                    class="mt-2 flex h-[52px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
+                    class="mt-2 flex h-13 w-full items-center justify-center gap-2.5 rounded-xl bg-site-red text-[15px] font-semibold text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none disabled:opacity-60"
                     :disabled="processing"
                 >
+                    <AppIcon
+                        v-if="processing"
+                        name="progress_activity"
+                        :size="18"
+                        class="animate-spin"
+                    />
+                    <AppIcon v-else name="verified_user" :size="18" />
                     <span v-if="processing">Verifying…</span>
                     <template v-else>
                         <span>Verify & Sign in</span>

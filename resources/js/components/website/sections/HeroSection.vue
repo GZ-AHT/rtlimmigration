@@ -76,7 +76,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
                     {{ data.eyebrow }}
                 </p>
                 <h1
-                    class="mt-6 text-[48px] leading-[1.05] font-bold tracking-[-0.04em] whitespace-pre-line text-site-ink sm:text-[64px] lg:mt-[33px] lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
+                    class="mt-6 text-[36px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-site-ink sm:text-[54px] sm:leading-[1.05] sm:tracking-[-0.04em] lg:mt-8.25 lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
                 >
                     <template v-if="current === 0 || !slide.title"
                         >{{ data.title
@@ -97,14 +97,14 @@ onBeforeUnmount(() => window.clearInterval(timer));
                     {{ slide.description }}
                 </p>
                 <div
-                    class="mt-8 flex flex-wrap items-center gap-x-[27px] gap-y-4 lg:mt-10"
+                    class="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-10"
                     :class="centered && 'justify-center'"
                 >
                     <SiteButton
                         v-if="data.primary.url"
                         :href="data.primary.url"
                         size="lg"
-                        class="min-w-[240px]"
+                        class="w-full justify-center sm:w-auto sm:min-w-[240px]"
                         >{{ data.primary.label }}</SiteButton
                     >
                     <ArrowLink

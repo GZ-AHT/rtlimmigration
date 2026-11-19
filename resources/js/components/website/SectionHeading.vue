@@ -28,7 +28,7 @@ withDefaults(
         <component
             :is="as"
             v-if="title"
-            class="mt-3 font-bold whitespace-pre-line"
+            class="mt-3 font-bold break-words whitespace-pre-line"
             :class="[
                 dark ? 'text-white' : 'text-site-ink',
                 size === 'lg'

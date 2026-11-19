@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import DataTable from '@/components/panel/DataTable.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -105,11 +106,12 @@ const columns: TableColumn<Row>[] = [
             <template #cell-status="{ row }"
                 ><StatusBadge :label="row.status_label" :tone="row.status_tone"
             /></template>
-            <template #actions="{ row }"
-                ><Link :href="show(row.id)" class="tiny-action"
-                    >Open</Link
-                ></template
-            >
+            <template #actions="{ row }">
+                <Link :href="show(row.id)" class="tiny-action">
+                    <AppIcon name="visibility" :size="13" />
+                    <span>Open</span>
+                </Link>
+            </template>
         </DataTable>
         <TablePagination
             v-if="applications.last_page > 1"

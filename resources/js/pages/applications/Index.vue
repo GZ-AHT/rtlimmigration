@@ -179,11 +179,19 @@ const columns: TableColumn<ApplicationRow>[] = [
             <template #cell-updated_at="{ row }">{{
                 relativeTime(row.updated_at)
             }}</template>
-            <template #actions="{ row }"
-                ><Link :href="row.url!" class="tiny-action">{{
-                    row.status === 'in_progress' ? 'Update' : 'Open'
-                }}</Link></template
-            >
+            <template #actions="{ row }">
+                <Link :href="row.url!" class="tiny-action">
+                    <AppIcon
+                        :name="
+                            row.status === 'in_progress' ? 'edit' : 'visibility'
+                        "
+                        :size="13"
+                    />
+                    <span>{{
+                        row.status === 'in_progress' ? 'Update' : 'Open'
+                    }}</span>
+                </Link>
+            </template>
         </DataTable>
         <TablePagination :meta="applications" />
     </PanelCard>

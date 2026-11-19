@@ -43,8 +43,14 @@ defineProps<{
             >
         </div>
 
-        <ul class="mt-9 grid gap-6 md:grid-cols-2 lg:mt-[45px] lg:grid-cols-3">
-            <li v-for="(item, i) in data.items" :key="i">
+        <ul
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-11 lg:grid-cols-3 lg:gap-6"
+        >
+            <li
+                v-for="(item, i) in data.items"
+                :key="i"
+                class="w-[82vw] max-w-[340px] shrink-0 snap-start sm:w-[60vw] md:w-auto md:max-w-none"
+            >
                 <component
                     :is="item.link.url ? SiteLink : 'div'"
                     v-bind="item.link.url ? { href: item.link.url } : {}"

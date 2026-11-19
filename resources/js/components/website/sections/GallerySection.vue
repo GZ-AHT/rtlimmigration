@@ -28,9 +28,13 @@ const zoomed = ref<{ image: SiteImage; caption: string } | null>(null);
             class="[&_h2]:sm:text-[39px] [&_h2]:sm:leading-[47px] [&_h2]:sm:tracking-normal"
         />
         <ul
-            class="mt-9 grid grid-cols-2 gap-4 lg:mt-[25px] lg:grid-cols-4 lg:gap-6"
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-6.25 lg:grid-cols-4 lg:gap-6"
         >
-            <li v-for="(item, i) in data.items" :key="i">
+            <li
+                v-for="(item, i) in data.items"
+                :key="i"
+                class="w-[68vw] max-w-[260px] shrink-0 snap-start sm:w-[45vw] md:w-auto md:max-w-none"
+            >
                 <button
                     v-if="item.image"
                     type="button"

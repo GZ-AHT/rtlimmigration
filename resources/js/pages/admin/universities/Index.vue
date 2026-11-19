@@ -143,9 +143,13 @@ const columns: TableColumn<Row>[] = [
                 </div>
             </template>
             <template #actions="{ row }">
-                <Link :href="edit(row.id)" class="tiny-action">{{
-                    canManage ? 'Edit' : 'View'
-                }}</Link>
+                <Link :href="edit(row.id)" class="tiny-action">
+                    <AppIcon
+                        :name="canManage ? 'edit' : 'visibility'"
+                        :size="13"
+                    />
+                    <span>{{ canManage ? 'Edit' : 'View' }}</span>
+                </Link>
             </template>
         </DataTable>
         <TablePagination

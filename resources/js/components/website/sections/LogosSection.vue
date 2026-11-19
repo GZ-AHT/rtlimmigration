@@ -24,12 +24,12 @@ defineProps<{
             class="text-center [&_p]:mx-auto"
         />
         <ul
-            class="mt-9 grid grid-cols-2 items-center gap-4 sm:grid-cols-3 lg:grid-cols-6"
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory items-center gap-4 overflow-x-auto px-4 pt-1 pb-3 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pt-0 sm:pb-0 lg:grid-cols-6"
         >
             <li
                 v-for="(logo, i) in data.items"
                 :key="i"
-                class="grid h-24 place-items-center rounded-[16px] bg-white p-4"
+                class="grid h-24 w-[42vw] max-w-[160px] shrink-0 snap-start place-items-center rounded-2xl bg-white p-4 sm:w-auto sm:max-w-none"
             >
                 <component
                     :is="logo.url ? 'a' : 'span'"

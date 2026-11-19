@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, setLayoutProps, usePage } from '@inertiajs/vue3';
+import AppIcon from '@/components/panel/AppIcon.vue';
 import DataTable from '@/components/panel/DataTable.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -120,7 +121,7 @@ const columns: TableColumn<RefundRow>[] = [
                 ><b class="text-foreground">{{ row.amount_label }}</b></template
             >
             <template #cell-reason="{ row }">
-                <span class="line-clamp-2 max-w-[320px]">{{ row.reason }}</span>
+                <span class="line-clamp-2 max-w-80">{{ row.reason }}</span>
             </template>
             <template #cell-status="{ row }">
                 <StatusBadge
@@ -136,13 +137,24 @@ const columns: TableColumn<RefundRow>[] = [
                     >by {{ row.requested_by }}</span
                 >
             </template>
-            <template #actions="{ row }"
-                ><Link :href="row.url!" class="tiny-action">{{
-                    row.status === 'requested' || row.status === 'approved'
-                        ? 'Review'
-                        : 'Open'
-                }}</Link></template
-            >
+            <template #actions="{ row }">
+                <Link :href="row.url!" class="tiny-action">
+                    <AppIcon
+                        :name="
+                            row.status === 'requested' ||
+                            row.status === 'approved'
+                                ? 'rate_review'
+                                : 'visibility'
+                        "
+                        :size="13"
+                    />
+                    <span>{{
+                        row.status === 'requested' || row.status === 'approved'
+                            ? 'Review'
+                            : 'Open'
+                    }}</span>
+                </Link>
+            </template>
         </DataTable>
         <TablePagination :meta="refunds" />
     </PanelCard>

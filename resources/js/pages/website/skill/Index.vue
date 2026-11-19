@@ -43,11 +43,13 @@ function go(): void {
                 Skill migration assessment
             </p>
             <h1
-                class="mt-4 text-[38px] leading-[1.05] font-bold tracking-[-0.02em] sm:text-[56px] sm:leading-[58px]"
+                class="mt-4 text-[28px] leading-[1.12] font-bold tracking-[-0.02em] break-words sm:text-[44px] sm:leading-[50px] md:text-[56px] md:leading-[58px]"
             >
                 Where can your skills take you?
             </h1>
-            <p class="mt-5 max-w-[640px] text-[17px] leading-6 text-site-muted">
+            <p
+                class="mt-5 max-w-[640px] text-[16px] leading-6 text-site-muted sm:text-[17px]"
+            >
                 Choose a destination. Each country has its own questions and
                 scoring, so you’ll see how your profile compares for that
                 country.
@@ -68,7 +70,7 @@ function go(): void {
                 />
                 <button
                     type="submit"
-                    class="flex h-[54px] items-center justify-center gap-2.5 rounded-[10px] bg-site-red px-5 text-[15px] font-semibold text-white hover:bg-site-red-dark"
+                    class="flex h-[54px] w-full shrink-0 items-center justify-center gap-2.5 rounded-[10px] bg-site-red px-5 text-[14px] font-semibold text-white hover:bg-site-red-dark sm:w-auto sm:text-[15px]"
                 >
                     Find Skill Migration Assessment <SiteArrow glyph="→" />
                 </button>
