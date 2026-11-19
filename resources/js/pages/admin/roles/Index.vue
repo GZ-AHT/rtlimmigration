@@ -49,7 +49,7 @@ function confirmDelete(): void {
         return;
     }
 
-    router.delete(destroy(deleting.value.id).url, {
+    router.delete(destroy(String(deleting.value.id) as never).url, {
         preserveScroll: true,
         onStart: () => (busy.value = true),
         onError: (errors) =>
@@ -120,7 +120,7 @@ function confirmDelete(): void {
             <template #actions="{ row }">
                 <Link
                     v-if="row.can.update"
-                    :href="edit(row.id)"
+                    :href="edit(String(row.id) as never)"
                     class="tiny-action"
                 >
                     <AppIcon name="edit" :size="13" />
