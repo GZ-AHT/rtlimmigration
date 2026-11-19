@@ -22,9 +22,9 @@ defineProps<{
 
 <template>
     <div
-        class="site-container grid w-full min-w-0 grid-cols-1 items-center gap-10 lg:grid-cols-[588px_1fr] lg:gap-[76px]"
+        class="site-container grid items-center gap-10 lg:grid-cols-[588px_1fr] lg:gap-[76px]"
     >
-        <div v-if="data.image" class="relative w-full min-w-0">
+        <div v-if="data.image" class="relative">
             <SiteImg
                 :image="data.image"
                 class="aspect-[588/496] w-full rounded-[24px]"
@@ -45,7 +45,7 @@ defineProps<{
                 </p>
             </div>
         </div>
-        <div class="w-full min-w-0" :class="!data.image && 'lg:col-span-2'">
+        <div :class="!data.image && 'lg:col-span-2'">
             <SectionHeading
                 :eyebrow="data.eyebrow"
                 :title="data.title"

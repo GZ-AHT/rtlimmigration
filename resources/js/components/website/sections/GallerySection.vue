@@ -19,7 +19,7 @@ const zoomed = ref<{ image: SiteImage; caption: string } | null>(null);
 </script>
 
 <template>
-    <div class="site-container w-full min-w-0">
+    <div class="site-container">
         <SectionHeading
             :eyebrow="data.eyebrow"
             :title="data.title"
@@ -27,39 +27,34 @@ const zoomed = ref<{ image: SiteImage; caption: string } | null>(null);
             :dark="dark"
             class="[&_h2]:sm:text-[39px] [&_h2]:sm:leading-[47px] [&_h2]:sm:tracking-normal"
         />
-        <div class="w-full min-w-0 overflow-hidden">
-            <ul
-                class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-6.25 lg:grid-cols-4 lg:gap-6"
+        <ul
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-6.25 lg:grid-cols-4 lg:gap-6"
+        >
+            <li
+                v-for="(item, i) in data.items"
+                :key="i"
+                class="w-[68vw] max-w-[260px] shrink-0 snap-start sm:w-[45vw] md:w-auto md:max-w-none"
             >
-                <li
-                    v-for="(item, i) in data.items"
-                    :key="i"
-                    class="w-[68vw] max-w-[260px] shrink-0 snap-start sm:w-[45vw] md:w-auto md:max-w-none"
+                <button
+                    v-if="item.image"
+                    type="button"
+                    class="flex w-full flex-col rounded-[6px] bg-white px-3 pt-3 pb-4 text-left transition-shadow hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)] sm:px-[26px]"
+                    :aria-label="`Enlarge ${item.caption || item.image.alt}`"
+                    @click="
+                        zoomed = { image: item.image, caption: item.caption }
+                    "
                 >
-                    <button
-                        v-if="item.image"
-                        type="button"
-                        class="flex w-full flex-col rounded-[6px] bg-white px-3 pt-3 pb-4 text-left transition-shadow hover:shadow-[0_12px_30px_rgba(0,0,0,0.1)] sm:px-[26px]"
-                        :aria-label="`Enlarge ${item.caption || item.image.alt}`"
-                        @click="
-                            zoomed = {
-                                image: item.image,
-                                caption: item.caption,
-                            }
-                        "
+                    <SiteImg
+                        :image="item.image"
+                        class="aspect-[242/344] w-full rounded-[3px]"
+                    />
+                    <span
+                        class="mt-[9px] text-[12px] leading-[17px] font-semibold text-site-ink sm:-mx-[9px]"
+                        >{{ item.caption }}</span
                     >
-                        <SiteImg
-                            :image="item.image"
-                            class="aspect-[242/344] w-full rounded-[3px]"
-                        />
-                        <span
-                            class="mt-[9px] text-[12px] leading-[17px] font-semibold text-site-ink sm:-mx-[9px]"
-                            >{{ item.caption }}</span
-                        >
-                    </button>
-                </li>
-            </ul>
-        </div>
+                </button>
+            </li>
+        </ul>
 
         <div
             v-if="zoomed"

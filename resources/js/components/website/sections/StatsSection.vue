@@ -14,10 +14,8 @@ defineProps<{
 </script>
 
 <template>
-    <div class="site-container w-full min-w-0">
-        <dl
-            class="grid w-full min-w-0 grid-cols-2 gap-y-10 lg:grid-cols-4 lg:pt-[5px]"
-        >
+    <div class="site-container">
+        <dl class="grid grid-cols-2 gap-y-10 lg:grid-cols-4 lg:pt-[5px]">
             <div
                 v-for="(item, i) in data.items"
                 :key="i"

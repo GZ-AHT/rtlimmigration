@@ -31,10 +31,8 @@
                 background-color: #f7f8fa;
             }
 
-            html.website,
-            html.website body {
+            html.website {
                 background-color: #ffffff;
-                overflow-x: hidden;
             }
 
             html.dark {

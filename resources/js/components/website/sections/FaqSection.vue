@@ -42,9 +42,9 @@ function choose(index: number): void {
 
 <template>
     <div
-        class="site-container grid w-full min-w-0 grid-cols-1 gap-8 lg:grid-cols-[363px_minmax(0,1fr)] lg:justify-between lg:gap-10 xl:grid-cols-[363px_805px]"
+        class="site-container grid gap-10 lg:grid-cols-[363px_805px] lg:justify-between"
     >
-        <div class="w-full min-w-0 lg:pt-1">
+        <div class="lg:pt-1">
             <SectionHeading
                 :eyebrow="data.eyebrow"
                 :title="data.title"
@@ -53,7 +53,7 @@ function choose(index: number): void {
             />
             <p
                 v-if="data.description"
-                class="mt-4 text-[15px] leading-relaxed text-site-muted sm:mt-[21px] sm:leading-[21.75px]"
+                class="mt-[21px] text-[15px] leading-[21.75px] text-site-muted"
             >
                 {{ data.description }}
             </p>
@@ -69,53 +69,42 @@ function choose(index: number): void {
                 />
             </div>
 
-            <div
+            <ul
                 v-if="groups.length > 1 || data.all"
-                class="mt-5 w-full min-w-0 sm:mt-5.5"
+                class="-mx-4 mt-5.5 no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-col sm:overflow-visible sm:px-0 sm:pb-0"
+                role="tablist"
+                aria-label="Question topics"
             >
-                <div
-                    class="-mx-4 no-scrollbar overflow-x-auto px-4 pb-2 sm:mx-0 sm:overflow-visible sm:px-0 sm:pb-0"
+                <li
+                    v-for="(g, i) in groups"
+                    :key="g.slug"
+                    class="shrink-0 snap-start sm:shrink sm:snap-none"
                 >
-                    <ul
-                        class="flex snap-x snap-mandatory gap-2 sm:flex-col"
-                        role="tablist"
-                        aria-label="Question topics"
+                    <button
+                        type="button"
+                        role="tab"
+                        :aria-selected="!query && i === active"
+                        class="relative flex h-11 items-center justify-between overflow-hidden rounded-xl pr-4 pl-4.5 text-left text-[14px] leading-[18.2px] whitespace-nowrap transition-colors sm:w-full"
+                        :class="
+                            !query && i === active
+                                ? 'bg-site-navy font-semibold text-white'
+                                : 'font-medium text-site-muted hover:bg-white'
+                        "
+                        @click="choose(i)"
                     >
-                        <li
-                            v-for="(g, i) in groups"
-                            :key="g.slug"
-                            class="shrink-0 snap-start sm:shrink sm:snap-none"
-                        >
-                            <button
-                                type="button"
-                                role="tab"
-                                :aria-selected="!query && i === active"
-                                class="relative flex h-10 items-center justify-between gap-3 overflow-hidden rounded-xl px-4 text-left text-[13.5px] leading-[18.2px] whitespace-nowrap transition-colors active:scale-98 sm:h-11 sm:w-full sm:pr-4 sm:pl-4.5 sm:text-[14px]"
-                                :class="
-                                    !query && i === active
-                                        ? 'bg-site-navy font-semibold text-white shadow-sm'
-                                        : 'border border-site-line/70 bg-white/80 font-medium text-site-muted hover:bg-white sm:border-0 sm:bg-transparent'
-                                "
-                                @click="choose(i)"
-                            >
-                                <span
-                                    v-if="!query && i === active"
-                                    class="absolute inset-y-0 left-0 hidden w-[3px] bg-site-red sm:block"
-                                    aria-hidden="true"
-                                />
-                                <span>{{ g.name }}</span>
-                                <SiteArrow
-                                    glyph="→"
-                                    class="hidden shrink-0 text-[16px] sm:inline-block"
-                                />
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-            </div>
+                        <span
+                            v-if="!query && i === active"
+                            class="absolute inset-y-0 left-0 w-[3px] bg-site-red"
+                            aria-hidden="true"
+                        />
+                        {{ g.name }}
+                        <SiteArrow glyph="→" class="text-[18px]" />
+                    </button>
+                </li>
+            </ul>
         </div>
 
-        <div class="w-full min-w-0">
+        <div>
             <p
                 v-if="!items.length"
                 class="rounded-[12px] bg-white p-6 text-site-muted"
@@ -126,14 +115,14 @@ function choose(index: number): void {
                         : 'Questions and answers will appear here soon.'
                 }}
             </p>
-            <ul v-else class="flex w-full min-w-0 flex-col gap-2.5 lg:pt-[3px]">
+            <ul v-else class="flex flex-col gap-2 lg:pt-[3px]">
                 <li
                     v-for="f in items"
                     :key="f.id"
-                    class="w-full min-w-0 rounded-[14px] border bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all"
+                    class="rounded-[12px] border bg-white"
                     :class="
                         open === f.id
-                            ? 'border-site-warm-line shadow-[0_4px_16px_rgba(0,0,0,0.06)]'
+                            ? 'border-site-warm-line'
                             : 'border-transparent'
                     "
                 >
@@ -141,23 +130,29 @@ function choose(index: number): void {
                         <button
                             :id="`faq-q-${f.id}`"
                             type="button"
-                            class="flex w-full items-start justify-between gap-4 px-4.5 py-4 text-left sm:gap-6 sm:px-6 sm:py-4.5"
-                            :class="open === f.id ? 'pb-1' : ''"
+                            class="flex w-full items-start justify-between gap-6 px-6 text-left"
+                            :class="
+                                open === f.id ? 'pt-[21px] pb-0' : 'py-[14px]'
+                            "
                             :aria-expanded="open === f.id"
                             :aria-controls="`faq-a-${f.id}`"
                             @click="open = open === f.id ? null : f.id"
                         >
                             <span
-                                class="min-w-0 flex-1 text-[15px] leading-snug font-semibold break-words text-site-ink sm:text-[17px]"
+                                :class="
+                                    open === f.id
+                                        ? 'text-[17px] leading-[24.65px] font-semibold text-site-ink'
+                                        : 'text-[15px] leading-[19.5px] font-medium text-site-ink'
+                                "
                                 >{{ f.question }}</span
                             >
                             <span
                                 aria-hidden="true"
-                                class="grid size-7 shrink-0 place-items-center rounded-full text-base font-semibold transition-colors"
+                                class="w-[26px] shrink-0 text-[22px]"
                                 :class="
                                     open === f.id
-                                        ? 'bg-site-red/10 text-site-red'
-                                        : 'bg-site-sand text-site-muted'
+                                        ? 'leading-[24.65px] font-medium text-site-red'
+                                        : 'leading-5 text-site-muted'
                                 "
                                 >{{ open === f.id ? '−' : '+' }}</span
                             >
@@ -168,7 +163,7 @@ function choose(index: number): void {
                         :id="`faq-a-${f.id}`"
                         role="region"
                         :aria-labelledby="`faq-q-${f.id}`"
-                        class="px-4.5 pt-2 pb-5 text-[14px] leading-relaxed break-words whitespace-pre-line text-site-muted sm:px-6 sm:pt-3 sm:pb-6 sm:text-[15px] lg:max-w-[778px]"
+                        class="px-6 pt-[16px] pb-[24px] text-[15px] leading-6 whitespace-pre-line text-site-muted lg:max-w-[778px]"
                     >
                         {{ f.answer }}
                     </div>

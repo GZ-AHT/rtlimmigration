@@ -52,7 +52,7 @@ const name = () => props.data.adviser_name || 'Your RTL adviser';
 
 <template>
     <div
-        class="w-full min-w-0 rounded-[26px] border border-site-warm-line bg-white p-3 sm:p-[23px]"
+        class="rounded-[26px] border border-site-warm-line bg-white p-3 sm:p-[23px]"
         aria-hidden="true"
     >
         <!-- Google Meet / Zoom style -->

@@ -240,9 +240,9 @@ const pill = (active: boolean) =>
     </div>
 
     <!-- Homepage -->
-    <div v-else class="site-container w-full min-w-0">
+    <div v-else class="site-container">
         <div
-            class="flex w-full min-w-0 flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+            class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
         >
             <SectionHeading
                 :eyebrow="data.eyebrow"
@@ -262,18 +262,17 @@ const pill = (active: boolean) =>
         >
             New articles are on their way.
         </p>
-        <div v-else class="w-full min-w-0 overflow-hidden">
-            <ul
-                class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-8.25 lg:grid-cols-3 lg:gap-6"
+        <ul
+            v-else
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-8.25 lg:grid-cols-3 lg:gap-6"
+        >
+            <li
+                v-for="post in records.items"
+                :key="post.id"
+                class="w-[82vw] max-w-[340px] shrink-0 snap-start sm:w-[60vw] md:w-auto md:max-w-none"
             >
-                <li
-                    v-for="post in records.items"
-                    :key="post.id"
-                    class="w-[82vw] max-w-[340px] shrink-0 snap-start sm:w-[60vw] md:w-auto md:max-w-none"
-                >
-                    <PostCard :post="post" />
-                </li>
-            </ul>
-        </div>
+                <PostCard :post="post" />
+            </li>
+        </ul>
     </div>
 </template>

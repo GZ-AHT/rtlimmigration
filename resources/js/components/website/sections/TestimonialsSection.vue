@@ -34,7 +34,7 @@ function step(by: number): void {
 </script>
 
 <template>
-    <div v-if="data.all" class="site-container w-full min-w-0">
+    <div v-if="data.all" class="site-container">
         <SectionHeading
             :eyebrow="data.eyebrow"
             :title="data.title"
@@ -43,56 +43,55 @@ function step(by: number): void {
         <p v-if="!items.length" class="mt-10 text-site-muted">
             Student reviews will appear here soon.
         </p>
-        <div v-else class="w-full min-w-0 overflow-hidden">
-            <ul
-                class="-mx-4 mt-10 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:block md:columns-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-12"
+        <ul
+            v-else
+            class="-mx-4 mt-10 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:block md:columns-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-12"
+        >
+            <li
+                v-for="t in items"
+                :key="t.id"
+                class="mb-6 w-[85vw] max-w-[360px] shrink-0 snap-start break-inside-avoid rounded-[24px] bg-site-sand p-7 sm:w-[65vw] sm:p-8 md:w-auto md:max-w-none md:shrink"
             >
-                <li
-                    v-for="t in items"
-                    :key="t.id"
-                    class="mb-6 w-[85vw] max-w-[360px] shrink-0 snap-start break-inside-avoid rounded-[24px] bg-site-sand p-7 sm:w-[65vw] sm:p-8 md:w-auto md:max-w-none md:shrink"
+                <span
+                    aria-hidden="true"
+                    class="block text-[56px] leading-[48px] font-bold text-site-red"
+                    >“</span
                 >
-                    <span
-                        aria-hidden="true"
-                        class="block text-[56px] leading-[48px] font-bold text-site-red"
-                        >“</span
-                    >
-                    <blockquote
-                        class="mt-2 text-[18px] leading-[28px] font-medium text-site-ink"
-                    >
-                        {{ t.quote }}
-                    </blockquote>
-                    <div class="mt-6 flex items-center gap-3">
-                        <SiteImg
-                            v-if="t.photo"
-                            :image="t.photo"
-                            :alt="''"
-                            class="size-11 rounded-full"
-                        />
-                        <div>
-                            <p
-                                class="text-[11px] leading-[14.3px] font-semibold text-site-red uppercase"
-                            >
-                                {{ t.name }}
-                            </p>
-                            <p
-                                v-if="byline(t)"
-                                class="mt-1 text-[12px] leading-[15.6px] text-site-muted"
-                            >
-                                {{ byline(t) }}
-                            </p>
-                        </div>
+                <blockquote
+                    class="mt-2 text-[18px] leading-[28px] font-medium text-site-ink"
+                >
+                    {{ t.quote }}
+                </blockquote>
+                <div class="mt-6 flex items-center gap-3">
+                    <SiteImg
+                        v-if="t.photo"
+                        :image="t.photo"
+                        :alt="''"
+                        class="size-11 rounded-full"
+                    />
+                    <div>
+                        <p
+                            class="text-[11px] leading-[14.3px] font-semibold text-site-red uppercase"
+                        >
+                            {{ t.name }}
+                        </p>
+                        <p
+                            v-if="byline(t)"
+                            class="mt-1 text-[12px] leading-[15.6px] text-site-muted"
+                        >
+                            {{ byline(t) }}
+                        </p>
                     </div>
-                </li>
-            </ul>
-        </div>
+                </div>
+            </li>
+        </ul>
     </div>
 
     <div
         v-else
-        class="site-container grid w-full min-w-0 grid-cols-1 gap-10 lg:grid-cols-[475px_1fr] lg:gap-[65px]"
+        class="site-container grid gap-10 lg:grid-cols-[475px_1fr] lg:gap-[65px]"
     >
-        <div class="w-full min-w-0 lg:pt-[25px]">
+        <div class="lg:pt-[25px]">
             <SectionHeading
                 :eyebrow="data.eyebrow"
                 :title="data.title"
@@ -114,7 +113,7 @@ function step(by: number): void {
 
         <figure
             v-if="current"
-            class="relative min-h-[332px] w-full min-w-0 rounded-[24px] bg-site-sand px-6 pt-[7px] pb-8 sm:px-8"
+            class="relative min-h-[332px] rounded-[24px] bg-site-sand px-6 pt-[7px] pb-8 sm:px-8"
         >
             <span
                 aria-hidden="true"

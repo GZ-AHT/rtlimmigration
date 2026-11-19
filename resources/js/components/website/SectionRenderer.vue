@@ -158,7 +158,7 @@ function classes(section: PublicSection): string[] {
             :id="section.settings.anchor || undefined"
             :class="classes(section)"
             :data-section="section.type"
-            class="w-full min-w-0 overflow-x-hidden"
+            class="w-full overflow-x-clip"
         >
             <component
                 :is="components[section.type]"

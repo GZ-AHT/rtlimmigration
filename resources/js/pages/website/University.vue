@@ -302,27 +302,22 @@ const facts = computed(() =>
                     {{ university.scholarships }}
                 </p>
             </section>
-            <section
-                v-if="university.gallery.length"
-                class="mt-12 w-full min-w-0"
-            >
+            <section v-if="university.gallery.length" class="mt-12">
                 <h2 class="text-[24px] font-bold">Gallery</h2>
-                <div class="w-full min-w-0 overflow-hidden">
-                    <ul
-                        class="-mx-4 mt-4 no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0"
+                <ul
+                    class="-mx-4 mt-4 no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0"
+                >
+                    <li
+                        v-for="(img, i) in university.gallery"
+                        :key="i"
+                        class="w-[60vw] max-w-[240px] shrink-0 snap-start sm:w-auto sm:max-w-none"
                     >
-                        <li
-                            v-for="(img, i) in university.gallery"
-                            :key="i"
-                            class="w-[60vw] max-w-[240px] shrink-0 snap-start sm:w-auto sm:max-w-none"
-                        >
-                            <SiteImg
-                                :image="img"
-                                class="aspect-[4/3] w-full rounded-[12px]"
-                            />
-                        </li>
-                    </ul>
-                </div>
+                        <SiteImg
+                            :image="img"
+                            class="aspect-[4/3] w-full rounded-[12px]"
+                        />
+                    </li>
+                </ul>
             </section>
         </div>
 

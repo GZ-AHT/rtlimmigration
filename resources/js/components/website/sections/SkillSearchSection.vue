@@ -72,7 +72,7 @@ function go(): void {
         </div>
 
         <div
-            class="w-full min-w-0 rounded-2xl bg-white p-4.5 shadow-[0_12px_30px_rgba(0,0,0,0.12)] sm:rounded-[20px] sm:p-6"
+            class="w-full min-w-0 rounded-2xl bg-white p-5 shadow-[0_12px_30px_rgba(0,0,0,0.12)] sm:rounded-[20px] sm:p-6"
         >
             <form
                 class="flex w-full min-w-0 flex-col gap-3"
@@ -94,9 +94,9 @@ function go(): void {
                 />
                 <button
                     type="submit"
-                    class="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-site-red px-4 py-2.5 text-[14px] font-semibold text-white transition-all hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none active:scale-[0.99] sm:h-[54px] sm:px-6 sm:py-0 sm:text-[15px]"
+                    class="flex h-12 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-site-red px-4 text-[14px] font-semibold text-white transition-all hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none active:scale-[0.99] sm:h-[54px] sm:px-6 sm:text-[15px]"
                 >
-                    <span class="text-center leading-snug">{{
+                    <span class="truncate">{{
                         data.button || 'Find Skill Migration Assessment'
                     }}</span>
                     <SiteArrow glyph="→" class="shrink-0" />
@@ -124,18 +124,23 @@ function go(): void {
                 <span>{{ error }}</span>
             </p>
 
-            <div v-if="records?.countries.length" class="mt-5 w-full min-w-0">
+            <div
+                v-if="records?.countries.length"
+                class="mt-5 w-full min-w-0 overflow-hidden"
+            >
                 <p
                     class="text-[11px] font-semibold tracking-wider text-site-muted uppercase"
                 >
                     Popular destinations
                 </p>
-                <div class="mt-2.5">
-                    <ul class="flex flex-wrap gap-2">
+                <div
+                    class="-mx-5 mt-2.5 no-scrollbar overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0 sm:pb-0"
+                >
+                    <ul class="flex snap-x snap-mandatory gap-2 sm:flex-wrap">
                         <li
                             v-for="c in records.countries"
                             :key="c.slug"
-                            class="shrink-0"
+                            class="shrink-0 snap-start"
                         >
                             <a
                                 :href="c.url"

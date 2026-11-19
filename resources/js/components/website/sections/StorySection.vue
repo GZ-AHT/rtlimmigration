@@ -17,9 +17,9 @@ defineProps<{
 
 <template>
     <div
-        class="site-container grid w-full min-w-0 grid-cols-1 gap-10 lg:grid-cols-[591px_559px] lg:justify-between"
+        class="site-container grid gap-10 lg:grid-cols-[591px_559px] lg:justify-between"
     >
-        <div class="w-full min-w-0">
+        <div>
             <SectionHeading
                 :eyebrow="data.eyebrow"
                 :title="data.title"
@@ -41,7 +41,7 @@ defineProps<{
                 {{ data.text }}
             </p>
         </div>
-        <div class="w-full min-w-0 lg:pt-[3px]">
+        <div class="lg:pt-[3px]">
             <h3
                 v-if="data.list_title"
                 class="text-[21px] leading-[30px] font-semibold sm:text-[23px]"

@@ -21,12 +21,9 @@ defineProps<{
 
 <template>
     <div
-        class="site-container grid w-full min-w-0 grid-cols-1 items-start gap-10 lg:grid-cols-[420px_1fr] lg:gap-[84px]"
+        class="site-container grid items-start gap-10 lg:grid-cols-[420px_1fr] lg:gap-[84px]"
     >
-        <div
-            v-if="data.image"
-            class="relative mx-auto w-full max-w-[420px] min-w-0"
-        >
+        <div v-if="data.image" class="relative mx-auto w-full max-w-[420px]">
             <SiteImg
                 :image="data.image"
                 class="aspect-[420/525] w-full rounded-[8px]"
@@ -36,10 +33,7 @@ defineProps<{
                 aria-hidden="true"
             />
         </div>
-        <div
-            class="w-full min-w-0 lg:pt-[5px]"
-            :class="!data.image && 'lg:col-span-2'"
-        >
+        <div class="lg:pt-[5px]" :class="!data.image && 'lg:col-span-2'">
             <p
                 v-if="data.eyebrow"
                 class="text-[11px] leading-[17px] font-semibold text-site-red uppercase"

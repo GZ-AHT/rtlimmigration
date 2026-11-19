@@ -45,21 +45,21 @@ const HEIGHTS: Record<string, string> = {
             aria-hidden="true"
         />
         <div
-            class="relative site-container flex w-full min-w-0 flex-col pt-8 pb-6 sm:pt-12 sm:pb-8 lg:pt-[57px] lg:pb-[33px]"
+            class="relative site-container flex flex-col pt-12 pb-8 lg:pt-[57px] lg:pb-[33px]"
             :class="HEIGHTS[data.height] ?? HEIGHTS.standard"
         >
             <div
-                class="w-full max-w-[650px] min-w-0"
+                class="max-w-[650px]"
                 :class="centered && 'mx-auto text-center'"
             >
                 <p
                     v-if="data.eyebrow"
-                    class="text-[10px] font-bold tracking-[1px] text-white uppercase sm:text-[12px] sm:leading-[15px]"
+                    class="text-[12px] leading-[15px] font-semibold text-white uppercase"
                 >
                     {{ data.eyebrow }}
                 </p>
                 <h1
-                    class="mt-2.5 text-[28px] leading-[1.12] font-bold tracking-[-0.02em] whitespace-pre-line text-white sm:mt-6 sm:text-[48px] sm:leading-[1.05] lg:mt-6.25 lg:text-[66px] lg:leading-[73px] lg:tracking-[-0.5px]"
+                    class="mt-6 text-[34px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-white sm:text-[48px] sm:leading-[1.05] lg:mt-6.25 lg:text-[66px] lg:leading-[73px] lg:tracking-[-0.5px]"
                 >
                     {{ data.title
                     }}<template v-if="data.title_accent"
@@ -68,13 +68,13 @@ const HEIGHTS: Record<string, string> = {
                 </h1>
                 <p
                     v-if="data.description"
-                    class="mt-2.5 line-clamp-2 text-[14px] leading-relaxed text-white/90 sm:mt-6 sm:line-clamp-none sm:max-w-[540px] sm:text-[17px] sm:leading-[29px] lg:mt-7 lg:whitespace-pre-line"
+                    class="mt-6 max-w-[540px] text-[16px] leading-[1.7] text-white sm:text-[17px] sm:leading-[29px] lg:mt-7 lg:whitespace-pre-line"
                     :class="centered && 'mx-auto'"
                 >
                     {{ data.description }}
                 </p>
                 <div
-                    class="mt-5 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-7.5"
+                    class="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-7.5"
                     :class="centered && 'justify-center'"
                 >
                     <SiteButton
@@ -88,7 +88,7 @@ const HEIGHTS: Record<string, string> = {
                         :href="data.secondary.url"
                         arrow="→"
                         tone="white"
-                        class="hidden text-[14px] sm:inline-flex sm:text-[15px]"
+                        class="text-[15px]"
                         >{{ data.secondary.label }}</ArrowLink
                     >
                 </div>
@@ -96,7 +96,7 @@ const HEIGHTS: Record<string, string> = {
 
             <p
                 v-if="data.image_caption"
-                class="mt-4 hidden text-[10px] font-semibold tracking-wider text-white uppercase sm:mt-10 sm:block sm:text-[11px] sm:leading-[14px] xl:absolute xl:top-[436px] xl:right-[215px] xl:mt-0"
+                class="mt-10 text-[11px] leading-[14px] font-semibold text-white uppercase xl:absolute xl:top-[436px] xl:right-[215px] xl:mt-0"
                 :class="centered && 'text-center xl:static xl:mt-10'"
             >
                 {{ data.image_caption }}
@@ -108,7 +108,7 @@ const HEIGHTS: Record<string, string> = {
                 :help="data.finder_help"
                 :records="records"
                 variant="bar"
-                class="mt-6 sm:mt-10 lg:mt-auto"
+                class="mt-10 lg:mt-auto"
             />
         </div>
     </BannerMedia>

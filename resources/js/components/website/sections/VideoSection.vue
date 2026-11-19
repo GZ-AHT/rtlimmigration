@@ -31,11 +31,11 @@ defineProps<{
 </script>
 
 <template>
-    <div class="site-container w-full min-w-0">
+    <div class="site-container">
         <div
-            class="grid w-full min-w-0 grid-cols-1 items-start gap-10 lg:grid-cols-[minmax(0,564px)_608px] lg:justify-between"
+            class="grid items-start gap-10 lg:grid-cols-[minmax(0,564px)_608px] lg:justify-between"
         >
-            <div class="w-full min-w-0 lg:pt-1">
+            <div class="lg:pt-1">
                 <p
                     v-if="data.eyebrow"
                     class="text-[11px] leading-4 font-semibold tracking-[1.2px] text-site-red uppercase"
