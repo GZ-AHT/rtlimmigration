@@ -12,6 +12,7 @@ use App\Support\Search\GlobalSearch;
 use App\Support\Search\Providers\PageSearchProvider;
 use App\Support\Search\Providers\UserSearchProvider;
 use App\Support\Settings\SettingsRepository;
+use App\Support\Webhooks\Webhooks;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Spatie\Permission\Models\Role as RoleModel;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        Webhooks::listen();
         $this->configureAuthorization();
     }
 
@@ -72,14 +75,49 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
-                ->mixedCase()
-                ->letters()
-                ->numbers()
-                ->symbols()
-                ->uncompromised()
-            : null,
-        );
+        // REQ §23.2 password policy: System → Settings → Security. Until Super Admin
+        // saves a policy, production keeps the strict built-in rule.
+        Password::defaults(function (): ?Password {
+            try {
+                $settings = app(SettingsRepository::class);
+                $min = $settings->get('security.password_min_length');
+            } catch (Throwable) {
+                $min = null;
+            }
+
+            if ($min === null) {
+                return app()->isProduction()
+                    ? Password::min(12)->mixedCase()->letters()->numbers()->symbols()->uncompromised()
+                    : null;
+            }
+
+            $rule = Password::min((int) $min);
+
+            if ($settings->get('security.password_mixed_case')) {
+                $rule->mixedCase();
+            }
+            if ($settings->get('security.password_numbers')) {
+                $rule->numbers();
+            }
+            if ($settings->get('security.password_symbols')) {
+                $rule->symbols();
+            }
+            if ($settings->get('security.password_uncompromised')) {
+                $rule->uncompromised();
+            }
+
+            return $rule;
+        });
+
+        // Idle sign-out time from the same screen (config is read before the session starts).
+        try {
+            $lifetime = app(SettingsRepository::class)->get('security.session_lifetime');
+
+            if (is_numeric($lifetime)) {
+                config(['session.lifetime' => (int) $lifetime]);
+            }
+        } catch (Throwable) {
+            // Settings table not migrated yet.
+        }
     }
 }

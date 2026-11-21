@@ -44,7 +44,13 @@ export function useSite() {
     const whatsappUrl = computed(() => {
         const digits = text('general', 'whatsapp').replace(/\D/g, '');
 
-        return digits ? `https://wa.me/${digits}` : null;
+        if (!digits || !flag('integrations', 'whatsapp_enabled', true)) {
+            return null;
+        }
+
+        const message = text('integrations', 'whatsapp_message');
+
+        return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ''}`;
     });
 
     return { site, text, flag, link, menu, media, whatsappUrl };

@@ -195,6 +195,32 @@ const optionList = (o?: Record<string, string>) =>
             </FormField>
 
             <FormField
+                v-else-if="field.type === 'secret' || field.type === 'datetime'"
+                v-slot="{ id, invalid, describedBy }"
+                :label="field.label"
+                :error="err(String(key))"
+                :hint="field.hint"
+            >
+                <Input
+                    :id="id"
+                    :type="
+                        field.type === 'secret' ? 'password' : 'datetime-local'
+                    "
+                    :autocomplete="
+                        field.type === 'secret' ? 'new-password' : undefined
+                    "
+                    :class="field.type === 'datetime' ? 'max-w-64' : ''"
+                    :model-value="str(String(key))"
+                    :maxlength="field.max"
+                    :aria-invalid="invalid"
+                    :aria-describedby="describedBy"
+                    @update:model-value="
+                        (v: string | number) => set(String(key), String(v))
+                    "
+                />
+            </FormField>
+
+            <FormField
                 v-else-if="field.type === 'number'"
                 v-slot="{ id, invalid }"
                 :label="field.label"

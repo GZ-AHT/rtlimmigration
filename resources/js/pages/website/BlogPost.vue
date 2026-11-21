@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { useRecaptcha } from '@/composables/useRecaptcha';
 import { computed, ref } from 'vue';
 import FormField from '@/components/website/FormField.vue';
 import PostCard from '@/components/website/PostCard.vue';
@@ -49,9 +50,12 @@ const form = useForm({
     body: '',
     parent_id: null as number | null,
     website: '',
+    recaptcha_token: '',
 });
+const { token } = useRecaptcha();
 
-function submit(): void {
+async function submit(): Promise<void> {
+    form.recaptcha_token = await token('comment');
     form.parent_id = replyTo.value?.id ?? null;
     form.submit(storeComment(props.post.url.split('/').pop() ?? ''), {
         preserveScroll: true,

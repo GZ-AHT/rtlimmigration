@@ -5,7 +5,7 @@ import ArrowLink from '@/components/website/ArrowLink.vue';
 import SiteButton from '@/components/website/SiteButton.vue';
 
 /** Website error pages: 404, 403, 429, 500, 503 (REQ §21.8 "404 page"). */
-const props = defineProps<{ status: number }>();
+const props = defineProps<{ status: number; message?: string | null }>();
 
 const copy = computed(
     () =>
@@ -58,7 +58,7 @@ const copy = computed(
             <p
                 class="mt-6 max-w-[560px] text-[18px] leading-[1.6] text-site-muted"
             >
-                {{ copy[1] }} {{ copy[2] }}
+                {{ message || `${copy[1]} ${copy[2]}` }}
             </p>
             <div class="mt-10 flex flex-wrap items-center gap-6">
                 <SiteButton href="/" arrow="→">Go to the homepage</SiteButton>

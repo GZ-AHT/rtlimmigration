@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { useRecaptcha } from '@/composables/useRecaptcha';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
@@ -54,7 +55,9 @@ const form = useForm({
     documents: [] as File[],
     consent: false,
     company_url: '', // honeypot
+    recaptcha_token: '',
 });
+const { token } = useRecaptcha();
 
 function pick(event: Event): void {
     form.documents = Array.from(
@@ -62,7 +65,8 @@ function pick(event: Event): void {
     ).slice(0, 3);
 }
 
-function submit(): void {
+async function submit(): Promise<void> {
+    form.recaptcha_token = await token('partner');
     form.transform((d) => ({
         ...d,
         website: d.website || null,

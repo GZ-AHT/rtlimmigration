@@ -9,6 +9,7 @@ import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
 import SearchInput from '@/components/panel/SearchInput.vue';
 import TablePagination from '@/components/panel/TablePagination.vue';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useFilters } from '@/composables/useFilters';
 import { useMediaLibrary } from '@/composables/useMediaLibrary';
@@ -17,7 +18,7 @@ import type { MediaItem, Paginated } from '@/types';
 
 const props = defineProps<{
     media: Paginated<MediaItem>;
-    filters: { search: string };
+    filters: { search: string; missing_alt: string };
     limits: {
         max_mb: number;
         extensions: string[];
@@ -126,11 +127,22 @@ const kb = (b: number) =>
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <PanelCard>
-            <div class="mb-3 max-w-sm">
-                <SearchInput
-                    v-model="filters.search"
-                    placeholder="Search by name or description…"
-                />
+            <div class="mb-3 flex flex-wrap items-center gap-3">
+                <div class="max-w-sm min-w-60 flex-1">
+                    <SearchInput
+                        v-model="filters.search"
+                        placeholder="Search by name or description…"
+                    />
+                </div>
+                <label class="flex items-center gap-2 text-[13px]">
+                    <Checkbox
+                        :model-value="filters.missing_alt === '1'"
+                        @update:model-value="
+                            (v) => (filters.missing_alt = v === true ? '1' : '')
+                        "
+                    />
+                    Missing alt text
+                </label>
             </div>
             <EmptyState
                 v-if="media.data.length === 0"

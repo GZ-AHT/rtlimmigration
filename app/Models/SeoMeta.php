@@ -20,17 +20,22 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string|null $og_description
  * @property int|null $og_image_id
  * @property bool $noindex
+ * @property bool $seo_enabled
+ * @property string|null $meta_keywords
+ * @property bool $nofollow
+ * @property string|null $twitter_card
+ * @property string|null $custom_schema
  * @property-read Media|null $ogImage
  */
 #[Table('seo_meta')]
-#[Fillable(['meta_title', 'meta_description', 'focus_keyword', 'canonical_url', 'og_title', 'og_description', 'og_image_id', 'noindex'])]
+#[Fillable(['meta_title', 'meta_description', 'focus_keyword', 'canonical_url', 'og_title', 'og_description', 'og_image_id', 'noindex', 'seo_enabled', 'meta_keywords', 'nofollow', 'twitter_card', 'custom_schema'])]
 class SeoMeta extends Model
 {
-    public const FIELDS = ['meta_title', 'meta_description', 'focus_keyword', 'canonical_url', 'og_title', 'og_description', 'og_image_id', 'noindex'];
+    public const FIELDS = ['meta_title', 'meta_description', 'focus_keyword', 'canonical_url', 'og_title', 'og_description', 'og_image_id', 'noindex', 'seo_enabled', 'meta_keywords', 'nofollow', 'twitter_card', 'custom_schema'];
 
     protected function casts(): array
     {
-        return ['noindex' => 'boolean'];
+        return ['noindex' => 'boolean', 'nofollow' => 'boolean', 'seo_enabled' => 'boolean'];
     }
 
     /** @return MorphTo<Model, $this> */

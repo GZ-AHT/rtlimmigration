@@ -72,6 +72,36 @@ class SiteSettings
                     'tiktok' => ['type' => 'url', 'label' => 'TikTok'],
                 ],
             ],
+            'seo' => [
+                'label' => 'SEO', 'description' => 'Search and sharing defaults, structured data, verification codes, sitemap and robots.txt (REQ §22). Pages, posts and universities can override these.',
+                'fields' => [
+                    'enabled' => ['type' => 'toggle', 'label' => 'Turn on SEO features (meta tags, social tags, structured data, analytics)'],
+                    'noindex_site' => ['type' => 'toggle', 'label' => 'Hide the whole website from search engines', 'hint' => 'Use on a test site. Adds noindex to every page and blocks crawlers in robots.txt.'],
+                    'default_title' => ['type' => 'text', 'label' => 'Default meta title', 'max' => 70, 'hint' => 'Used for the homepage when it has no title of its own.'],
+                    'default_description' => ['type' => 'textarea', 'label' => 'Default meta description', 'max' => 170, 'hint' => 'Used when a page has none. Blank uses the general description.'],
+                    'default_keywords' => ['type' => 'text', 'label' => 'Default meta keywords', 'max' => 255],
+                    'canonical_base' => ['type' => 'url', 'label' => 'Default canonical URL (site address)', 'hint' => 'Canonical links use this address plus the page path. Blank uses the address the page was opened on.'],
+                    'default_robots' => ['type' => 'select', 'label' => 'Default robots meta', 'options' => ['index,follow' => 'Index, follow', 'index,nofollow' => 'Index, nofollow', 'noindex,follow' => 'Noindex, follow', 'noindex,nofollow' => 'Noindex, nofollow']],
+                    'og_title' => ['type' => 'text', 'label' => 'Default Open Graph title', 'max' => 100],
+                    'og_description' => ['type' => 'textarea', 'label' => 'Default Open Graph description', 'max' => 300],
+                    'og_image' => ['type' => 'image', 'label' => 'Default Open Graph image (1200 × 630 px)'],
+                    'twitter_card' => ['type' => 'select', 'label' => 'Twitter card', 'options' => ['summary_large_image' => 'Large image', 'summary' => 'Summary']],
+                    'twitter_site' => ['type' => 'text', 'label' => 'Twitter / X username', 'max' => 16, 'hint' => 'Without the @.'],
+                    'publisher' => ['type' => 'text', 'label' => 'Website publisher', 'max' => 120, 'hint' => 'The organisation that owns the website, e.g. RTBL Group.'],
+                    'schema_organization' => ['type' => 'toggle', 'label' => 'Organization and website structured data (homepage)'],
+                    'schema_local_business' => ['type' => 'toggle', 'label' => 'Local business structured data (homepage)', 'hint' => 'Uses the address, phone, hours and social links from General and Social media.'],
+                    'business_type' => ['type' => 'select', 'label' => 'Local business type', 'options' => ['ProfessionalService' => 'Professional service', 'TravelAgency' => 'Travel agency', 'EducationalOrganization' => 'Educational organisation']],
+                    'price_range' => ['type' => 'text', 'label' => 'Price range (optional)', 'max' => 20, 'hint' => 'For example ৳৳.'],
+                    'hreflang' => ['type' => 'toggle', 'label' => 'Add hreflang tags', 'hint' => 'Marks the website language. More languages can be added later (roadmap Q4).'],
+                    'google_verification' => ['type' => 'text', 'label' => 'Google Search Console verification code', 'max' => 100, 'pattern' => '/^[A-Za-z0-9_-]+$/'],
+                    'bing_verification' => ['type' => 'text', 'label' => 'Bing Webmaster verification code', 'max' => 100, 'pattern' => '/^[A-Za-z0-9_-]+$/'],
+                    'ga_id' => ['type' => 'text', 'label' => 'Google Analytics measurement ID', 'max' => 20, 'pattern' => '/^G-[A-Z0-9]{4,}$/', 'hint' => 'Looks like G-XXXXXXXXXX.'],
+                    'gtm_id' => ['type' => 'text', 'label' => 'Google Tag Manager ID', 'max' => 20, 'pattern' => '/^GTM-[A-Z0-9]{4,}$/', 'hint' => 'Looks like GTM-XXXXXXX.'],
+                    'sitemap_enabled' => ['type' => 'toggle', 'label' => 'Publish the XML sitemap (/sitemap.xml)'],
+                    'sitemap_extra' => ['type' => 'textarea', 'label' => 'Extra sitemap addresses', 'max' => 4000, 'hint' => 'One path or address per line, for pages that are not in the CMS.'],
+                    'robots_txt' => ['type' => 'code', 'label' => 'robots.txt', 'max' => 5000, 'hint' => 'Blank uses a safe default that allows crawling and points to the sitemap.'],
+                ],
+            ],
             'branding' => [
                 'label' => 'Logo & branding', 'description' => 'Logos, icons, colours and fonts. Without a logo image, the site name is shown in the brand style.',
                 'fields' => [
@@ -128,6 +158,11 @@ class SiteSettings
             'general.business_hours' => 'Sat–Thu, 10:00–19:00',
             'branding.primary_color' => '#d71920', 'branding.secondary_color' => '#191b20', 'branding.accent_color' => '#f6f3ee',
             'branding.heading_font' => 'Inter', 'branding.body_font' => 'Inter',
+            'seo.enabled' => true, 'seo.noindex_site' => false, 'seo.default_robots' => 'index,follow',
+            'seo.twitter_card' => 'summary_large_image', 'seo.schema_organization' => true, 'seo.schema_local_business' => true,
+            'seo.business_type' => 'ProfessionalService', 'seo.hreflang' => true, 'seo.sitemap_enabled' => true,
+            'seo.default_title' => 'RTL Bangladesh | Immigration & Visa Advisory',
+            'seo.publisher' => 'RTBL Group',
             'theme.admin_mode' => 'system', 'theme.button_style' => 'rounded',
         ];
     }
@@ -197,6 +232,15 @@ class SiteSettings
         }
     }
 
+    /**
+     * @param  array<string, mixed>  $field
+     * @return list<string>
+     */
+    private static function patternRule(array $field): array
+    {
+        return isset($field['pattern']) && is_string($field['pattern']) ? ['regex:'.$field['pattern']] : [];
+    }
+
     /** @return array<string, list<mixed>> */
     public static function rules(string $group): array
     {
@@ -206,7 +250,7 @@ class SiteSettings
             $base = ($field['required'] ?? false) ? ['required'] : ['nullable'];
 
             $rules[$key] = match ($field['type']) {
-                'text', 'textarea' => [...$base, 'string', 'max:'.($field['max'] ?? 255)],
+                'text', 'textarea' => [...$base, 'string', 'max:'.($field['max'] ?? 255), ...self::patternRule($field)],
                 'code' => ['nullable', 'string', 'max:'.($field['max'] ?? 20000)],
                 'email' => [...$base, 'email:rfc', 'max:255'],
                 'url' => [...$base, 'url:https,http', 'max:255'],

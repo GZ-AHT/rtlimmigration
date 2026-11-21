@@ -50,7 +50,7 @@ class UniversityController extends Controller
                     'requirements' => $c->requirements,
                 ])->values(),
             ],
-            'seo' => WebsiteSeo::make($university->name, $university->summary, $university->seo, $university->banner ?? $university->logo, noindex: ! $university->is_active),
+            'seo' => WebsiteSeo::make($university->name, $university->summary, $university->seo, $university->banner ?? $university->logo, noindex: ! $university->is_active, crumbs: [['name' => 'Universities', 'url' => WebsiteSeo::canonicalFor('universities')], ['name' => $university->name, 'url' => WebsiteSeo::canonicalFor("universities/{$university->slug}")]]),
         ]);
     }
 }

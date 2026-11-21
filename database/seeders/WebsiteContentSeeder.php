@@ -103,14 +103,24 @@ class WebsiteContentSeeder extends Seeder
     private function seedContent(): void
     {
         $faqs = [
-            'Student visa' => [
+            'Getting started' => [
+                ['Can I speak to an adviser before choosing a destination?', 'Yes. A first conversation with an adviser is the best place to begin. We listen to your goals and explain which destinations and pathways may suit you, before you commit to anything.', false],
+                ['Can I book an online consultation?', 'Yes. You can book a consultation online or at our Dhaka office. Use the Book a consultation button and choose a time that suits you.', false],
+            ],
+            'Student visas' => [
                 ['How can RTL help me get a student visa?', 'We assist with university selection, documentation, visa applications and interview preparation, helping you navigate each stage with confidence.', true],
                 ['Which countries can I apply to for studying abroad?', 'We guide applications for destinations including the USA, Canada, Australia, the UK, Germany, Malaysia, Japan, New Zealand, Denmark and Armenia. Talk to an adviser about which suits your goals and budget.', true],
                 ['What are the basic requirements for a student visa?', 'Requirements depend on the country and course, but usually include an offer letter from an institution, proof of funds, academic documents, a valid passport and, for many destinations, an English language test result. We give you a checklist for your exact application.', true],
                 ['Can RTL guarantee visa approval?', 'No. Visa decisions are made by the embassy or immigration authority, so nobody can honestly guarantee approval. What we do is prepare a complete, accurate application and help you present it with confidence.', true],
                 ['How long does a student visa application take?', 'It varies by country and season. Plan for several weeks to a few months from offer letter to decision. Starting early leaves time for documents, tests and any interview.', true],
             ],
-            'Visitor visa' => [
+            'Applications & documents' => [
+                ['What documents should I bring to my first consultation?', 'Bring your passport, academic transcripts and certificates, any English test results and a note of your study goals. Don’t worry if something is missing; we’ll tell you exactly what you still need.', false],
+            ],
+            'Fees & timelines' => [
+                ['How do I find out about fees and service costs?', 'We explain our service fees and the expected third-party costs, such as application and visa fees, before you commit. Ask an adviser for a clear breakdown for your destination.', false],
+            ],
+            'Visitor visas' => [
                 ['Can you help with a visitor or tourist visa?', 'Yes. We help you prepare the application, supporting documents and travel plans for family visits, tourism and short business trips.', true],
             ],
             'Skilled migration' => [
@@ -558,8 +568,9 @@ class WebsiteContentSeeder extends Seeder
     private function faqPage(): array
     {
         return [
-            $this->s('page_hero', ['eyebrow' => 'HERE TO HELP', 'title' => "Big questions.\nClear answers.", 'description' => 'Answers to the questions students and families ask us most. Can’t find yours? Our team is a message away.', 'button' => $this->link('Ask us a question', '/contact')], ['background' => 'blush', 'spacing' => 'none']),
-            $this->s('faq', ['eyebrow' => 'BROWSE BY TOPIC', 'title' => 'Everything in one place.', 'all' => true], ['background' => 'sand']),
+            $this->s('page_hero', ['eyebrow' => 'A LITTLE CLARITY FOR YOUR NEXT CHAPTER', 'title' => "Big questions.\nClear answers.", 'description' => 'From your first consultation to preparing your application, start here.', 'button' => $this->link('Ask us a question', '/contact')], ['background' => 'blush', 'spacing' => 'none']),
+            $this->s('faq', ['eyebrow' => 'BROWSE BY TOPIC', 'title' => 'Everything in one place.', 'all' => true]),
+            $this->s('cta', ['title' => 'Let’s make your next step clearer.', 'description' => 'Tell us about your plans and we’ll help you find the right place to begin.', 'button' => $this->link('Contact an adviser', '/contact')], ['background' => 'sand']),
         ];
     }
 

@@ -13,6 +13,7 @@ use App\Http\Controllers\Website\GuestChatController;
 use App\Http\Controllers\Website\NewsletterController;
 use App\Http\Controllers\Website\PageController;
 use App\Http\Controllers\Website\PartnerApplicationController;
+use App\Http\Controllers\Website\SeoController;
 use App\Http\Controllers\Website\SkillMigrationController;
 use App\Http\Controllers\Website\UniversityController;
 use App\Http\Middleware\ShareWebsiteData;
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(ShareWebsiteData::class)->group(function () {
     Route::get('/', [PageController::class, 'home'])->name('home');
     Route::get('contact', [PageController::class, 'contact'])->name('contact');
+    Route::get('sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+    Route::get('robots.txt', [SeoController::class, 'robots'])->name('robots');
     Route::get('blog/{slug}', [BlogController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('blog.show');
     Route::get('universities/{slug}', [UniversityController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('universities.show');
 
@@ -32,14 +35,14 @@ Route::middleware(ShareWebsiteData::class)->group(function () {
     Route::get('skill-migration/result/{token}', [SkillMigrationController::class, 'result'])->where('token', '[A-Za-z0-9]{48}')->name('skill-migration.result');
     Route::get('skill-migration/{slug}', [SkillMigrationController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('skill-migration.show');
 });
-Route::post('skill-migration/{slug}/start', [SkillMigrationController::class, 'start'])->where('slug', '[a-z0-9-]+')->middleware('throttle:10,1')->name('skill-migration.start');
+Route::post('skill-migration/{slug}/start', [SkillMigrationController::class, 'start'])->where('slug', '[a-z0-9-]+')->middleware(['throttle:10,1', 'recaptcha'])->name('skill-migration.start');
 Route::post('skill-migration/take/{token}', [SkillMigrationController::class, 'submit'])->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:20,1')->name('skill-migration.submit');
 
 // REQ §7 website lead form: every enquiry becomes a lead.
-Route::post('enquiry', [EnquiryController::class, 'store'])->middleware('throttle:5,1')->name('enquiry.store');
-Route::post('blog/{slug}/comments', [BlogController::class, 'comment'])->where('slug', '[a-z0-9-]+')->middleware('throttle:5,1')->name('blog.comments.store');
-Route::post('partners/apply', [PartnerApplicationController::class, 'store'])->middleware('throttle:5,1')->name('partners.apply');
-Route::post('newsletter', [NewsletterController::class, 'store'])->middleware('throttle:5,1')->name('newsletter.store');
+Route::post('enquiry', [EnquiryController::class, 'store'])->middleware(['throttle:5,1', 'recaptcha'])->name('enquiry.store');
+Route::post('blog/{slug}/comments', [BlogController::class, 'comment'])->where('slug', '[a-z0-9-]+')->middleware(['throttle:5,1', 'recaptcha'])->name('blog.comments.store');
+Route::post('partners/apply', [PartnerApplicationController::class, 'store'])->middleware(['throttle:5,1', 'recaptcha'])->name('partners.apply');
+Route::post('newsletter', [NewsletterController::class, 'store'])->middleware(['throttle:5,1', 'recaptcha'])->name('newsletter.store');
 Route::get('newsletter/unsubscribe/{token}', [NewsletterController::class, 'unsubscribe'])->where('token', '[A-Za-z0-9]{20,64}')->middleware('throttle:20,1')->name('newsletter.unsubscribe');
 
 // Signed account invitation link (REQ §11.2).

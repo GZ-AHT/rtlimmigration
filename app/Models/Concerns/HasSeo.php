@@ -23,6 +23,8 @@ trait HasSeo
 
         $values = array_intersect_key($data, array_flip(SeoMeta::FIELDS));
         $values['noindex'] = (bool) ($values['noindex'] ?? false);
+        $values['nofollow'] = (bool) ($values['nofollow'] ?? false);
+        $values['seo_enabled'] = (bool) ($values['seo_enabled'] ?? true);
 
         $this->seo()->updateOrCreate([], $values);
     }
@@ -41,6 +43,11 @@ trait HasSeo
             'og_description' => $seo->og_description ?? '',
             'og_image' => $seo?->ogImage?->present(),
             'noindex' => (bool) $seo?->noindex,
+            'seo_enabled' => $seo === null ? true : (bool) $seo->seo_enabled,
+            'meta_keywords' => $seo->meta_keywords ?? '',
+            'nofollow' => (bool) $seo?->nofollow,
+            'twitter_card' => $seo->twitter_card ?? '',
+            'custom_schema' => $seo->custom_schema ?? '',
         ];
     }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, useForm, usePage } from '@inertiajs/vue3';
+import { useRecaptcha } from '@/composables/useRecaptcha';
 import { ref } from 'vue';
 import FormField from '@/components/website/FormField.vue';
 import { fieldClass, selectClass } from '@/components/website/form';
@@ -55,9 +56,12 @@ const form = useForm({
     message: '',
     consent: false,
     website: '', // honeypot, hidden from people
+    recaptcha_token: '',
 });
+const { token } = useRecaptcha();
 
-function submit(): void {
+async function submit(): Promise<void> {
+    form.recaptcha_token = await token('contact');
     form.transform((d) => ({
         ...d,
         country_id: d.country_id || null,

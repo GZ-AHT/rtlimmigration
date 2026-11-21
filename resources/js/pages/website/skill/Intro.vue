@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
+import { useRecaptcha } from '@/composables/useRecaptcha';
 import { ref } from 'vue';
 import CountryCombobox from '@/components/website/CountryCombobox.vue';
 import type { CountryChoice } from '@/components/website/CountryCombobox.vue';
@@ -35,11 +36,14 @@ const form = useForm({
     phone: '',
     consent: false,
     website: '',
+    recaptcha_token: '',
 });
+const { token } = useRecaptcha();
 const switchTo = ref(props.assessment.slug);
 const switchQuery = ref('');
 
-function begin(): void {
+async function begin(): Promise<void> {
+    form.recaptcha_token = await token('assessment');
     form.submit(start(props.assessment.slug), { preserveScroll: true });
 }
 

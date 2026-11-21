@@ -141,7 +141,11 @@ return [
                     ['title' => 'Testimonials', 'route' => 'admin.cms.testimonials.index', 'permission' => 'cms.manage', 'phase' => 9],
                     ['title' => 'Newsletter', 'route' => 'admin.cms.newsletter.index', 'permission' => 'cms.manage', 'phase' => 9],
                 ]],
-                ['title' => 'SEO Management', 'icon' => 'travel_explore', 'route' => null, 'permission' => 'seo.manage', 'phase' => 10],
+                ['title' => 'SEO Management', 'icon' => 'travel_explore', 'children' => [
+                    ['title' => 'Global SEO & sitemap', 'route' => 'admin.cms.settings', 'params' => ['tab' => 'seo'], 'permission' => 'cms.manage', 'phase' => 10],
+                    ['title' => 'Redirects', 'route' => 'admin.seo.redirects.index', 'permission' => 'seo.manage', 'phase' => 10],
+                    ['title' => 'Broken links', 'route' => 'admin.seo.broken-links.index', 'permission' => 'seo.manage', 'phase' => 10],
+                ]],
             ]],
             ['label' => 'Insights', 'items' => [
                 // Finance reports shipped with Phase 5; the rest of REQ §24 arrives in Phase 12.
@@ -155,10 +159,19 @@ return [
                 ['title' => 'Media Library', 'icon' => 'perm_media', 'route' => 'admin.media.index', 'permission' => 'media.view', 'phase' => 9],
             ]],
             ['label' => 'System', 'items' => [
-                ['title' => 'Integrations', 'icon' => 'extension', 'route' => null, 'permission' => 'integrations.manage', 'phase' => 11],
+                ['title' => 'Integrations', 'icon' => 'extension', 'children' => [
+                    ['title' => 'Services & keys', 'route' => 'admin.system.settings', 'params' => ['tab' => 'integrations'], 'permission' => 'integrations.manage', 'phase' => 11],
+                    ['title' => 'Webhooks', 'route' => 'admin.system.webhooks.index', 'permission' => 'integrations.manage', 'phase' => 11],
+                ]],
                 ['title' => 'Roles & Permissions', 'icon' => 'admin_panel_settings', 'route' => 'admin.roles.index', 'permission' => 'roles.manage', 'phase' => 1],
-                ['title' => 'System Settings', 'icon' => 'settings', 'route' => null, 'permission' => 'settings.manage', 'phase' => 11],
-                ['title' => 'Security & Audit Logs', 'icon' => 'shield_lock', 'route' => null, 'permission' => 'audit.view', 'phase' => 11],
+                ['title' => 'System Settings', 'icon' => 'settings', 'children' => [
+                    ['title' => 'Overview & maintenance', 'route' => 'admin.system.settings', 'params' => ['tab' => 'overview'], 'permission' => 'settings.manage', 'phase' => 11],
+                    ['title' => 'Backups', 'route' => 'admin.system.backups.index', 'permission' => 'backups.manage', 'phase' => 11],
+                ]],
+                ['title' => 'Security & Audit Logs', 'icon' => 'shield_lock', 'children' => [
+                    ['title' => 'Security settings', 'route' => 'admin.system.settings', 'params' => ['tab' => 'security'], 'permission' => 'security.manage', 'phase' => 11],
+                    ['title' => 'Audit logs', 'route' => 'admin.system.audit', 'permission' => 'audit.view', 'phase' => 11],
+                ]],
             ]],
         ],
 

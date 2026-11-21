@@ -34,12 +34,15 @@ class MediaController extends Controller
     {
         Gate::authorize('media.view');
 
-        $filters = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'kind' => ['nullable', 'in:image,video']]);
+        $filters = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'kind' => ['nullable', 'in:image,video'], 'missing_alt' => ['nullable', 'boolean']]);
         $search = (string) ($filters['search'] ?? '');
         $kind = $filters['kind'] ?? null;
+        $missingAlt = (bool) ($filters['missing_alt'] ?? false);
 
         $media = Media::query()
             ->when($kind === 'video', fn (Builder $q) => $q->where('mime_type', 'like', 'video/%'))
+            // REQ §22.3 image alt text management: find images that still need a description.
+            ->when($missingAlt, fn (Builder $q) => $q->where('mime_type', 'not like', 'video/%')->where(fn (Builder $q) => $q->whereNull('alt')->orWhere('alt', '')))
             ->when($kind === 'image', fn (Builder $q) => $q->where('mime_type', 'not like', 'video/%'))
             ->when($search !== '', fn (Builder $q) => $q->where(fn (Builder $q) => $q->where('original_name', 'like', '%'.addcslashes($search, '%_\\').'%')->orWhere('alt', 'like', '%'.addcslashes($search, '%_\\').'%')))
             ->latest('id')
@@ -53,7 +56,7 @@ class MediaController extends Controller
 
         return Inertia::render('admin/media/Index', [
             'media' => $media,
-            'filters' => ['search' => $search],
+            'filters' => ['search' => $search, 'missing_alt' => $missingAlt ? '1' : ''],
             'limits' => ['max_mb' => self::MAX_KB / 1024, 'extensions' => self::MIMES, 'video_max_mb' => self::VIDEO_MAX_KB / 1024, 'video_extensions' => self::VIDEO_MIMES],
             'canManage' => $request->user()->can('media.manage'),
         ]);

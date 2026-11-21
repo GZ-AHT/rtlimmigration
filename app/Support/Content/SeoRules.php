@@ -21,6 +21,15 @@ class SeoRules
             "{$prefix}.og_description" => ['nullable', 'string', 'max:300'],
             "{$prefix}.og_image_id" => ['nullable', 'integer', Rule::exists(Media::class, 'id')],
             "{$prefix}.noindex" => ['boolean'],
+            "{$prefix}.nofollow" => ['boolean'],
+            "{$prefix}.seo_enabled" => ['boolean'],
+            "{$prefix}.meta_keywords" => ['nullable', 'string', 'max:255'],
+            "{$prefix}.twitter_card" => ['nullable', 'in:summary,summary_large_image'],
+            "{$prefix}.custom_schema" => ['nullable', 'string', 'max:10000', function ($a, $v, $fail) {
+                if (filled($v) && ! (is_array($d = json_decode((string) $v, true)) && json_last_error() === JSON_ERROR_NONE)) {
+                    $fail(__('Custom structured data must be valid JSON (a JSON-LD object or a list of objects).'));
+                }
+            }],
         ];
     }
 }

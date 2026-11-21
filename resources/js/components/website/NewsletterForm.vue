@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
+import { useRecaptcha } from '@/composables/useRecaptcha';
 import { ref } from 'vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 import { store } from '@/routes/newsletter';
@@ -17,9 +18,16 @@ const props = withDefaults(
 );
 
 const done = ref(false);
-const form = useForm({ email: '', website: '', source: props.source });
+const form = useForm({
+    email: '',
+    website: '',
+    source: props.source,
+    recaptcha_token: '',
+});
+const { token } = useRecaptcha();
 
-function submit(): void {
+async function submit(): Promise<void> {
+    form.recaptcha_token = await token('newsletter');
     form.submit(store(), {
         preserveScroll: true,
         onSuccess: () => {

@@ -199,6 +199,35 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::delete('newsletter/{subscriber}', [Admin\Cms\NewsletterController::class, 'destroy'])->name('newsletter.destroy');
         });
 
+        // REQ §23 System & advanced settings
+        Route::prefix('system')->name('system.')->group(function () {
+            Route::get('settings', [Admin\SystemController::class, 'show'])->name('settings');
+            Route::put('settings/{group}', [Admin\SystemController::class, 'update'])->name('settings.update');
+            Route::post('cache/{type}', [Admin\SystemController::class, 'clearCache'])->middleware('throttle:20,1')->name('cache.clear');
+            Route::get('audit', [Admin\AuditController::class, 'index'])->name('audit');
+            Route::get('backups', [Admin\BackupController::class, 'index'])->name('backups.index');
+            Route::post('backups', [Admin\BackupController::class, 'store'])->middleware('throttle:6,1')->name('backups.store');
+            Route::get('backups/{backup}/download', [Admin\BackupController::class, 'download'])->middleware('throttle:20,1')->name('backups.download');
+            Route::post('backups/{backup}/restore', [Admin\BackupController::class, 'restore'])->middleware('throttle:3,10')->name('backups.restore');
+            Route::delete('backups/{backup}', [Admin\BackupController::class, 'destroy'])->name('backups.destroy');
+            Route::get('webhooks', [Admin\WebhookController::class, 'index'])->name('webhooks.index');
+            Route::post('webhooks', [Admin\WebhookController::class, 'store'])->name('webhooks.store');
+            Route::put('webhooks/{webhook}', [Admin\WebhookController::class, 'update'])->name('webhooks.update');
+            Route::post('webhooks/{webhook}/secret', [Admin\WebhookController::class, 'secret'])->name('webhooks.secret');
+            Route::post('webhooks/{webhook}/test', [Admin\WebhookController::class, 'test'])->middleware('throttle:10,1')->name('webhooks.test');
+            Route::delete('webhooks/{webhook}', [Admin\WebhookController::class, 'destroy'])->name('webhooks.destroy');
+        });
+
+        // REQ §22.3 Technical SEO
+        Route::prefix('seo')->name('seo.')->group(function () {
+            Route::get('redirects', [Admin\Cms\RedirectController::class, 'index'])->name('redirects.index');
+            Route::post('redirects', [Admin\Cms\RedirectController::class, 'store'])->name('redirects.store');
+            Route::put('redirects/{redirect}', [Admin\Cms\RedirectController::class, 'update'])->name('redirects.update');
+            Route::delete('redirects/{redirect}', [Admin\Cms\RedirectController::class, 'destroy'])->name('redirects.destroy');
+            Route::get('broken-links', [Admin\Cms\BrokenLinkController::class, 'index'])->name('broken-links.index');
+            Route::post('broken-links/scan', [Admin\Cms\BrokenLinkController::class, 'scan'])->middleware('throttle:3,1')->name('broken-links.scan');
+        });
+
         // REQ §15 University Management
         Route::get('universities', [Admin\Universities\UniversityController::class, 'index'])->name('universities.index');
         Route::get('universities/create', [Admin\Universities\UniversityController::class, 'create'])->name('universities.create');

@@ -33,10 +33,26 @@ const items = computed(() => {
     return groups.value[active.value]?.items ?? [];
 });
 
+/** FAQ page (Figma 12:675): every topic under a numbered heading. */
+const grouped = computed(() => props.data.all && !query.value.trim());
+
 function choose(index: number): void {
     active.value = index;
     query.value = '';
+
+    if (props.data.all) {
+        document
+            .getElementById(`faq-group-${groups.value[index]?.slug}`)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        return;
+    }
+
     open.value = groups.value[index]?.items[0]?.id ?? null;
+}
+
+function pad(n: number): string {
+    return String(n).padStart(2, '0');
 }
 </script>
 
@@ -102,6 +118,24 @@ function choose(index: number): void {
                     </button>
                 </li>
             </ul>
+
+            <div
+                v-if="data.all"
+                class="mt-10 hidden rounded-[6px] bg-white p-[22px] lg:block"
+            >
+                <p class="text-[25px] leading-[30px] font-bold text-site-ink">
+                    Every journey<br />is different.
+                </p>
+                <p class="mt-5 text-[14px] leading-[21px] text-site-muted">
+                    Can’t find the answer you need? Our advisers are here to
+                    help.
+                </p>
+                <a
+                    href="/contact"
+                    class="mt-6 inline-block text-[14px] font-semibold text-site-red"
+                    >Talk to our team <SiteArrow glyph="↗"
+                /></a>
+            </div>
         </div>
 
         <div>
@@ -115,6 +149,62 @@ function choose(index: number): void {
                         : 'Questions and answers will appear here soon.'
                 }}
             </p>
+            <template v-else-if="grouped">
+                <section
+                    v-for="(g, gi) in groups"
+                    :id="`faq-group-${g.slug}`"
+                    :key="g.slug"
+                    class="mb-10 scroll-mt-28 last:mb-0"
+                >
+                    <h3
+                        class="mb-4 text-[25px] leading-[37.5px] font-bold text-site-ink"
+                    >
+                        {{ pad(gi + 1) }} / {{ g.name }}
+                    </h3>
+                    <ul class="flex flex-col gap-2">
+                        <li
+                            v-for="f in g.items"
+                            :key="f.id"
+                            class="rounded-[5px] border"
+                            :class="
+                                open === f.id
+                                    ? 'border-site-warm-line bg-site-sand'
+                                    : 'border-site-field-border bg-white'
+                            "
+                        >
+                            <button
+                                :id="`faq-q-${f.id}`"
+                                type="button"
+                                class="flex w-full items-start justify-between gap-6 px-6 py-[19px] text-left text-[16px] leading-6 font-semibold text-site-ink"
+                                :aria-expanded="open === f.id"
+                                :aria-controls="`faq-a-${f.id}`"
+                                @click="open = open === f.id ? null : f.id"
+                            >
+                                <span>{{ f.question }}</span>
+                                <span
+                                    aria-hidden="true"
+                                    class="w-[18px] shrink-0 text-center"
+                                    :class="
+                                        open === f.id
+                                            ? 'text-[24px] leading-6 text-site-red'
+                                            : 'text-[18px] leading-6 text-site-muted'
+                                    "
+                                    >{{ open === f.id ? '−' : '⌄' }}</span
+                                >
+                            </button>
+                            <div
+                                v-show="open === f.id"
+                                :id="`faq-a-${f.id}`"
+                                role="region"
+                                :aria-labelledby="`faq-q-${f.id}`"
+                                class="px-6 pb-6 text-[14px] leading-[22.4px] whitespace-pre-line text-site-muted"
+                            >
+                                {{ f.answer }}
+                            </div>
+                        </li>
+                    </ul>
+                </section>
+            </template>
             <ul v-else class="flex flex-col gap-2 lg:pt-[3px]">
                 <li
                     v-for="f in items"

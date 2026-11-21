@@ -1,9 +1,13 @@
 <?php
 
+use App\Http\Middleware\ApplyRedirects;
+use App\Http\Middleware\EnforceIpRules;
+use App\Http\Middleware\EnforceMaintenance;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ShareWebsiteData;
+use App\Http\Middleware\VerifyRecaptcha;
 use App\Support\Cms\WebsiteMenus;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -26,8 +30,15 @@ return Application::configure(basePath: dirname(__DIR__))
         // services, not from our pages.
         $middleware->validateCsrfTokens(except: ['payments/gateway/*', 'chat/webhook/*']);
 
+        $middleware->alias(['recaptcha' => VerifyRecaptcha::class]);
+
+        // Global, so an old address is redirected even when no route matches it (nested paths, .html files, capitals).
+        $middleware->prepend(ApplyRedirects::class);
+
         $middleware->web(append: [
             EnsureUserIsActive::class,
+            EnforceIpRules::class,
+            EnforceMaintenance::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
@@ -59,7 +70,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 $menus = [];
             }
 
-            return Inertia::render('website/Error', ['status' => $status, 'menus' => $menus, 'siteMedia' => fn () => ShareWebsiteData::media()])
+            return Inertia::render('website/Error', ['status' => $status, 'message' => $status === 503 ? $e->getMessage() : null, 'menus' => $menus, 'siteMedia' => fn () => ShareWebsiteData::media()])
                 ->toResponse($request)
                 ->setStatusCode($status);
         });

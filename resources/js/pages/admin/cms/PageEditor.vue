@@ -83,6 +83,11 @@ const emptySeo: SeoValue = {
     og_description: '',
     og_image: null,
     noindex: false,
+    seo_enabled: true,
+    meta_keywords: '',
+    nofollow: false,
+    twitter_card: '',
+    custom_schema: '',
 };
 const mediaMap = reactive<Record<number, MediaItem>>({ ...props.media });
 

@@ -55,6 +55,12 @@ export type Seo = {
     image: string | null;
     noindex: boolean;
     type: string;
+    robots?: string;
+    keywords?: string | null;
+    twitter_card?: string;
+    twitter_site?: string | null;
+    hreflang?: string | null;
+    enabled?: boolean;
 };
 
 export type Pagination = {

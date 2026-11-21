@@ -24,6 +24,11 @@ export type SeoValue = {
     og_description: string;
     og_image: MediaItem | null;
     noindex: boolean;
+    seo_enabled: boolean;
+    meta_keywords: string;
+    nofollow: boolean;
+    twitter_card: string;
+    custom_schema: string;
 };
 
 export type PublishState = {
@@ -48,7 +53,9 @@ export type FieldDef = {
         | 'email'
         | 'url'
         | 'color'
-        | 'code';
+        | 'code'
+        | 'secret'
+        | 'datetime';
     label: string;
     max?: number;
     min?: number;

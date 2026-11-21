@@ -61,7 +61,10 @@ class BlogController extends Controller
                 ->oldest()->limit(100)->get()
                 ->map(fn (BlogComment $c) => self::presentComment($c))->values(),
             'related' => $this->related($post),
-            'seo' => WebsiteSeo::make($post->title, $post->excerpt, $post->seo, $post->featuredImage, 'article', $preview),
+            'seo' => WebsiteSeo::make($post->title, $post->excerpt, $post->seo, $post->featuredImage, 'article', $preview,
+                [['name' => 'Blog', 'url' => WebsiteSeo::canonicalFor('blog')], ['name' => $post->title, 'url' => WebsiteSeo::canonicalFor("blog/{$post->slug}")]],
+                ['published' => $post->published_at?->toIso8601String(), 'modified' => $post->updated_at?->toIso8601String(), 'author' => $profile?->display_name ?: $post->author?->name],
+            ),
         ]);
     }
 
