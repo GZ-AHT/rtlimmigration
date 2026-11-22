@@ -3,6 +3,7 @@
 use App\Enums\EmailAccountStatus;
 use App\Enums\EmailMessageStatus;
 use App\Enums\Role;
+use App\Jobs\SyncMailboxes;
 use App\Mail\OutgoingEmail;
 use App\Models\EmailAccount;
 use App\Models\EmailCampaign;
@@ -13,12 +14,14 @@ use App\Models\Student;
 use App\Models\User;
 use App\Support\Email\EmailSender;
 use App\Support\Email\EmailSettings;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request as HttpRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Activitylog\Models\Activity;
 
@@ -355,4 +358,243 @@ it('lets a user save their signature', function () {
 
     $this->put(route('accounts.email.signature'), ['body' => ''])->assertSessionHasNoErrors();
     expect(User::find($user->id)->emailSignature)->toBeNull();
+});
+
+/** An email already sent by $user, as if composed in the dashboard. */
+function sentBy(User $user, array $attributes = []): EmailMessage
+{
+    return EmailMessage::create([
+        'uuid' => (string) Str::uuid(), 'sent_by' => $user->id, 'from_email' => 'info@rtl.test', 'from_name' => 'RTL',
+        'to_email' => 'rafi@example.test', 'to_name' => 'Rafi Ahmed', 'subject' => 'Your offer', 'body' => '<p>Hello Rafi,</p><p>Your offer is attached.</p>',
+        'status' => EmailMessageStatus::Sent, 'sent_at' => now(), ...$attributes,
+    ]);
+}
+
+describe('CC and BCC', function () {
+    it('delivers to cc and bcc through the mailer without showing bcc in the message', function () {
+        $this->actingAs($this->admin)->post(route('admin.email.send'), [
+            'to_email' => 'rafi@example.test', 'cc' => 'Boss@example.test; mum@example.test', 'bcc' => 'audit@example.test',
+            'subject' => 'Offer', 'body' => 'Hello.',
+        ])->assertSessionHasNoErrors();
+
+        $message = EmailMessage::sole();
+        expect($message->status)->toBe(EmailMessageStatus::Sent)
+            ->and($message->cc)->toBe(['Boss@example.test', 'mum@example.test'])
+            ->and($message->bcc)->toBe(['audit@example.test']);
+
+        // What actually went to the mail transport (the "array" mailer records it).
+        $sent = Mail::mailer()->getSymfonyTransport()->messages()->last();
+        $envelope = collect($sent->getEnvelope()->getRecipients())->map(fn ($a) => strtolower($a->getAddress()))->all();
+        expect($envelope)->toEqualCanonicalizing(['rafi@example.test', 'boss@example.test', 'mum@example.test', 'audit@example.test'])
+            ->and($sent->toString())->toContain('Cc:')->not->toContain('audit@example.test');
+    });
+
+    it('sends cc and bcc through a mailbox\'s own SMTP mailer', function () {
+        Mail::fake();
+        $account = mailbox();
+
+        $this->actingAs($this->admin)->post(route('admin.email.send'), [
+            'email_account_id' => $account->id, 'to_email' => 'rafi@example.test', 'cc' => 'boss@example.test', 'bcc' => 'audit@example.test',
+            'subject' => 'Offer', 'body' => 'Hello.',
+        ])->assertSessionHasNoErrors();
+
+        Mail::assertSent(OutgoingEmail::class, fn (OutgoingEmail $m) => $m->hasTo('rafi@example.test') && $m->hasCc('boss@example.test') && $m->hasBcc('audit@example.test'));
+    });
+
+    it('refuses bad addresses and too many, and drops repeats', function () {
+        $post = fn (array $extra) => $this->actingAs($this->admin)->post(route('admin.email.send'), ['to_email' => 'rafi@example.test', 'subject' => 'S', 'body' => 'B', ...$extra]);
+
+        $post(['cc' => 'fine@example.test, not-an-address'])->assertSessionHasErrors('cc');
+        $post(['bcc' => 'x@y.test, "evil" <inject@example.test>'])->assertSessionHasErrors('bcc');
+        $post(['cc' => implode(',', array_map(fn ($i) => "p{$i}@example.test", range(1, 11)))])->assertSessionHasErrors('cc');
+        expect(EmailMessage::count())->toBe(0);
+
+        $post(['cc' => 'RAFI@example.test, a@example.test, A@example.test', 'bcc' => 'a@example.test, b@example.test'])->assertSessionHasNoErrors();
+        expect(EmailMessage::sole())->cc->toBe(['a@example.test'])->bcc->toBe(['b@example.test']);
+    });
+
+    it('leaves emails without cc or bcc exactly as before', function () {
+        $this->actingAs($this->admin)->post(route('admin.email.send'), ['to_email' => 'rafi@example.test', 'subject' => 'S', 'body' => 'B'])->assertSessionHasNoErrors();
+
+        expect(EmailMessage::sole())->cc->toBeNull()->bcc->toBeNull();
+        $sent = Mail::mailer()->getSymfonyTransport()->messages()->last();
+        expect(collect($sent->getEnvelope()->getRecipients())->map(fn ($a) => $a->getAddress())->all())->toBe(['rafi@example.test']);
+    });
+});
+
+describe('reply and forward', function () {
+    it('prefills a reply with the recipient, a Re: subject and the quoted original', function () {
+        $original = sentBy($this->admin, ['cc' => ['boss@example.test']]);
+
+        $this->actingAs($this->admin)->get(route('admin.email.compose', ['reply' => $original->id]))->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->where('prefill.mode', 'reply')->where('prefill.to_email', 'rafi@example.test')
+                ->where('prefill.subject', 'Re: Your offer')->where('prefill.cc', 'boss@example.test')->where('prefill.forward_of', null)
+                ->where('prefill.body', fn (string $b) => str_contains($b, 'wrote:') && str_contains($b, '> Your offer is attached.')));
+    });
+
+    it('does not stack Re: or Fwd: prefixes', function () {
+        $original = sentBy($this->admin, ['subject' => 'Re: Your offer']);
+
+        $this->actingAs($this->admin)->get(route('admin.email.compose', ['reply' => $original->id]))->assertInertia(fn (Assert $p) => $p->where('prefill.subject', 'Re: Your offer'));
+        $this->actingAs($this->admin)->get(route('admin.email.compose', ['forward' => $original->id]))->assertInertia(fn (Assert $p) => $p->where('prefill.subject', 'Re: Your offer'));
+    });
+
+    it('keeps the student link on a reply and sends it through the normal queue', function () {
+        $student = Student::factory()->create();
+        $original = sentBy($this->admin, ['recipient_type' => $student->getMorphClass(), 'recipient_id' => $student->id, 'to_email' => $student->user->email]);
+
+        $this->actingAs($this->admin)->get(route('admin.email.compose', ['reply' => $original->id]))
+            ->assertInertia(fn (Assert $p) => $p->where('recipient.type', 'student')->where('recipient.id', $student->id));
+
+        $this->actingAs($this->admin)->post(route('admin.email.send'), [
+            'recipient_type' => 'student', 'recipient_id' => $student->id, 'subject' => 'Re: Your offer', 'body' => 'Thanks!',
+        ])->assertSessionHasNoErrors();
+
+        expect(EmailMessage::query()->latest('id')->first())->status->toBe(EmailMessageStatus::Sent)->recipient_id->toBe($student->id);
+    });
+
+    it('forwards with a blank recipient and copies the attachments to the new email', function () {
+        Storage::fake(config('documents.disk'));
+        $disk = Storage::disk(config('documents.disk'));
+        $disk->put('email-attachments/original/offer.pdf', 'PDF-BYTES');
+        $original = sentBy($this->admin, ['attachments' => [['name' => 'offer.pdf', 'path' => 'email-attachments/original/offer.pdf', 'mime' => 'application/pdf', 'size' => 9]]]);
+
+        $this->actingAs($this->admin)->get(route('admin.email.compose', ['forward' => $original->id]))
+            ->assertInertia(fn (Assert $p) => $p->where('prefill.mode', 'forward')->where('prefill.to_email', null)->where('prefill.subject', 'Fwd: Your offer')
+                ->where('prefill.forward_of', $original->id)->where('prefill.attachments', ['offer.pdf'])
+                ->where('prefill.body', fn (string $b) => str_contains($b, 'Forwarded message') && str_contains($b, 'From: RTL <info@rtl.test>')));
+
+        $this->actingAs($this->admin)->post(route('admin.email.send'), [
+            'to_email' => 'new@example.test', 'subject' => 'Fwd: Your offer', 'body' => 'FYI', 'forward_of' => $original->id,
+        ])->assertSessionHasNoErrors();
+
+        $copy = EmailMessage::query()->latest('id')->first();
+        expect($copy->id)->not->toBe($original->id)->and($copy->attachments[0]['path'])->not->toBe($original->attachments[0]['path']);
+        $disk->assertExists($copy->attachments[0]['path']);
+        expect($disk->get($copy->attachments[0]['path']))->toBe('PDF-BYTES');
+        $disk->assertExists($original->attachments[0]['path']);
+    });
+
+    it('only starts from your own sent emails', function () {
+        $other = $this->userWithRole(Role::Counselor);
+        $theirs = sentBy($other);
+
+        $this->actingAs($this->admin)->get(route('admin.email.compose', ['reply' => $theirs->id]))->assertNotFound();
+        $this->actingAs($this->admin)->get(route('admin.email.compose', ['forward' => $theirs->id]))->assertNotFound();
+        $this->actingAs($this->admin)->post(route('admin.email.send'), ['to_email' => 'x@example.test', 'subject' => 'S', 'body' => 'B', 'forward_of' => $theirs->id])->assertNotFound();
+        expect(EmailMessage::count())->toBe(1);
+    });
+});
+
+describe('deleting from the sent list', function () {
+    it('hides it from the sent list, keeps the record, and restores it', function () {
+        $message = sentBy($this->admin);
+        $url = fn (?string $view = null) => route('admin.email.index', $view ? ['view' => $view] : []);
+
+        $this->actingAs($this->admin)->delete(route('admin.email.messages.trash', $message))->assertSessionHasNoErrors();
+
+        expect($message->fresh())->not->toBeNull()->trashed_at->not->toBeNull();
+        $this->get($url())->assertInertia(fn (Assert $p) => $p->has('sent.data', 0)->where('trashCount', 1)->where('view', 'sent'));
+        $this->get($url('trash'))->assertInertia(fn (Assert $p) => $p->has('sent.data', 1)->where('sent.data.0.id', $message->id)->where('view', 'trash'));
+        // The delivery log keeps it.
+        $this->get(route('admin.email.logs.index'))->assertOk()->assertInertia(fn (Assert $p) => $p->where('messages.data.0.id', $message->id));
+        expect(Activity::query()->where('description', 'Removed an email from the sent list')->count())->toBe(1);
+
+        $this->patch(route('admin.email.messages.restore', $message))->assertSessionHasNoErrors();
+        expect($message->fresh()->trashed_at)->toBeNull();
+        $this->get($url())->assertInertia(fn (Assert $p) => $p->has('sent.data', 1)->where('trashCount', 0));
+    });
+
+    it('lets you delete only your own emails', function () {
+        $counselor = $this->userWithRole(Role::Counselor);
+        $mine = sentBy($counselor);
+        $theirs = sentBy($this->admin);
+
+        $this->actingAs($counselor)->delete(route('counselor.email.messages.trash', $theirs))->assertForbidden();
+        $this->actingAs($counselor)->patch(route('counselor.email.messages.restore', $theirs))->assertForbidden();
+        expect($theirs->fresh()->trashed_at)->toBeNull();
+
+        // A counselor sees only their own list, never the admin's.
+        $this->get(route('counselor.email.index'))->assertInertia(fn (Assert $p) => $p->has('sent.data', 1)->where('sent.data.0.id', $mine->id));
+        $this->actingAs($counselor)->delete(route('counselor.email.messages.trash', $mine))->assertSessionHasNoErrors();
+        expect($mine->fresh()->trashed_at)->not->toBeNull();
+    });
+
+    it('does not let a queued email be deleted before it is sent', function () {
+        $queued = sentBy($this->admin, ['status' => EmailMessageStatus::Queued, 'sent_at' => null]);
+
+        $this->actingAs($this->admin)->delete(route('admin.email.messages.trash', $queued));
+
+        expect($queued->fresh()->trashed_at)->toBeNull();
+    });
+
+    it('keeps the student history and the file on disk when a sent email is deleted', function () {
+        $student = Student::factory()->create();
+        $message = sentBy($this->admin, ['recipient_type' => $student->getMorphClass(), 'recipient_id' => $student->id, 'subject' => 'Visa update']);
+
+        $this->actingAs($this->admin)->delete(route('admin.email.messages.trash', $message));
+
+        $this->get(route('admin.students.show', ['student' => $student, 'tab' => 'emails']))
+            ->assertInertia(fn (Assert $p) => $p->where('emails.items.0.subject', 'Visa update'));
+    });
+
+    it('requires a signed-in user with email access', function () {
+        $message = sentBy($this->admin);
+        $student = $this->userWithRole(Role::Student);
+
+        $this->delete('/admin/email/messages/'.$message->id)->assertRedirect();
+        $this->actingAs($student)->delete('/admin/email/messages/'.$message->id)->assertForbidden();
+        expect($message->fresh()->trashed_at)->toBeNull();
+    });
+});
+
+describe('automatic mailbox sync', function () {
+    it('is scheduled every thirty minutes', function () {
+        $event = collect(app(Schedule::class)->events())->first(fn ($e) => $e->description === 'email:sync-mailboxes');
+
+        expect($event)->not->toBeNull()->and($event->expression)->toBe('*/30 * * * *');
+    });
+
+    it('imports and updates mailboxes from cPanel without creating duplicates', function () {
+        connectCpanel();
+        $known = mailbox(['email' => 'old@rtl.test', 'local_part' => 'old']);
+        Http::fake([CPANEL.'Email/list_pops_with_disk' => Http::response(cpanelOk([
+            ['email' => 'old@rtl.test', 'diskused' => '7', 'diskquota' => '512', 'suspended_login' => 0],
+            ['email' => 'new@rtl.test', 'diskused' => '0', 'diskquota' => 'unlimited', 'suspended_login' => 0],
+        ]))]);
+
+        dispatch_sync(new SyncMailboxes);
+        dispatch_sync(new SyncMailboxes);
+
+        expect(EmailAccount::count())->toBe(2)->and($known->fresh())->disk_used_mb->toBe(7.0)->quota_mb->toBe(512)
+            ->and($known->fresh()->password)->toBe('Secret-Pass-123'); // credentials untouched
+        expect(Activity::query()->where('description', 'Mailboxes synced from the mail server')->count())->toBe(2);
+    });
+
+    it('does nothing when cPanel is not connected', function () {
+        Http::fake();
+
+        dispatch_sync(new SyncMailboxes);
+
+        Http::assertNothingSent();
+    });
+
+    it('survives an unreachable server and tries again next time', function () {
+        connectCpanel();
+        mailbox();
+        Http::fake([CPANEL.'*' => Http::response(['status' => 0, 'errors' => ['Server busy'], 'data' => null])]);
+
+        dispatch_sync(new SyncMailboxes);
+
+        expect(EmailAccount::sole()->on_server)->toBeTrue(); // nothing was marked missing by a failed call
+    });
+
+    it('keeps the manual Sync button working', function () {
+        connectCpanel();
+        Http::fake([CPANEL.'Email/list_pops_with_disk' => Http::response(cpanelOk([['email' => 'by-hand@rtl.test', 'diskused' => '0', 'diskquota' => 'unlimited', 'suspended_login' => 0]]))]);
+
+        $this->actingAs($this->admin)->post(route('admin.email.accounts.sync'))->assertSessionHasNoErrors();
+
+        expect(EmailAccount::where('email', 'by-hand@rtl.test')->exists())->toBeTrue();
+    });
 });

@@ -445,6 +445,9 @@ export type EmailMessageRow = {
     from_email: string;
     to_email: string;
     to_name: string | null;
+    cc: string[];
+    bcc: string[];
+    trashed_at: string | null;
     recipient: string | null;
     sender: string | null;
     campaign: string | null;

@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import DataTable from '@/components/panel/DataTable.vue';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -32,7 +34,9 @@ const props = defineProps<{
     } | null;
     signature: string;
     sent: Paginated<EmailMessageRow>;
-    urls: { compose: string; signature: string };
+    view: 'sent' | 'trash';
+    trashCount: number;
+    urls: { compose: string; signature: string; message: string };
     canManage: boolean;
     csrfToken: string;
 }>();
@@ -43,9 +47,45 @@ function saveSignature(): void {
     signatureForm.put(props.urls.signature, { preserveScroll: true });
 }
 
+// Removing an email only hides the dashboard copy; it can be restored.
+const deleting = ref<EmailMessageRow | null>(null);
+const deleteOpen = ref(false);
+const working = ref(false);
+
+function askDelete(row: EmailMessageRow): void {
+    deleting.value = row;
+    deleteOpen.value = true;
+}
+
+function confirmDelete(): void {
+    if (!deleting.value) {
+        return;
+    }
+
+    working.value = true;
+    router.delete(`${props.urls.message}/messages/${deleting.value.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            working.value = false;
+            deleteOpen.value = false;
+        },
+    });
+}
+
+function restore(row: EmailMessageRow): void {
+    router.patch(
+        `${props.urls.message}/messages/${row.id}/restore`,
+        {},
+        { preserveScroll: true },
+    );
+}
+
+const composeUrl = (kind: 'reply' | 'forward', row: EmailMessageRow): string =>
+    `${props.urls.compose}?${kind}=${row.id}`;
+
 const columns: TableColumn<EmailMessageRow>[] = [
     { key: 'subject', label: 'Email' },
-    { key: 'status', label: 'Status' },
+    { key: 'status', label: 'Status', hideBelow: 'sm' },
     { key: 'open_count', label: 'Opened', hideBelow: 'md', align: 'right' },
     {
         key: 'created_at',
@@ -53,6 +93,7 @@ const columns: TableColumn<EmailMessageRow>[] = [
         hideBelow: 'sm',
         format: (r) => relativeTime(r.created_at),
     },
+    { key: 'actions', label: 'Actions', align: 'right' },
 ];
 </script>
 
@@ -150,12 +191,52 @@ const columns: TableColumn<EmailMessageRow>[] = [
                 </ul>
             </PanelCard>
 
-            <PanelCard title="Sent from the system" flush>
+            <PanelCard
+                :title="view === 'trash' ? 'Deleted' : 'Sent from the system'"
+                flush
+            >
+                <div class="flex gap-2 border-b px-5 py-2.5 text-[13px]">
+                    <Link
+                        :href="urls.message"
+                        class="rounded-md px-2.5 py-1"
+                        :class="
+                            view === 'sent'
+                                ? 'bg-muted font-semibold'
+                                : 'text-muted-foreground hover:bg-muted'
+                        "
+                        preserve-scroll
+                        >Sent</Link
+                    >
+                    <Link
+                        :href="urls.message"
+                        :data="{ view: 'trash' }"
+                        class="rounded-md px-2.5 py-1"
+                        :class="
+                            view === 'trash'
+                                ? 'bg-muted font-semibold'
+                                : 'text-muted-foreground hover:bg-muted'
+                        "
+                        preserve-scroll
+                        >Deleted<span
+                            v-if="trashCount"
+                            class="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold"
+                            >{{ trashCount }}</span
+                        ></Link
+                    >
+                </div>
                 <DataTable
                     :columns="columns"
                     :rows="sent.data"
-                    caption="Emails you sent from the system"
-                    empty-title="Nothing sent from here yet"
+                    :caption="
+                        view === 'trash'
+                            ? 'Emails you removed from your sent list'
+                            : 'Emails you sent from the system'
+                    "
+                    :empty-title="
+                        view === 'trash'
+                            ? 'Nothing deleted'
+                            : 'Nothing sent from here yet'
+                    "
                     empty-icon="outgoing_mail"
                 >
                     <template #cell-subject="{ row }">
@@ -169,6 +250,22 @@ const columns: TableColumn<EmailMessageRow>[] = [
                                 >· {{ row.recipient }}</template
                             ></span
                         >
+                        <StatusBadge
+                            class="mt-1 sm:hidden"
+                            :label="row.status_label"
+                            :tone="row.status_tone"
+                        />
+                        <span
+                            v-if="row.cc.length || row.bcc.length"
+                            class="block truncate text-[11px] text-muted-foreground"
+                            ><template v-if="row.cc.length"
+                                >Cc {{ row.cc.join(', ') }}</template
+                            ><template v-if="row.cc.length && row.bcc.length">
+                                · </template
+                            ><template v-if="row.bcc.length"
+                                >Bcc {{ row.bcc.length }}</template
+                            ></span
+                        >
                     </template>
                     <template #cell-status="{ row }">
                         <StatusBadge
@@ -178,6 +275,50 @@ const columns: TableColumn<EmailMessageRow>[] = [
                     </template>
                     <template #cell-open_count="{ row }">
                         {{ row.open_count > 0 ? row.open_count : '—' }}
+                    </template>
+                    <template #cell-actions="{ row }">
+                        <div class="flex flex-nowrap justify-end gap-1.5">
+                            <template v-if="view === 'sent'">
+                                <Link
+                                    :href="composeUrl('reply', row)"
+                                    class="tiny-action"
+                                    :aria-label="`Reply to ${row.subject}`"
+                                    ><AppIcon name="reply" :size="14" />
+                                    <span class="max-sm:sr-only"
+                                        >Reply</span
+                                    ></Link
+                                >
+                                <Link
+                                    :href="composeUrl('forward', row)"
+                                    class="tiny-action"
+                                    :aria-label="`Forward ${row.subject}`"
+                                    ><AppIcon name="forward" :size="14" />
+                                    <span class="max-sm:sr-only"
+                                        >Forward</span
+                                    ></Link
+                                >
+                                <button
+                                    v-if="row.status !== 'queued'"
+                                    type="button"
+                                    class="tiny-action"
+                                    :aria-label="`Delete ${row.subject}`"
+                                    @click="askDelete(row)"
+                                >
+                                    <AppIcon name="delete" :size="14" />
+                                    <span class="max-sm:sr-only">Delete</span>
+                                </button>
+                            </template>
+                            <button
+                                v-else
+                                type="button"
+                                class="tiny-action"
+                                :aria-label="`Restore ${row.subject}`"
+                                @click="restore(row)"
+                            >
+                                <AppIcon name="restore_from_trash" :size="14" />
+                                <span class="max-sm:sr-only">Restore</span>
+                            </button>
+                        </div>
                     </template>
                 </DataTable>
                 <TablePagination v-if="sent.last_page > 1" :meta="sent" />
@@ -215,4 +356,14 @@ const columns: TableColumn<EmailMessageRow>[] = [
             </form>
         </PanelCard>
     </div>
+
+    <ConfirmDialog
+        v-model:open="deleteOpen"
+        title="Delete this email?"
+        description="It disappears from your Sent list only. The delivery log, the person's history and your mailbox are not touched, and you can restore it from Deleted."
+        confirm-label="Delete"
+        destructive
+        :loading="working"
+        @confirm="confirmDelete"
+    />
 </template>

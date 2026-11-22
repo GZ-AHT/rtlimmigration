@@ -21,6 +21,8 @@ class OutgoingEmail extends Mailable
         return new Envelope(
             from: new Address($this->record->from_email, $this->record->from_name),
             to: [new Address($this->record->to_email, $this->record->to_name)],
+            cc: array_map(fn (string $email) => new Address($email), $this->record->cc ?? []),
+            bcc: array_map(fn (string $email) => new Address($email), $this->record->bcc ?? []),
             subject: $this->record->subject,
         );
     }

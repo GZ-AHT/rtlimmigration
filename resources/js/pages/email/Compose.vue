@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import FormField from '@/components/panel/FormField.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
@@ -21,6 +21,16 @@ const props = defineProps<{
         name: string;
         email: string | null;
     } | null;
+    prefill: {
+        mode: 'reply' | 'forward';
+        to_email: string | null;
+        to_name: string | null;
+        cc: string;
+        subject: string;
+        body: string;
+        forward_of: number | null;
+        attachments: string[];
+    } | null;
     placeholders: Record<string, string>;
     signature: string;
     limits: { max_files: number; max_mb: number; extensions: string[] };
@@ -31,14 +41,22 @@ const form = useForm({
     email_account_id: props.senders[1]?.value ?? '',
     recipient_type: props.recipient?.type ?? '',
     recipient_id: props.recipient ? String(props.recipient.id) : '',
-    to_email: '',
-    to_name: '',
+    to_email: props.prefill?.to_email ?? '',
+    to_name: props.prefill?.to_name ?? '',
+    cc: props.prefill?.cc ?? '',
+    bcc: '',
+    forward_of: props.prefill?.forward_of
+        ? String(props.prefill.forward_of)
+        : '',
     email_template_id: '',
-    subject: '',
-    body: '',
+    subject: props.prefill?.subject ?? '',
+    body: props.prefill?.body ?? '',
     include_signature: true,
     files: [] as File[],
 });
+
+// Cc and Bcc stay out of the way until asked for (or already filled, e.g. a reply).
+const showCopies = ref(!!props.prefill?.cc);
 
 const templateOptions = computed<Option[]>(() =>
     props.templates.map((t) => ({
@@ -111,6 +129,9 @@ function send(): void {
         recipient_type: d.recipient_type || null,
         recipient_id: d.recipient_id || null,
         to_email: d.to_email || null,
+        cc: d.cc || null,
+        bcc: d.bcc || null,
+        forward_of: d.forward_of || null,
         email_template_id: d.email_template_id || null,
     })).post(props.urls.send, { forceFormData: true });
 }
@@ -120,11 +141,25 @@ const token = (key: string): string => `{{ ${key} }}`;
 </script>
 
 <template>
-    <Head title="Compose email" />
+    <Head
+        :title="
+            prefill?.mode === 'forward'
+                ? 'Forward email'
+                : prefill?.mode === 'reply'
+                  ? 'Reply'
+                  : 'Compose email'
+        "
+    />
 
     <PageHeader
         eyebrow="Email"
-        title="Compose email"
+        :title="
+            prefill?.mode === 'forward'
+                ? 'Forward email'
+                : prefill?.mode === 'reply'
+                  ? 'Reply'
+                  : 'Compose email'
+        "
         description="Sent from the queue and kept in the delivery log and on the recipient's record."
     >
         <template #actions>
@@ -221,6 +256,49 @@ const token = (key: string): string => `{{ ${key} }}`;
                     </FormField>
                 </div>
 
+                <div>
+                    <button
+                        v-if="!showCopies"
+                        type="button"
+                        class="tiny-action"
+                        @click="showCopies = true"
+                    >
+                        <AppIcon name="add" :size="14" /> Add Cc / Bcc
+                    </button>
+                    <div v-else class="grid gap-4 sm:grid-cols-2">
+                        <FormField
+                            label="Cc"
+                            :error="err('cc')"
+                            hint="Separate addresses with commas. They see each other."
+                        >
+                            <template #default="{ id, invalid, describedBy }">
+                                <Input
+                                    :id="id"
+                                    v-model="form.cc"
+                                    autocomplete="off"
+                                    :aria-invalid="invalid"
+                                    :aria-describedby="describedBy"
+                                />
+                            </template>
+                        </FormField>
+                        <FormField
+                            label="Bcc"
+                            :error="err('bcc')"
+                            hint="Hidden from everyone else on the email."
+                        >
+                            <template #default="{ id, invalid, describedBy }">
+                                <Input
+                                    :id="id"
+                                    v-model="form.bcc"
+                                    autocomplete="off"
+                                    :aria-invalid="invalid"
+                                    :aria-describedby="describedBy"
+                                />
+                            </template>
+                        </FormField>
+                    </div>
+                </div>
+
                 <FormField label="Subject" required :error="err('subject')">
                     <template #default="{ id, invalid }">
                         <Input
@@ -268,6 +346,13 @@ const token = (key: string): string => `{{ ${key} }}`;
 
                 <div class="flex flex-col gap-2">
                     <span class="text-[13px] font-semibold">Attachments</span>
+                    <p
+                        v-if="prefill?.attachments.length"
+                        class="rounded-md border border-border bg-muted/40 px-3 py-1.5 text-[13px]"
+                    >
+                        Carried over from the original:
+                        {{ prefill.attachments.join(', ') }}
+                    </p>
                     <ul v-if="form.files.length" class="flex flex-col gap-1">
                         <li
                             v-for="(file, i) in form.files"

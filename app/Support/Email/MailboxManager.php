@@ -142,11 +142,12 @@ class MailboxManager
     /**
      * Pulls mailboxes, usage and suspension from cPanel. Mailboxes made in
      * cPanel directly are imported (without a password, so they can be used
-     * in webmail but not sent from here until one is saved).
+     * in webmail but not sent from here until one is saved). Run by hand
+     * (an actor) or on a schedule (no actor).
      *
      * @return array{imported: int, updated: int, missing: int}
      */
-    public function sync(User $actor): array
+    public function sync(?User $actor): array
     {
         $remote = collect($this->cpanel->mailboxes())->keyBy('email');
         $result = ['imported' => 0, 'updated' => 0, 'missing' => 0];

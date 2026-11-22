@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Email;
 
+use App\Enums\EmailMessageStatus;
 use App\Http\Controllers\Concerns\ResolvesAreaRoutes;
 use App\Http\Controllers\Controller;
 use App\Models\EmailAccount;
@@ -30,6 +31,8 @@ class MailboxController extends Controller
     public function index(Request $request, EmailSettings $settings): Response
     {
         $user = $request->user();
+        $view = $request->validate(['view' => ['nullable', 'in:sent,trash']])['view'] ?? 'sent';
+        $mine = fn () => EmailMessage::query()->where('sent_by', $user->id);
 
         $accounts = $user->emailAccounts()->orderBy('email')->get()->map(fn (EmailAccount $a) => [
             ...EmailPresenter::account($a),
@@ -43,10 +46,14 @@ class MailboxController extends Controller
             // For setting up a phone or desktop mail app. Passwords come from an admin, never from here.
             'servers' => $accounts->isNotEmpty() && $settings->imap()['host'] !== '' ? ['imap' => $settings->imap(), 'smtp' => $settings->smtp()] : null,
             'signature' => (string) $user->emailSignature?->body,
-            'sent' => EmailMessage::query()->where('sent_by', $user->id)->with('recipient')->latest('id')->paginate(15)->through(fn (EmailMessage $m) => EmailPresenter::message($m)),
+            'view' => $view,
+            'trashCount' => $mine()->whereNotNull('trashed_at')->count(),
+            'sent' => $mine()->when($view === 'trash', fn ($q) => $q->whereNotNull('trashed_at'), fn ($q) => $q->whereNull('trashed_at'))
+                ->with('recipient')->latest('id')->paginate(15)->withQueryString()->through(fn (EmailMessage $m) => EmailPresenter::message($m)),
             'urls' => [
                 'compose' => $this->areaRoute($request, 'email.compose'),
                 'signature' => $this->areaRoute($request, 'email.signature'),
+                'message' => $this->areaRoute($request, 'email.index'),
             ],
             'canManage' => $user->can('email.manage'),
             // Webmail opens with a plain form post into a new tab, outside Inertia, so it needs the token itself.
@@ -66,6 +73,39 @@ class MailboxController extends Controller
         }
 
         $this->toast(['type' => 'success', 'message' => __('Signature saved.')]);
+
+        return back();
+    }
+
+    /**
+     * Removes an email from "Sent from the system". Only the dashboard copy is
+     * hidden (it can be restored); the delivery log, the person's history and
+     * anything in the mailbox are untouched. Emails still waiting to send stay.
+     */
+    public function trash(Request $request, EmailMessage $message): RedirectResponse
+    {
+        abort_unless($message->sent_by === $request->user()->id, 403);
+
+        if ($message->status === EmailMessageStatus::Queued) {
+            $this->toast(['type' => 'error', 'message' => __('This email is still waiting to be sent.')]);
+
+            return back();
+        }
+
+        $message->forceFill(['trashed_at' => now()])->save();
+        activity('email')->causedBy($request->user())->withProperties(['message' => $message->uuid])->log('Removed an email from the sent list');
+        $this->toast(['type' => 'success', 'message' => __('Email removed from your sent list. You can restore it from Deleted.')]);
+
+        return back();
+    }
+
+    public function restore(Request $request, EmailMessage $message): RedirectResponse
+    {
+        abort_unless($message->sent_by === $request->user()->id, 403);
+
+        $message->forceFill(['trashed_at' => null])->save();
+        activity('email')->causedBy($request->user())->withProperties(['message' => $message->uuid])->log('Restored an email to the sent list');
+        $this->toast(['type' => 'success', 'message' => __('Email restored to your sent list.')]);
 
         return back();
     }

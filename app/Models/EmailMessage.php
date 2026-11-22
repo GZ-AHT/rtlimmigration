@@ -26,6 +26,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property string|null $from_name
  * @property string $to_email
  * @property string|null $to_name
+ * @property list<string>|null $cc
+ * @property list<string>|null $bcc
  * @property string $subject
  * @property string $body
  * @property list<array{name: string, path: string, mime: string, size: int}>|null $attachments
@@ -36,6 +38,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property int $open_count
  * @property CarbonInterface|null $clicked_at
  * @property int $click_count
+ * @property CarbonInterface|null $trashed_at
  * @property CarbonInterface|null $created_at
  * @property-read EmailAccount|null $account
  * @property-read EmailCampaign|null $campaign
@@ -44,8 +47,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 #[Fillable([
     'uuid', 'email_account_id', 'email_campaign_id', 'email_template_id', 'sent_by', 'recipient_type', 'recipient_id',
-    'from_email', 'from_name', 'to_email', 'to_name', 'subject', 'body', 'attachments', 'status', 'error', 'sent_at',
-    'opened_at', 'open_count', 'clicked_at', 'click_count',
+    'from_email', 'from_name', 'to_email', 'to_name', 'cc', 'bcc', 'subject', 'body', 'attachments', 'status', 'error', 'sent_at',
+    'opened_at', 'open_count', 'clicked_at', 'click_count', 'trashed_at',
 ])]
 class EmailMessage extends Model
 {
@@ -53,6 +56,9 @@ class EmailMessage extends Model
     {
         return [
             'attachments' => 'array',
+            'cc' => 'array',
+            'bcc' => 'array',
+            'trashed_at' => 'datetime',
             'status' => EmailMessageStatus::class,
             'sent_at' => 'datetime',
             'opened_at' => 'datetime',

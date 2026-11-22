@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SyncMailboxes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
@@ -22,3 +23,6 @@ Schedule::command('backup:run --scheduled')->dailyAt('02:00')->withoutOverlappin
 // REQ §24: keep website traffic counts for about 14 months.
 Schedule::call(fn () => DB::table('page_views')->where('viewed_on', '<', now()->subDays(430)->toDateString())->delete())
     ->name('page-views:prune')->dailyAt('03:10')->withoutOverlapping();
+
+// REQ §19.2: keep cPanel mailboxes, usage and suspensions in step (the "Sync" button still works).
+Schedule::job(new SyncMailboxes)->name('email:sync-mailboxes')->everyThirtyMinutes()->withoutOverlapping();

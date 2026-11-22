@@ -181,6 +181,7 @@
 - **Delivery logs:** status, error, preview (shown in a sandboxed frame) and retry for failed emails. **Tracking:** an open pixel and signed click redirects (unsigned or altered links are refused, so the redirect can't be abused). It can be switched off in settings. Opens are a lower bound because many mail apps block images.
 - **History:** a student's page has an Emails tab (REQ §3 Student Email History). A counselor's admin page shows mail sent by or to them (Counselor Email History). Mail sent from Roundcube is not in these: it stays in the mailbox.
 - Email activity (account changes, access changes, webmail sign-ins, settings, bulk sends) is in the activity log under `email` and on the Email accounts page (REQ §19.2 "Email Activity Logs").
+- **Email gaps closed (2026-11-23, after an audit that kept Q1 as decided):** Compose has Cc and Bcc (up to 10 addresses each, validated, repeats dropped; Bcc is in the SMTP envelope but not in the message headers). "Sent from the system" has Reply (Re:, quoted original, same student/lead link), Forward (Fwd:, attachments copied to the new email) and Delete. Delete only hides the dashboard copy (`email_messages.trashed_at`): the delivery log, the person's history, reports and the real mailbox are untouched, and it can be restored from the Deleted tab. Emails still queued cannot be deleted. `SyncMailboxes` (queued, unique) runs the cPanel mailbox sync every 30 minutes through the scheduler; the manual Sync button stays. Needs the scheduler and a queue worker.
 - Not built: auto-replies, folders, labels and the address book are Roundcube and cPanel features, so staff use them there. There is no unsubscribe link in bulk email, because the audience is limited to the agency's own students and leads; add one before any marketing use.
 - Not checked against a real cPanel server yet. The UAPI calls follow cPanel's API docs and are faked in tests. Check SSO and creating a mailbox once credentials are available. If a server has a self-signed certificate, untick "Check the server's SSL certificate".
 - A queue worker must run in production (`php artisan queue:work`, under Supervisor per Q5), or emails stay queued.
@@ -467,7 +468,6 @@ This follows REQ §29's 12 phases, with **three small adjustments** for dependen
 - All §24 reports with PDF/Excel/CSV export. Notification templates and settings, read/unread, per-role preferences.
 - Full role-based access test matrix (Super Admin, Lead Manager, Counselor, Accounts, Student), plus responsive QA at desktop, tablet and mobile.
 - Performance (N+1 checks, indexes, caching), accessibility pass, and a security review.
-
 
 **Phase 12 notes (built 2026-11-22):**
 

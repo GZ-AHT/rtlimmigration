@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Email;
 
 use App\Http\Controllers\Concerns\ResolvesAreaRoutes;
 use App\Http\Controllers\Controller;
+use App\Models\EmailMessage;
 use App\Models\EmailTemplate;
 use App\Models\Lead;
 use App\Models\Student;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -32,15 +34,27 @@ class ComposeController extends Controller
 
     public const MAX_ATTACHMENTS = 5;
 
+    /** Most addresses in each of CC and BCC. */
+    public const MAX_COPIES = 10;
+
     public function create(Request $request): Response
     {
         $user = $request->user();
         $preset = $request->validate([
             'student' => ['nullable', 'integer'],
             'lead' => ['nullable', 'integer'],
+            'reply' => ['nullable', 'integer'],
+            'forward' => ['nullable', 'integer'],
         ]);
 
-        $recipient = $this->resolveRecipient($user, isset($preset['student']) ? 'student' : (isset($preset['lead']) ? 'lead' : null), $preset['student'] ?? $preset['lead'] ?? null);
+        $source = isset($preset['reply']) || isset($preset['forward'])
+            ? $this->ownMessage($user, (int) ($preset['reply'] ?? $preset['forward']))
+            : null;
+        $forwarding = $source !== null && isset($preset['forward']);
+
+        $recipient = $source !== null
+            ? ($forwarding ? null : $this->recipientOf($user, $source))
+            : $this->resolveRecipient($user, isset($preset['student']) ? 'student' : (isset($preset['lead']) ? 'lead' : null), $preset['student'] ?? $preset['lead'] ?? null);
 
         return Inertia::render('email/Compose', [
             'senders' => SenderAccounts::options($user),
@@ -48,6 +62,7 @@ class ComposeController extends Controller
                 'id' => $t->id, 'name' => $t->name, 'category' => $t->category, 'subject' => $t->subject, 'body' => $t->body,
             ]),
             'recipient' => $recipient ? $this->describe($recipient) : null,
+            'prefill' => $source ? $this->prefill($source, $forwarding) : null,
             'placeholders' => TemplateRenderer::PLACEHOLDERS,
             'signature' => (string) $user->emailSignature?->body,
             'limits' => [
@@ -73,6 +88,9 @@ class ComposeController extends Controller
             'recipient_id' => ['nullable', 'required_with:recipient_type', 'integer'],
             'to_email' => ['required_without:recipient_type', 'nullable', 'email:rfc', 'max:255'],
             'to_name' => ['nullable', 'string', 'max:120'],
+            'cc' => ['nullable', 'string', 'max:1500'],
+            'bcc' => ['nullable', 'string', 'max:1500'],
+            'forward_of' => ['nullable', 'integer'],
             'email_template_id' => ['nullable', 'integer', Rule::exists(EmailTemplate::class, 'id')],
             'subject' => ['required', 'string', 'max:200'],
             'body' => ['required', 'string', 'max:20000'],
@@ -99,8 +117,18 @@ class ComposeController extends Controller
             throw ValidationException::withMessages(['to_email' => __('This person has no email address on file.')]);
         }
 
+        $cc = $this->addresses($data['cc'] ?? '', 'cc', [$to]);
+        $bcc = $this->addresses($data['bcc'] ?? '', 'bcc', [$to, ...$cc]);
+
         $signature = ($data['include_signature'] ?? true) ? $user->emailSignature?->body : null;
         $uuid = (string) Str::uuid();
+        $forwarded = isset($data['forward_of']) ? $this->ownMessage($user, (int) $data['forward_of']) : null;
+        $uploaded = $this->storeAttachments($request->file('files', []), $uuid) ?? [];
+        $attachments = [...$uploaded, ...$this->copyAttachments($forwarded, $uuid)];
+
+        if (count($attachments) > self::MAX_ATTACHMENTS) {
+            throw ValidationException::withMessages(['files' => __('Attach at most :max files, including those carried over from the forwarded email.', ['max' => self::MAX_ATTACHMENTS])]);
+        }
 
         $message = $sender->queue([
             'email_account_id' => $accountId,
@@ -110,9 +138,11 @@ class ComposeController extends Controller
             'recipient_id' => $recipient?->getKey(),
             'to_email' => $to,
             'to_name' => $recipient ? $vars['name'] : ($data['to_name'] ?? null),
+            'cc' => $cc ?: null,
+            'bcc' => $bcc ?: null,
             'subject' => $renderer->fill($data['subject'], $vars),
             'body' => $renderer->toHtml($renderer->fill($data['body'], $vars), $signature),
-            'attachments' => $this->storeAttachments($request->file('files', []), $uuid),
+            'attachments' => $attachments ?: null,
         ]);
 
         $this->toast(['type' => 'success', 'message' => __('Email to :to queued for sending.', ['to' => $message->to_email])]);
@@ -157,6 +187,110 @@ class ComposeController extends Controller
         return $recipient instanceof Student
             ? ['type' => 'student', 'id' => $recipient->id, 'name' => $recipient->user->name, 'email' => $recipient->user->email]
             : ['type' => 'lead', 'id' => (int) $recipient->getKey(), 'name' => (string) $recipient->getAttribute('name'), 'email' => $recipient->getAttribute('email')];
+    }
+
+    /** Reply and forward start from one of the user's own sent emails, never anyone else's. */
+    private function ownMessage(User $user, int $id): EmailMessage
+    {
+        return EmailMessage::query()->where('sent_by', $user->id)->with('recipient')->findOrFail($id);
+    }
+
+    /** The student or lead the original went to, if the user may still see them. */
+    private function recipientOf(User $user, EmailMessage $message): ?Model
+    {
+        $recipient = $message->recipient;
+
+        return ($recipient instanceof Student || $recipient instanceof Lead) && $user->can('view', $recipient) ? $recipient : null;
+    }
+
+    /** @return array{mode: string, to_email: string|null, to_name: string|null, cc: string, subject: string, body: string, forward_of: int|null, attachments: list<string>} */
+    private function prefill(EmailMessage $source, bool $forwarding): array
+    {
+        $original = $this->plainText($source->body);
+        $when = ($source->sent_at ?? $source->created_at)?->format('D, j M Y H:i');
+        $who = trim(($source->from_name ? $source->from_name.' ' : '').'<'.$source->from_email.'>');
+
+        if ($forwarding) {
+            $body = "\n\n---------- Forwarded message ----------\nFrom: {$who}\nDate: {$when}\nSubject: {$source->subject}\nTo: {$source->to_email}\n\n{$original}";
+        } else {
+            $quoted = implode("\n", array_map(fn (string $line) => '> '.$line, explode("\n", $original)));
+            $body = "\n\nOn {$when}, {$who} wrote:\n{$quoted}";
+        }
+
+        $prefix = $forwarding ? 'Fwd: ' : 'Re: ';
+
+        return [
+            'mode' => $forwarding ? 'forward' : 'reply',
+            'to_email' => $forwarding ? null : $source->to_email,
+            'to_name' => $forwarding ? null : $source->to_name,
+            'cc' => $forwarding ? '' : implode(', ', $source->cc ?? []),
+            'subject' => preg_match('/^\s*(re|fwd?)\s*:/i', $source->subject) === 1 ? $source->subject : $prefix.$source->subject,
+            'body' => $body,
+            'forward_of' => $forwarding ? $source->id : null,
+            'attachments' => $forwarding ? array_map(fn (array $a) => $a['name'], $source->attachments ?? []) : [],
+        ];
+    }
+
+    private function plainText(string $html): string
+    {
+        $text = preg_replace(['/<br\s*\/?>/i', '/<\/(p|div|li|h[1-6]|tr)>/i'], "\n", $html) ?? $html;
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        return trim(preg_replace("/\n{3,}/", "\n\n", str_replace("\r", '', $text)) ?? $text);
+    }
+
+    /**
+     * CC and BCC arrive as one text box: addresses separated by commas,
+     * semicolons or spaces. Each must be a real address; repeats, and anyone
+     * already getting the email another way, are dropped.
+     *
+     * @param  list<string>  $already
+     * @return list<string>
+     */
+    private function addresses(string $input, string $field, array $already): array
+    {
+        $found = [];
+
+        foreach (preg_split('/[\s,;]+/', trim($input), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $address) {
+            if (filter_var($address, FILTER_VALIDATE_EMAIL) === false || strlen($address) > 255) {
+                throw ValidationException::withMessages([$field => __(':address is not a valid email address.', ['address' => Str::limit($address, 60)])]);
+            }
+
+            $found[strtolower($address)] ??= $address;
+        }
+
+        $taken = array_map('strtolower', $already);
+        $list = array_values(array_filter($found, fn (string $a, string $key) => ! in_array($key, $taken, true), ARRAY_FILTER_USE_BOTH));
+
+        if (count($list) > self::MAX_COPIES) {
+            throw ValidationException::withMessages([$field => __('Add at most :max addresses.', ['max' => self::MAX_COPIES])]);
+        }
+
+        return $list;
+    }
+
+    /**
+     * A forwarded email keeps its attachments: each file is copied into the
+     * new email's own folder, so deleting one email never breaks the other.
+     *
+     * @return list<array{name: string, path: string, mime: string, size: int}>
+     */
+    private function copyAttachments(?EmailMessage $source, string $uuid): array
+    {
+        $disk = Storage::disk((string) config('documents.disk'));
+        $copies = [];
+
+        foreach ($source === null ? [] : ($source->attachments ?? []) as $a) {
+            if (! $disk->exists($a['path'])) {
+                continue;
+            }
+
+            $path = "email-attachments/{$uuid}/".basename($a['path']);
+            $disk->copy($a['path'], $path);
+            $copies[] = [...$a, 'path' => $path];
+        }
+
+        return $copies;
     }
 
     /**

@@ -115,6 +115,8 @@ class AreaRoutes
             Route::get('email', [Email\MailboxController::class, 'index'])->name('email.index');
             Route::put('email/signature', [Email\MailboxController::class, 'signature'])->name('email.signature');
             Route::post('email/mailboxes/{account}/webmail', [Email\MailboxController::class, 'webmail'])->whereNumber('account')->middleware('throttle:10,1')->name('email.webmail');
+            Route::delete('email/messages/{message}', [Email\MailboxController::class, 'trash'])->whereNumber('message')->name('email.messages.trash');
+            Route::patch('email/messages/{message}/restore', [Email\MailboxController::class, 'restore'])->whereNumber('message')->name('email.messages.restore');
             Route::get('email/compose', [Email\ComposeController::class, 'create'])->name('email.compose');
             Route::post('email/compose', [Email\ComposeController::class, 'store'])->middleware('throttle:30,1')->name('email.send');
         });
