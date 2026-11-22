@@ -5,7 +5,7 @@ import BannerMedia from '@/components/website/BannerMedia.vue';
 import PathwayFinder from '@/components/website/PathwayFinder.vue';
 import SiteButton from '@/components/website/SiteButton.vue';
 import SiteImg from '@/components/website/SiteImg.vue';
-import { overlayStyle } from '@/components/website/banner';
+import { deviceHeightClasses, overlayStyle } from '@/components/website/banner';
 import type { BannerData } from '@/components/website/banner';
 import type { Option, SiteImage } from '@/types/website';
 
@@ -57,10 +57,13 @@ onBeforeUnmount(() => window.clearInterval(timer));
 <template>
     <div
         class="site-container pt-6 pb-10 max-sm:pb-8 lg:pt-9"
-        :class="
+        :class="[
             data.height === 'screen' &&
-            'flex flex-col justify-center lg:min-h-[calc(100svh-132px)]'
-        "
+                'flex flex-col justify-center lg:min-h-[calc(100svh-132px)]',
+            deviceHeightClasses(data),
+            deviceHeightClasses(data) &&
+                'max-lg:flex max-lg:flex-col max-lg:justify-center',
+        ]"
     >
         <div
             class="grid items-start gap-10 max-sm:gap-6 lg:grid-cols-[minmax(0,650px)_minmax(0,554px)] lg:justify-between lg:gap-8"
@@ -76,7 +79,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
                     {{ data.eyebrow }}
                 </p>
                 <h1
-                    class="mt-6 text-[36px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-site-ink max-sm:mt-3 max-sm:text-[34px] sm:text-[54px] sm:leading-[1.05] sm:tracking-[-0.04em] lg:mt-8.25 lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
+                    class="mt-6 text-[36px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-site-ink max-sm:mt-2 max-sm:text-[28px] sm:text-[54px] sm:leading-[1.05] sm:tracking-[-0.04em] lg:mt-8.25 lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
                 >
                     <template v-if="current === 0 || !slide.title"
                         >{{ data.title
@@ -91,20 +94,20 @@ onBeforeUnmount(() => window.clearInterval(timer));
                 </h1>
                 <p
                     v-if="slide.description"
-                    class="mt-6 max-w-[530px] text-[16px] leading-[1.7] whitespace-pre-line text-site-muted max-sm:mt-3 max-sm:line-clamp-3 max-sm:text-[15px] max-sm:leading-[1.55] sm:text-[17px] sm:leading-[28.8px] lg:mt-8"
+                    class="mt-6 max-w-[530px] text-[16px] leading-[1.7] whitespace-pre-line text-site-muted max-sm:mt-2 max-sm:line-clamp-2 max-sm:text-[14px] max-sm:leading-[1.5] sm:text-[17px] sm:leading-[28.8px] lg:mt-8"
                     :class="centered && 'mx-auto'"
                 >
                     {{ slide.description }}
                 </p>
                 <div
-                    class="mt-8 flex flex-col gap-4 max-sm:mt-5 max-sm:gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-10"
+                    class="mt-8 flex flex-col gap-4 max-sm:mt-4 max-sm:flex-row max-sm:flex-wrap max-sm:items-center max-sm:gap-x-5 max-sm:gap-y-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-10"
                     :class="centered && 'justify-center'"
                 >
                     <SiteButton
                         v-if="data.primary.url"
                         :href="data.primary.url"
                         size="lg"
-                        class="w-full justify-center sm:w-auto sm:min-w-[240px]"
+                        class="max-lg:h-11! max-lg:px-5! max-lg:text-[14px]! max-sm:justify-center sm:w-auto lg:min-w-[240px]"
                         >{{ data.primary.label }}</SiteButton
                     >
                     <ArrowLink
@@ -112,7 +115,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
                         :href="data.secondary.url"
                         arrow="→"
                         tone="ink"
-                        class="text-[15px]"
+                        class="text-[14px] lg:text-[15px]"
                         >{{ data.secondary.label }}</ArrowLink
                     >
                 </div>

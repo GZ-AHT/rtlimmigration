@@ -577,3 +577,16 @@ it('switches an unchanged first-version partner page to the new design', functio
 
     expect(array_column($page->fresh()->sections, 'type'))->toBe(['page_intro', 'partner_form', 'steps']);
 });
+
+it('keeps a banner height for each screen size and ignores unknown values', function () {
+    $clean = app(SectionSanitizer::class)->clean([
+        ['type' => 'hero_cover', 'data' => ['height' => 'tall', 'height_tablet' => 'compact', 'height_mobile' => 'screen']],
+        ['type' => 'hero_cover', 'data' => ['height_tablet' => 'enormous', 'height_mobile' => '']],
+        ['type' => 'hero', 'data' => []],
+    ]);
+
+    expect($clean[0]['data'])->toMatchArray(['height' => 'tall', 'height_tablet' => 'compact', 'height_mobile' => 'screen'])
+        ->and($clean[1]['data'])->toMatchArray(['height' => 'standard', 'height_tablet' => 'auto', 'height_mobile' => 'auto'])
+        // Existing pages saved before this setting behave as before: as tall as the content.
+        ->and($clean[2]['data'])->toMatchArray(['height_tablet' => 'auto', 'height_mobile' => 'auto']);
+});

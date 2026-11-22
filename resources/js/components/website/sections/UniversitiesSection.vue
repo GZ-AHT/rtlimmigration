@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { reactive } from 'vue';
 import ArrowLink from '@/components/website/ArrowLink.vue';
+import CollapsibleFilter from '@/components/website/CollapsibleFilter.vue';
 import SectionHeading from '@/components/website/SectionHeading.vue';
 import SitePagination from '@/components/website/SitePagination.vue';
 import UniversityCard from '@/components/website/UniversityCard.vue';
@@ -56,7 +57,7 @@ function reset(): void {
 }
 
 const field =
-    'h-[50px] w-full rounded-[12px] border border-site-field-border bg-white px-4 text-[15px] text-site-ink outline-none focus:border-site-red focus:ring-3 focus:ring-site-red/15';
+    'h-[50px] max-lg:h-11 w-full rounded-[12px] border border-site-field-border bg-white px-4 text-[15px] text-site-ink outline-none focus:border-site-red focus:ring-3 focus:ring-site-red/15';
 </script>
 
 <template>
@@ -77,74 +78,89 @@ const field =
             >
         </div>
 
-        <form
+        <CollapsibleFilter
             v-if="data.all && records"
-            class="mt-8 grid gap-3 rounded-[20px] border border-site-warm-line bg-white p-4 shadow-[0_12px_30px_rgba(0,0,0,0.06)] md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_auto]"
-            role="search"
-            aria-label="Find universities and courses"
-            @submit.prevent="apply"
+            framed
+            :count="
+                (filters.country ? 1 : 0) +
+                (filters.level ? 1 : 0) +
+                (filters.q ? 1 : 0)
+            "
+            class="mt-6 lg:mt-0"
         >
-            <div>
-                <label
-                    for="uni-country"
-                    class="mb-1.5 block text-[11px] font-semibold text-site-muted uppercase"
-                    >Destination</label
-                >
-                <select
-                    id="uni-country"
-                    v-model="filters.country"
-                    :class="field"
-                >
-                    <option value="">All destinations</option>
-                    <option
-                        v-for="c in records.countries"
-                        :key="c.value"
-                        :value="c.value"
+            <form
+                v-if="data.all && records"
+                class="mt-8 grid gap-3 rounded-[20px] border border-site-warm-line bg-white p-4 shadow-[0_12px_30px_rgba(0,0,0,0.06)] max-lg:mt-2 max-lg:gap-2.5 max-lg:rounded-xl max-lg:p-3 md:grid-cols-2 lg:grid-cols-[1fr_1fr_1.3fr_auto]"
+                role="search"
+                aria-label="Find universities and courses"
+                @submit.prevent="apply"
+            >
+                <div>
+                    <label
+                        for="uni-country"
+                        class="mb-1.5 block text-[11px] font-semibold text-site-muted uppercase"
+                        >Destination</label
                     >
-                        {{ c.label }}
-                    </option>
-                </select>
-            </div>
-            <div>
-                <label
-                    for="uni-level"
-                    class="mb-1.5 block text-[11px] font-semibold text-site-muted uppercase"
-                    >Study level</label
-                >
-                <select id="uni-level" v-model="filters.level" :class="field">
-                    <option value="">All levels</option>
-                    <option
-                        v-for="l in records.levels"
-                        :key="l.value"
-                        :value="l.value"
+                    <select
+                        id="uni-country"
+                        v-model="filters.country"
+                        :class="field"
                     >
-                        {{ l.label }}
-                    </option>
-                </select>
-            </div>
-            <div>
-                <label
-                    for="uni-q"
-                    class="mb-1.5 block text-[11px] font-semibold text-site-muted uppercase"
-                    >Course or university</label
-                >
-                <input
-                    id="uni-q"
-                    v-model="filters.q"
-                    type="search"
-                    placeholder="e.g. Business, Nursing, Toronto"
-                    :class="field"
-                />
-            </div>
-            <div class="flex items-end gap-2">
-                <button
-                    type="submit"
-                    class="h-[50px] flex-1 rounded-[12px] bg-site-red px-5 text-[15px] font-semibold whitespace-nowrap text-white hover:bg-site-red-dark lg:flex-none"
-                >
-                    Search <SiteArrow glyph="→" />
-                </button>
-            </div>
-        </form>
+                        <option value="">All destinations</option>
+                        <option
+                            v-for="c in records.countries"
+                            :key="c.value"
+                            :value="c.value"
+                        >
+                            {{ c.label }}
+                        </option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        for="uni-level"
+                        class="mb-1.5 block text-[11px] font-semibold text-site-muted uppercase"
+                        >Study level</label
+                    >
+                    <select
+                        id="uni-level"
+                        v-model="filters.level"
+                        :class="field"
+                    >
+                        <option value="">All levels</option>
+                        <option
+                            v-for="l in records.levels"
+                            :key="l.value"
+                            :value="l.value"
+                        >
+                            {{ l.label }}
+                        </option>
+                    </select>
+                </div>
+                <div>
+                    <label
+                        for="uni-q"
+                        class="mb-1.5 block text-[11px] font-semibold text-site-muted uppercase"
+                        >Course or university</label
+                    >
+                    <input
+                        id="uni-q"
+                        v-model="filters.q"
+                        type="search"
+                        placeholder="e.g. Business, Nursing, Toronto"
+                        :class="field"
+                    />
+                </div>
+                <div class="flex items-end gap-2">
+                    <button
+                        type="submit"
+                        class="h-[50px] flex-1 rounded-[12px] bg-site-red px-5 text-[15px] font-semibold whitespace-nowrap text-white hover:bg-site-red-dark max-lg:h-11 lg:flex-none"
+                    >
+                        Search <SiteArrow glyph="→" />
+                    </button>
+                </div>
+            </form>
+        </CollapsibleFilter>
 
         <p
             v-if="data.all && records?.pagination"

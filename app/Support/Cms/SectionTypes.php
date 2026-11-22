@@ -45,9 +45,11 @@ class SectionTypes
                 : ['none' => 'None (as designed)', 'solid' => 'Dark', 'brand' => 'Brand colour'], 'default' => $cover ? 'gradient' : 'none'],
             'overlay_opacity' => ['type' => 'number', 'label' => 'Overlay strength (%)', 'min' => 0, 'max' => 90, 'default' => $cover ? 70 : 30],
             'text_align' => ['type' => 'select', 'label' => 'Text alignment', 'options' => ['left' => 'Left', 'center' => 'Centre'], 'default' => 'left'],
-            'height' => ['type' => 'select', 'label' => 'Banner height', 'options' => $cover
+            'height' => ['type' => 'select', 'label' => 'Banner height on desktop (1024px and wider)', 'options' => $cover
                 ? ['standard' => 'Standard (as designed)', 'compact' => 'Compact', 'tall' => 'Tall', 'screen' => 'Fill the screen']
                 : ['standard' => 'As designed', 'screen' => 'Fill the screen'], 'default' => 'standard'],
+            'height_tablet' => ['type' => 'select', 'label' => 'Banner height on tablets (640 to 1023px)', 'options' => ['auto' => 'Fit the content', 'compact' => 'Compact', 'standard' => 'Standard', 'tall' => 'Tall', 'screen' => 'Fill the screen'], 'default' => 'auto'],
+            'height_mobile' => ['type' => 'select', 'label' => 'Banner height on phones (under 640px)', 'options' => ['auto' => 'Fit the content', 'compact' => 'Compact', 'standard' => 'Standard', 'tall' => 'Tall', 'screen' => 'Fill the screen'], 'default' => 'auto'],
             'mobile_video' => ['type' => 'toggle', 'label' => 'Play the video on phones too (off: phones show the image, which saves data)', 'default' => false],
             'show_finder' => ['type' => 'toggle', 'label' => 'Show the pathway finder', 'default' => true],
             'finder_tabs' => ['type' => 'repeater', 'label' => 'Pathway finder tabs (a tab without a link searches universities and courses)', 'max' => 5, 'fields' => [
