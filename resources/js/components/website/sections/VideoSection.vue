@@ -49,7 +49,7 @@ defineProps<{
                 </h2>
                 <p
                     v-if="data.description"
-                    class="mt-8 max-w-[515px] text-[16px] leading-6 text-site-muted"
+                    class="mt-8 max-w-[515px] text-[16px] leading-6 text-site-muted max-sm:mt-4 max-sm:line-clamp-3 max-sm:text-[15px]"
                 >
                     {{ data.description }}
                 </p>
@@ -57,7 +57,7 @@ defineProps<{
                     v-if="data.button"
                     href="/contact?preference=video"
                     size="tall"
-                    class="mt-11 min-w-[274px]"
+                    class="mt-11 min-w-[274px] max-sm:mt-6 max-sm:w-full"
                     >{{ data.button }}</SiteButton
                 >
                 <p
@@ -74,15 +74,15 @@ defineProps<{
 
         <ol
             v-if="data.steps.length"
-            class="mt-10 grid gap-4 border-t border-[#eaddd9] pt-3 md:grid-cols-3 md:gap-6 lg:mt-[41px]"
+            class="mt-10 grid gap-4 border-t border-[#eaddd9] pt-3 max-sm:mt-6 max-sm:gap-2 md:grid-cols-3 md:gap-6 lg:mt-[41px]"
         >
             <li
                 v-for="(step, i) in data.steps"
                 :key="i"
-                class="flex min-h-[88px] gap-[22px] rounded-[16px] bg-white px-[18px] py-[17px]"
+                class="flex min-h-[88px] gap-[22px] rounded-[16px] bg-white px-[18px] py-[17px] max-sm:min-h-0 max-sm:items-center max-sm:gap-4 max-sm:py-3"
             >
                 <span
-                    class="pt-[6px] text-[14px] leading-5 font-bold text-site-red"
+                    class="pt-[6px] text-[14px] leading-5 font-bold text-site-red max-sm:pt-0"
                     >{{ String(i + 1).padStart(2, '0') }}</span
                 >
                 <span>
@@ -91,7 +91,7 @@ defineProps<{
                         >{{ step.title }}</span
                     >
                     <span
-                        class="mt-2 block text-[13px] leading-[19px] text-site-muted"
+                        class="mt-2 block text-[13px] leading-[19px] text-site-muted max-sm:hidden"
                         >{{ step.text }}</span
                     >
                 </span>

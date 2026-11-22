@@ -101,7 +101,9 @@ const theme = computed(() => {
         <main id="main" class="flex-1" tabindex="-1">
             <slot />
         </main>
-        <SiteFooter />
+        <SiteFooter
+            class="max-sm:pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
+        />
         <SiteLaunchers />
         <Toaster />
     </div>

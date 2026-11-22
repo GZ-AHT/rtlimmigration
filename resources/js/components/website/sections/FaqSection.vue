@@ -58,7 +58,7 @@ function pad(n: number): string {
 
 <template>
     <div
-        class="site-container grid gap-10 lg:grid-cols-[363px_805px] lg:justify-between"
+        class="site-container grid gap-8 max-lg:grid-cols-[minmax(0,1fr)] lg:grid-cols-[363px_805px] lg:justify-between"
     >
         <div class="lg:pt-1">
             <SectionHeading
@@ -87,7 +87,7 @@ function pad(n: number): string {
 
             <ul
                 v-if="groups.length > 1 || data.all"
-                class="-mx-4 mt-5.5 no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-col sm:overflow-visible sm:px-0 sm:pb-0"
+                class="-mx-4 mt-5.5 no-scrollbar flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 max-sm:scroll-px-4 sm:mx-0 sm:flex-col sm:overflow-visible sm:px-0 sm:pb-0"
                 role="tablist"
                 aria-label="Question topics"
             >
@@ -175,7 +175,7 @@ function pad(n: number): string {
                             <button
                                 :id="`faq-q-${f.id}`"
                                 type="button"
-                                class="flex w-full items-start justify-between gap-6 px-6 py-[19px] text-left text-[16px] leading-6 font-semibold text-site-ink"
+                                class="flex min-h-12 w-full items-start justify-between gap-6 px-6 py-[19px] text-left text-[16px] leading-6 font-semibold text-site-ink max-sm:gap-4 max-sm:px-4 max-sm:py-4 max-sm:text-[15px]"
                                 :aria-expanded="open === f.id"
                                 :aria-controls="`faq-a-${f.id}`"
                                 @click="open = open === f.id ? null : f.id"
@@ -197,7 +197,7 @@ function pad(n: number): string {
                                 :id="`faq-a-${f.id}`"
                                 role="region"
                                 :aria-labelledby="`faq-q-${f.id}`"
-                                class="px-6 pb-6 text-[14px] leading-[22.4px] whitespace-pre-line text-site-muted"
+                                class="px-6 pb-6 text-[14px] leading-[22.4px] whitespace-pre-line text-site-muted max-sm:px-4 max-sm:pb-4"
                             >
                                 {{ f.answer }}
                             </div>
@@ -220,7 +220,7 @@ function pad(n: number): string {
                         <button
                             :id="`faq-q-${f.id}`"
                             type="button"
-                            class="flex w-full items-start justify-between gap-6 px-6 text-left"
+                            class="flex min-h-12 w-full items-start justify-between gap-6 px-6 text-left max-sm:gap-4 max-sm:px-4"
                             :class="
                                 open === f.id ? 'pt-[21px] pb-0' : 'py-[14px]'
                             "
@@ -253,7 +253,7 @@ function pad(n: number): string {
                         :id="`faq-a-${f.id}`"
                         role="region"
                         :aria-labelledby="`faq-q-${f.id}`"
-                        class="px-6 pt-[16px] pb-[24px] text-[15px] leading-6 whitespace-pre-line text-site-muted lg:max-w-[778px]"
+                        class="px-6 pt-[16px] pb-[24px] text-[15px] leading-6 whitespace-pre-line text-site-muted max-sm:px-4 max-sm:pt-3 max-sm:pb-4 max-sm:text-[14px] lg:max-w-[778px]"
                     >
                         {{ f.answer }}
                     </div>

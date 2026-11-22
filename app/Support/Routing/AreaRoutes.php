@@ -190,4 +190,14 @@ class AreaRoutes
             });
         }
     }
+
+    /** REQ §24: the report hub, each report and its downloads. */
+    public static function reports(): void
+    {
+        Route::middleware('can:reports.view')->group(function () {
+            Route::get('reports', [Reports\OperationalReportController::class, 'hub'])->name('reports.hub');
+            Route::get('reports/view/{report}', [Reports\OperationalReportController::class, 'show'])->where('report', '[a-z-]+')->name('reports.show');
+            Route::get('reports/view/{report}/{format}', [Reports\OperationalReportController::class, 'download'])->where('report', '[a-z-]+')->where('format', 'xlsx|csv|pdf')->middleware('throttle:30,1')->name('reports.file');
+        });
+    }
 }

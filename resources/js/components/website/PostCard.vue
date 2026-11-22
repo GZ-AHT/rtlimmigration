@@ -16,7 +16,7 @@ defineProps<{ post: PostCard }>();
             v-if="post.image"
             :image="post.image"
             :alt="''"
-            class="h-[190px] w-full rounded-[12px]"
+            class="h-[190px] w-full rounded-[12px] max-sm:h-[150px]"
         />
         <div
             v-else
@@ -25,7 +25,9 @@ defineProps<{ post: PostCard }>();
         >
             RTL
         </div>
-        <div class="flex flex-1 flex-col px-[10px] pt-5 pb-3">
+        <div
+            class="flex flex-1 flex-col px-[10px] pt-5 pb-3 max-sm:pt-4 max-sm:pb-2"
+        >
             <p
                 class="text-[11px] leading-[13px] font-semibold whitespace-pre text-site-red uppercase"
             >
@@ -38,7 +40,7 @@ defineProps<{ post: PostCard }>();
                 >
             </p>
             <h3
-                class="mt-[15px] text-[22px] leading-[28px] font-semibold text-site-ink"
+                class="mt-[15px] text-[22px] leading-[28px] font-semibold text-site-ink max-sm:mt-2 max-sm:line-clamp-2 max-sm:text-[19px] max-sm:leading-[25px]"
             >
                 <Link
                     :href="post.url"
@@ -47,7 +49,9 @@ defineProps<{ post: PostCard }>();
                 >
             </h3>
             <div class="mt-auto flex items-end justify-between gap-4 pt-4">
-                <p class="max-w-[262px] text-[13px] leading-5 text-site-muted">
+                <p
+                    class="max-w-[262px] text-[13px] leading-5 text-site-muted max-sm:line-clamp-2"
+                >
                     {{ post.excerpt }}
                 </p>
                 <span

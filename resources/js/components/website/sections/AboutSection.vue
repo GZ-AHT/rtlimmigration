@@ -22,12 +22,12 @@ defineProps<{
 
 <template>
     <div
-        class="site-container grid items-center gap-10 lg:grid-cols-[588px_1fr] lg:gap-[76px]"
+        class="site-container grid items-center gap-10 max-sm:gap-6 lg:grid-cols-[588px_1fr] lg:gap-[76px]"
     >
         <div v-if="data.image" class="relative">
             <SiteImg
                 :image="data.image"
-                class="aspect-[588/496] w-full rounded-[24px]"
+                class="aspect-[588/496] w-full rounded-[24px] max-sm:aspect-[4/3]"
             />
             <div
                 v-if="data.caption || data.caption_eyebrow"
@@ -55,14 +55,14 @@ defineProps<{
             />
             <p
                 v-if="data.description"
-                class="mt-[22px] max-w-[568px] text-[16px] leading-[25px]"
+                class="mt-[22px] max-w-[568px] text-[16px] leading-[25px] max-sm:mt-4 max-sm:line-clamp-3 max-sm:text-[15px] max-sm:leading-[23px]"
                 :class="dark ? 'text-[#cfd0d3]' : 'text-site-muted'"
             >
                 {{ data.description }}
             </p>
             <ol
                 v-if="data.steps.length"
-                class="mt-[18px] flex flex-col gap-[21px]"
+                class="mt-[18px] flex flex-col gap-[21px] max-sm:mt-5 max-sm:gap-3"
             >
                 <li
                     v-for="(step, i) in data.steps"
@@ -85,7 +85,7 @@ defineProps<{
                             >{{ step.title }}</span
                         >
                         <span
-                            class="block text-[13px] leading-[16.9px]"
+                            class="block text-[13px] leading-[16.9px] max-sm:hidden"
                             :class="
                                 dark ? 'text-site-soft-gray' : 'text-site-muted'
                             "
@@ -98,7 +98,7 @@ defineProps<{
                 v-if="data.link.url"
                 :href="data.link.url"
                 :tone="dark ? 'white' : 'red'"
-                class="mt-[42px] text-[15px]"
+                class="mt-[42px] text-[15px] max-sm:mt-6"
                 >{{ data.link.label }}</ArrowLink
             >
         </div>

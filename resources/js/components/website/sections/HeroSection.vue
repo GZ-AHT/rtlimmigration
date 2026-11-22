@@ -56,14 +56,14 @@ onBeforeUnmount(() => window.clearInterval(timer));
 
 <template>
     <div
-        class="site-container pt-6 pb-10 lg:pt-9"
+        class="site-container pt-6 pb-10 max-sm:pb-8 lg:pt-9"
         :class="
             data.height === 'screen' &&
             'flex flex-col justify-center lg:min-h-[calc(100svh-132px)]'
         "
     >
         <div
-            class="grid items-start gap-10 lg:grid-cols-[minmax(0,650px)_minmax(0,554px)] lg:justify-between lg:gap-8"
+            class="grid items-start gap-10 max-sm:gap-6 lg:grid-cols-[minmax(0,650px)_minmax(0,554px)] lg:justify-between lg:gap-8"
         >
             <div
                 class="lg:pt-[15px]"
@@ -76,7 +76,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
                     {{ data.eyebrow }}
                 </p>
                 <h1
-                    class="mt-6 text-[36px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-site-ink sm:text-[54px] sm:leading-[1.05] sm:tracking-[-0.04em] lg:mt-8.25 lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
+                    class="mt-6 text-[36px] leading-[1.08] font-bold tracking-[-0.03em] whitespace-pre-line text-site-ink max-sm:mt-3 max-sm:text-[34px] sm:text-[54px] sm:leading-[1.05] sm:tracking-[-0.04em] lg:mt-8.25 lg:text-[82px] lg:leading-[86px] lg:tracking-[-3.4px]"
                 >
                     <template v-if="current === 0 || !slide.title"
                         >{{ data.title
@@ -91,13 +91,13 @@ onBeforeUnmount(() => window.clearInterval(timer));
                 </h1>
                 <p
                     v-if="slide.description"
-                    class="mt-6 max-w-[530px] text-[16px] leading-[1.7] whitespace-pre-line text-site-muted sm:text-[17px] sm:leading-[28.8px] lg:mt-8"
+                    class="mt-6 max-w-[530px] text-[16px] leading-[1.7] whitespace-pre-line text-site-muted max-sm:mt-3 max-sm:line-clamp-3 max-sm:text-[15px] max-sm:leading-[1.55] sm:text-[17px] sm:leading-[28.8px] lg:mt-8"
                     :class="centered && 'mx-auto'"
                 >
                     {{ slide.description }}
                 </p>
                 <div
-                    class="mt-8 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-10"
+                    class="mt-8 flex flex-col gap-4 max-sm:mt-5 max-sm:gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 lg:mt-10"
                     :class="centered && 'justify-center'"
                 >
                     <SiteButton
@@ -152,7 +152,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
                         :key="current"
                         :image="slide.image"
                         eager
-                        class="aspect-[554/526] w-full rounded-[28px]"
+                        class="aspect-[554/526] w-full rounded-[28px] max-sm:aspect-[4/3]"
                     />
                 </Transition>
                 <p
@@ -184,7 +184,7 @@ onBeforeUnmount(() => window.clearInterval(timer));
             :tabs="data.finder_tabs"
             :help="data.finder_help"
             :records="records"
-            class="mt-10 lg:mt-[58px]"
+            class="mt-10 max-sm:mt-6 lg:mt-[58px]"
         />
     </div>
 </template>

@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
 
 // REQ §7 / §8.1: remind counselors when lead follow-ups fall due.
@@ -17,3 +18,7 @@ Schedule::command('seo:check-links')->weeklyOn(1, '03:30')->withoutOverlapping()
 
 // REQ §23.5: automatic backups, as chosen in System → Settings → Backups.
 Schedule::command('backup:run --scheduled')->dailyAt('02:00')->withoutOverlapping();
+
+// REQ §24: keep website traffic counts for about 14 months.
+Schedule::call(fn () => DB::table('page_views')->where('viewed_on', '<', now()->subDays(430)->toDateString())->delete())
+    ->name('page-views:prune')->dailyAt('03:10')->withoutOverlapping();

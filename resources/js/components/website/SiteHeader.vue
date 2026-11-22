@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteButton from '@/components/website/SiteButton.vue';
 import SiteLink from '@/components/website/SiteLink.vue';
@@ -79,6 +79,59 @@ function onKey(event: KeyboardEvent): void {
     }
 }
 
+/**
+ * Phones only (under 640px): a fixed glass header that folds into a floating
+ * button while scrolling down and returns when scrolling up or at the top.
+ * 'top' = original layout, 'shown' = nav bar only (strip tucked away),
+ * 'hidden' = collapsed to the floating button. Only transforms and opacity
+ * change, and a spacer keeps the page from jumping.
+ */
+const smart = computed(() => flag('header', 'sticky', true));
+const hasStrip = computed(() => flag('header', 'top_bar', true));
+const scrollMode = ref<'top' | 'shown' | 'hidden'>('top');
+const collapsed = computed(() => smart.value && scrollMode.value === 'hidden');
+let lastY = 0;
+let frame = 0;
+let phone: MediaQueryList | null = null;
+
+function updateScroll(): void {
+    frame = 0;
+
+    if (!phone?.matches || open.value) {
+        lastY = window.scrollY;
+
+        return;
+    }
+
+    const y = Math.max(0, window.scrollY);
+    const delta = y - lastY;
+
+    if (y <= 8) {
+        scrollMode.value = 'top';
+    } else if (delta > 4) {
+        scrollMode.value = 'hidden';
+    } else if (delta < -4) {
+        scrollMode.value = 'shown';
+    }
+
+    if (Math.abs(delta) > 4 || y <= 8) {
+        lastY = y;
+    }
+}
+
+function onScroll(): void {
+    if (!frame) {
+        frame = window.requestAnimationFrame(updateScroll);
+    }
+}
+
+onMounted(() => {
+    phone = window.matchMedia('(max-width: 639px)');
+    lastY = window.scrollY;
+    scrollMode.value = lastY > 8 ? 'hidden' : 'top';
+    window.addEventListener('scroll', onScroll, { passive: true });
+});
+
 watch(open, (value) => {
     document.body.style.overflow = value ? 'hidden' : '';
     if (value) {
@@ -89,15 +142,35 @@ watch(open, (value) => {
 });
 
 onBeforeUnmount(() => {
+    window.removeEventListener('scroll', onScroll);
+    window.cancelAnimationFrame(frame);
     document.body.style.overflow = '';
     document.removeEventListener('keydown', onKey);
 });
 </script>
 
 <template>
+    <!-- Keeps the page from jumping: the phone header is fixed, so this holds its place. -->
+    <div
+        v-if="smart"
+        class="sm:hidden"
+        :class="hasStrip ? 'h-22' : 'h-14'"
+        aria-hidden="true"
+    />
     <header
         class="z-40 bg-white"
-        :class="flag('header', 'sticky', true) ? 'sticky top-0' : 'relative'"
+        :class="[
+            smart ? 'sticky top-0' : 'relative',
+            smart &&
+                'max-sm:fixed max-sm:inset-x-0 max-sm:top-0 max-sm:bg-white/80 max-sm:shadow-[0_8px_24px_rgba(15,23,42,0.1)] max-sm:ring-1 max-sm:ring-white/60 max-sm:backdrop-blur-[20px] max-sm:backdrop-saturate-150 max-sm:transition-[transform,opacity] max-sm:duration-300 max-sm:ease-[cubic-bezier(0.16,1,0.3,1)] max-sm:ring-inset motion-reduce:max-sm:transition-none',
+            smart &&
+                scrollMode === 'shown' &&
+                hasStrip &&
+                'max-sm:-translate-y-8',
+            collapsed &&
+                'max-sm:pointer-events-none max-sm:-translate-y-[120%] max-sm:opacity-0',
+        ]"
+        :inert="collapsed ? true : undefined"
         @keydown.esc="openDropdown = null"
     >
         <a
@@ -112,7 +185,7 @@ onBeforeUnmount(() => {
             class="bg-site-ink text-xs leading-[15.6px]"
         >
             <div
-                class="mx-auto flex h-9.5 max-w-360 items-center gap-3 px-4 sm:px-6 lg:px-24"
+                class="mx-auto flex h-9.5 max-w-360 items-center gap-3 px-4 max-sm:h-8 max-sm:px-3 sm:px-6 lg:px-24"
             >
                 <a
                     v-if="text('general', 'contact_email')"
@@ -189,9 +262,9 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Brand, navigation, call to action -->
-        <div class="border-b border-site-line/70">
+        <div class="border-b border-site-line/70 max-sm:border-b-0">
             <div
-                class="mx-auto flex h-19 max-w-360 items-center gap-6 px-4 sm:px-6 lg:h-23.5 lg:px-24"
+                class="mx-auto flex h-19 max-w-360 items-center gap-6 px-4 max-sm:h-14 max-sm:gap-3 max-sm:px-3 sm:px-6 lg:h-23.5 lg:px-24"
             >
                 <!-- Figma: the logo block spans 96–367px, the nav starts at 438px (47px + the 24px gap). -->
                 <SiteLogo class="xl:min-w-67.75" />
@@ -284,7 +357,7 @@ onBeforeUnmount(() => {
                 <!-- Modern animated hamburger toggle -->
                 <button
                     type="button"
-                    class="relative ml-auto flex size-11 items-center justify-center rounded-xl border border-site-line text-site-ink transition-colors hover:border-site-red hover:text-site-red focus-visible:ring-2 focus-visible:ring-site-red/30 focus-visible:outline-none xl:hidden"
+                    class="relative ml-auto flex size-11 items-center justify-center rounded-xl border border-site-line text-site-ink transition-colors hover:border-site-red hover:text-site-red focus-visible:ring-2 focus-visible:ring-site-red/30 focus-visible:outline-none max-sm:size-10 max-sm:bg-white/50 xl:hidden"
                     :aria-expanded="open"
                     aria-controls="site-mobile-menu"
                     :aria-label="open ? 'Close menu' : 'Open menu'"
@@ -335,12 +408,12 @@ onBeforeUnmount(() => {
 
                 <!-- Drawer panel with smooth slide-in -->
                 <Transition
-                    enter-active-class="transition-transform duration-300 cubic-bezier(0.16, 1, 0.3, 1)"
-                    enter-from-class="translate-x-full"
-                    enter-to-class="translate-x-0"
-                    leave-active-class="transition-transform duration-250 ease-in"
-                    leave-from-class="translate-x-0"
-                    leave-to-class="translate-x-full"
+                    enter-active-class="transition-[transform,opacity] duration-300 cubic-bezier(0.16, 1, 0.3, 1)"
+                    enter-from-class="translate-x-full max-sm:translate-x-0 max-sm:scale-90 max-sm:opacity-0"
+                    enter-to-class="translate-x-0 max-sm:scale-100 max-sm:opacity-100"
+                    leave-active-class="transition-[transform,opacity] duration-250 ease-in"
+                    leave-from-class="translate-x-0 max-sm:scale-100 max-sm:opacity-100"
+                    leave-to-class="translate-x-full max-sm:translate-x-0 max-sm:scale-90 max-sm:opacity-0"
                 >
                     <div
                         v-if="open"
@@ -348,11 +421,11 @@ onBeforeUnmount(() => {
                         role="dialog"
                         aria-modal="true"
                         aria-label="Navigation Menu"
-                        class="fixed inset-y-0 right-0 flex w-full max-w-[340px] flex-col bg-white shadow-2xl sm:max-w-sm"
+                        class="fixed inset-y-0 right-0 flex w-full max-w-[340px] flex-col bg-white shadow-2xl max-sm:inset-y-auto max-sm:top-3 max-sm:right-3 max-sm:left-3 max-sm:max-h-[calc(100dvh-1.5rem)] max-sm:w-auto max-sm:max-w-none max-sm:origin-top-right max-sm:overflow-hidden max-sm:rounded-3xl max-sm:bg-white/85 max-sm:ring-1 max-sm:ring-white/60 max-sm:backdrop-blur-[20px] max-sm:backdrop-saturate-150 sm:max-w-sm"
                     >
                         <!-- Top drawer header -->
                         <div
-                            class="flex h-18 items-center justify-between border-b border-site-line/80 px-5"
+                            class="flex h-18 items-center justify-between border-b border-site-line/80 px-5 max-sm:h-14 max-sm:px-4"
                         >
                             <SiteLogo @click="closeAll" />
                             <button
@@ -368,7 +441,7 @@ onBeforeUnmount(() => {
 
                         <!-- Navigation items with icons and accordions -->
                         <nav
-                            class="no-scrollbar flex-1 overflow-y-auto px-4 py-4"
+                            class="no-scrollbar flex-1 overflow-y-auto px-4 py-4 max-sm:px-3 max-sm:py-3"
                             aria-label="Mobile Navigation"
                         >
                             <ul class="flex flex-col gap-1.5">
@@ -569,7 +642,7 @@ onBeforeUnmount(() => {
                                 <a
                                     v-if="text('general', 'phone')"
                                     :href="`tel:${text('general', 'phone').replace(/\s/g, '')}`"
-                                    class="inline-flex items-center gap-1.5 hover:text-site-red"
+                                    class="inline-flex min-h-11 items-center gap-1.5 hover:text-site-red"
                                 >
                                     <AppIcon
                                         name="call"
@@ -589,7 +662,7 @@ onBeforeUnmount(() => {
                                 <a
                                     v-if="text('general', 'contact_email')"
                                     :href="`mailto:${text('general', 'contact_email')}`"
-                                    class="inline-flex items-center gap-1.5 hover:text-site-red"
+                                    class="inline-flex min-h-11 items-center gap-1.5 hover:text-site-red"
                                 >
                                     <AppIcon
                                         name="mail"
@@ -604,7 +677,7 @@ onBeforeUnmount(() => {
                                         :href="whatsappUrl"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        class="inline-flex items-center gap-1.5 font-medium text-site-whatsapp hover:underline"
+                                        class="inline-flex min-h-11 items-center gap-1.5 font-medium text-site-whatsapp hover:underline"
                                     >
                                         <span>WhatsApp</span>
                                     </a>
@@ -616,4 +689,24 @@ onBeforeUnmount(() => {
             </div>
         </Teleport>
     </header>
+
+    <!-- Collapsed state (phones): a small glass button that opens the same menu. -->
+    <button
+        v-if="smart"
+        type="button"
+        class="fixed top-[max(0.75rem,env(safe-area-inset-top))] right-3 z-40 grid size-12 place-items-center rounded-full bg-white/80 text-site-ink shadow-[0_8px_24px_rgba(15,23,42,0.18)] ring-1 ring-white/60 backdrop-blur-[20px] backdrop-saturate-150 transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ring-inset active:scale-90 motion-reduce:transition-none sm:hidden"
+        :class="
+            collapsed && !open
+                ? 'scale-100 opacity-100'
+                : 'pointer-events-none scale-50 opacity-0'
+        "
+        :tabindex="collapsed && !open ? 0 : -1"
+        :aria-hidden="collapsed && !open ? undefined : 'true'"
+        :aria-expanded="open"
+        aria-controls="site-mobile-menu"
+        aria-label="Open menu"
+        @click="open = true"
+    >
+        <AppIcon name="menu" :size="24" />
+    </button>
 </template>

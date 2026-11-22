@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Support\Notifications\NotificationPreferences;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -36,10 +38,40 @@ abstract class AppNotification extends Notification
         return 'system';
     }
 
-    /** @return list<string> */
+    /**
+     * In-app by default; email too when the person's role or the person has
+     * asked for it (see NotificationPreferences).
+     *
+     * @return list<string>
+     */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return app(NotificationPreferences::class)->channels($notifiable, static::class, $this->category());
+    }
+
+    /** Email copy, worded by the notification template if an admin wrote one. */
+    public function toMail(object $notifiable): MailMessage
+    {
+        $template = app(NotificationPreferences::class)->template(static::class);
+        $path = $this->url($notifiable);
+        $link = $path !== null ? url($path) : '';
+        $values = [
+            '{name}' => (string) ($notifiable->name ?? ''),
+            '{title}' => $this->title($notifiable),
+            '{body}' => $this->body($notifiable),
+            '{url}' => $link,
+            '{app}' => (string) config('app.name'),
+        ];
+        $subject = trim(strtr($template['email_subject'] !== '' ? $template['email_subject'] : '{title}', $values));
+        $text = strtr($template['email_body'] !== '' ? $template['email_body'] : '{body}', $values);
+
+        $mail = (new MailMessage)->subject($subject)->greeting(__('Hello :name,', ['name' => $values['{name}']]));
+
+        foreach (preg_split('/\R{2,}/', trim($text)) ?: [] as $paragraph) {
+            $mail->line($paragraph);
+        }
+
+        return $link !== '' ? $mail->action(__('Open'), $link) : $mail;
     }
 
     /** @return array{title: string, body: string, url: string|null, icon: string, category: string} */

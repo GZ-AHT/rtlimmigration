@@ -36,7 +36,7 @@ import type { PublicSection } from '@/types/website';
  * Renders a CMS page's sections (types from App\Support\Cms\SectionTypes)
  * with each section's background, spacing, anchor and "hide on phones".
  */
-defineProps<{ sections: PublicSection[] }>();
+const props = defineProps<{ sections: PublicSection[] }>();
 
 const components: Record<string, Component> = {
     hero: HeroSection,
@@ -90,7 +90,7 @@ const BACKGROUNDS: Record<string, string> = {
 };
 
 const SPACING: Record<string, string> = {
-    default: 'py-14 lg:py-[60px]',
+    default: 'py-14 max-sm:py-10 lg:py-[60px]',
     compact: 'py-10 lg:py-[44px]',
     // Continues the section above on the same background (Figma Contact page).
     joined: 'pt-0 pb-14 lg:pb-[44px]',
@@ -104,15 +104,15 @@ const JOINED: Record<string, string> = {
 // Figma homepage frames pad these sections unevenly; "Normal" spacing
 // follows them on desktop (measured from the 1440px export).
 const FIGMA_PADDING: Record<string, string> = {
-    pathways: 'py-14 lg:pt-[58px] lg:pb-[50px]',
-    testimonials: 'py-14 lg:py-[44px]',
-    video: 'py-14 lg:pt-16 lg:pb-[27px]',
-    blog: 'py-14 lg:pt-[59px] lg:pb-[31px]',
-    faq: 'py-14 lg:pt-[62px] lg:pb-[77px]',
+    pathways: 'py-14 max-sm:py-10 lg:pt-[58px] lg:pb-[50px]',
+    testimonials: 'py-14 max-sm:py-10 lg:py-[44px]',
+    video: 'py-14 max-sm:py-10 lg:pt-16 lg:pb-[27px]',
+    blog: 'py-14 max-sm:py-10 lg:pt-[59px] lg:pb-[31px]',
+    faq: 'py-14 max-sm:py-10 lg:pt-[62px] lg:pb-[77px]',
     // Figma Blog page.
-    newsletter: 'py-14 lg:pt-[44px] lg:pb-[58px]',
+    newsletter: 'py-14 max-sm:py-10 lg:pt-[44px] lg:pb-[58px]',
     // Owner's reference "Partner application.png".
-    partner_form: 'py-14 lg:pt-[55px] lg:pb-[70px]',
+    partner_form: 'py-14 max-sm:py-10 lg:pt-[55px] lg:pb-[70px]',
     steps: 'py-12 lg:pt-[39px] lg:pb-[94px]',
 };
 
@@ -139,11 +139,31 @@ function padding(section: PublicSection): string {
         : (SPACING[spacing] ?? SPACING.default);
 }
 
-function classes(section: PublicSection): string[] {
+/**
+ * The video consultation section sits on sand between white and sand
+ * neighbours: when the section above is white, its top 140px fades from
+ * white into sand so there is no hard colour break.
+ */
+function fadesFromAbove(index: number): boolean {
+    const section = props.sections[index];
+    const above = props.sections[index - 1];
+
+    return (
+        section.type === 'video' &&
+        section.settings.background === 'sand' &&
+        !!above &&
+        (above.settings.background ?? 'white') === 'white'
+    );
+}
+
+function classes(section: PublicSection, index: number): string[] {
     const s = section.settings;
 
     return [
         BACKGROUNDS[s.background ?? 'white'] ?? 'bg-white',
+        fadesFromAbove(index)
+            ? 'bg-no-repeat [background-image:linear-gradient(to_bottom,#fff,var(--color-site-sand)_140px)] [background-size:100%_140px]'
+            : '',
         padding(section),
         s.hide_on_mobile ? 'hidden md:block' : '',
         'scroll-mt-28',
@@ -152,11 +172,11 @@ function classes(section: PublicSection): string[] {
 </script>
 
 <template>
-    <template v-for="section in sections" :key="section.id">
+    <template v-for="(section, index) in sections" :key="section.id">
         <section
             v-if="components[section.type]"
             :id="section.settings.anchor || undefined"
-            :class="classes(section)"
+            :class="classes(section, index)"
             :data-section="section.type"
             class="w-full overflow-x-clip"
         >

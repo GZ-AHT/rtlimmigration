@@ -106,18 +106,19 @@ function step(by: number): void {
             <ArrowLink
                 v-if="data.link.url"
                 :href="data.link.url"
-                class="mt-9 text-[15px]"
+                class="mt-9 text-[15px] max-sm:mt-5"
                 >{{ data.link.label }}</ArrowLink
             >
         </div>
 
         <figure
             v-if="current"
-            class="relative min-h-[332px] rounded-[24px] bg-site-sand px-6 pt-[7px] pb-8 sm:px-8"
+            class="relative min-h-[332px] rounded-[24px] bg-site-sand px-6 pt-[7px] pb-8 max-sm:min-h-0 sm:px-8"
+            :class="items.length > 1 ? 'max-sm:pb-20' : 'max-sm:pb-6'"
         >
             <span
                 aria-hidden="true"
-                class="block text-[70px] leading-[70px] font-bold text-site-red sm:-ml-1"
+                class="block text-[70px] leading-[70px] font-bold text-site-red max-sm:h-10 max-sm:text-[56px] max-sm:leading-[56px] sm:-ml-1"
                 >“</span
             >
             <Transition
@@ -129,11 +130,13 @@ function step(by: number): void {
             >
                 <figure :key="current.id" class="m-0">
                     <blockquote
-                        class="mt-[6px] max-w-[644px] text-[19px] leading-[28px] font-medium text-site-ink sm:text-[23px] sm:leading-[32px]"
+                        class="mt-[6px] max-w-[644px] text-[17px] leading-[26px] font-medium text-site-ink max-sm:line-clamp-6 sm:text-[19px] sm:text-[23px] sm:leading-[28px] sm:leading-[32px]"
                     >
                         {{ current.quote }}
                     </blockquote>
-                    <figcaption class="mt-10 flex items-center gap-3 lg:mt-14">
+                    <figcaption
+                        class="mt-6 flex items-center gap-3 sm:mt-10 lg:mt-14"
+                    >
                         <SiteImg
                             v-if="current.photo"
                             :image="current.photo"

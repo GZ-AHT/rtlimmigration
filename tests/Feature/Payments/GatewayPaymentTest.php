@@ -36,7 +36,7 @@ beforeEach(function () {
     ]);
     // No real call may reach SSLCommerz. Inertia's own SSR ping to the Vite dev server is not ours to fake.
     Http::preventStrayRequests();
-    Http::allowStrayRequests(['http://127.0.0.1:5173/*', 'http://localhost:5173/*']);
+    Http::allowStrayRequests(['http://*:5173/*']);
 
     $this->counselor = User::factory()->create()->assignRole(Role::Counselor->value);
     Counselor::create(['user_id' => $this->counselor->id]);

@@ -44,12 +44,12 @@ defineProps<{
         </div>
 
         <ul
-            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-11 lg:grid-cols-3 lg:gap-6"
+            class="-mx-4 mt-9 no-scrollbar flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pt-1 pb-4 max-sm:mt-6 sm:-mx-6 sm:px-6 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pt-0 md:pb-0 lg:mt-11 lg:grid-cols-3 lg:gap-6"
         >
             <li
                 v-for="(item, i) in data.items"
                 :key="i"
-                class="w-[82vw] max-w-[340px] shrink-0 snap-start sm:w-[60vw] md:w-auto md:max-w-none"
+                class="w-[78vw] max-w-[340px] shrink-0 snap-start sm:w-[60vw] md:w-auto md:max-w-none"
             >
                 <component
                     :is="item.link.url ? SiteLink : 'div'"
@@ -60,9 +60,11 @@ defineProps<{
                     <SiteImg
                         v-if="item.image"
                         :image="item.image"
-                        class="h-[190px] w-full rounded-[14px]"
+                        class="h-[190px] w-full rounded-[14px] max-sm:h-[140px]"
                     />
-                    <div class="px-[10px] pt-[21px] pb-3">
+                    <div
+                        class="px-[10px] pt-[21px] pb-3 max-sm:pt-4 max-sm:pb-2"
+                    >
                         <p
                             v-if="item.eyebrow"
                             class="text-[11px] leading-[13px] font-semibold tracking-[0.8px] uppercase"
@@ -76,7 +78,7 @@ defineProps<{
                         </p>
                         <h3 class="mt-3 flex items-start justify-between gap-4">
                             <span
-                                class="text-[28px] leading-[31.2px] font-bold"
+                                class="text-[28px] leading-[31.2px] font-bold max-sm:text-[24px] max-sm:leading-[28px]"
                                 :class="
                                     i % 2 === 1 ? 'text-white' : 'text-site-ink'
                                 "
@@ -96,7 +98,7 @@ defineProps<{
                         </h3>
                         <p
                             v-if="item.text"
-                            class="mt-[15px] text-[14px] leading-[22.4px] whitespace-pre-line"
+                            class="mt-[15px] text-[14px] leading-[22.4px] whitespace-pre-line max-sm:mt-2 max-sm:line-clamp-2"
                             :class="
                                 i % 2 === 1
                                     ? 'text-[#d2d5db]'

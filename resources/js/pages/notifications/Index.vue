@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import NotificationItem from '@/components/panel/NotificationItem.vue';
@@ -8,7 +8,8 @@ import PanelCard from '@/components/panel/PanelCard.vue';
 import PanelTabs from '@/components/panel/PanelTabs.vue';
 import TablePagination from '@/components/panel/TablePagination.vue';
 import { Button } from '@/components/ui/button';
-import { index, readAll } from '@/routes/notifications';
+import { Checkbox } from '@/components/ui/checkbox';
+import { index, preferences, readAll } from '@/routes/notifications';
 import type { AppNotification, Paginated } from '@/types';
 
 defineOptions({
@@ -18,16 +19,51 @@ defineOptions({
 const props = defineProps<{
     notifications: Paginated<AppNotification>;
     filter: 'all' | 'unread';
+    category: string | null;
+    categories: {
+        key: string;
+        label: string;
+        unread: number;
+        in_app: boolean;
+        email: boolean;
+    }[];
+    customised: boolean;
 }>();
 
 const tab = ref(props.filter);
+const kind = ref(props.category ?? 'all');
 
-watch(tab, (value) =>
-    router.get(index().url, value === 'all' ? {} : { filter: value }, {
-        preserveState: true,
-        replace: true,
-    }),
-);
+function load(): void {
+    router.get(
+        index().url,
+        {
+            ...(tab.value === 'all' ? {} : { filter: tab.value }),
+            ...(kind.value === 'all' ? {} : { category: kind.value }),
+        },
+        { preserveState: true, replace: true },
+    );
+}
+
+watch([tab, kind], load);
+
+// Own choices: show in the centre (In-app) and send an email copy (Email).
+const choices = useForm({
+    preferences: Object.fromEntries(
+        props.categories.map((c) => [
+            c.key,
+            { in_app: c.in_app, email: c.email },
+        ]),
+    ) as Record<string, { in_app: boolean; email: boolean }>,
+});
+const settingsOpen = ref(false);
+
+function savePreferences(): void {
+    choices.put(preferences().url, { preserveScroll: true });
+}
+
+function resetPreferences(): void {
+    router.put(preferences().url, { reset: true }, { preserveScroll: true });
+}
 </script>
 
 <template>
@@ -39,6 +75,9 @@ watch(tab, (value) =>
         description="Updates about your account, payments and applications."
     >
         <template #actions>
+            <Button variant="outline" @click="settingsOpen = !settingsOpen"
+                >My preferences</Button
+            >
             <Button
                 variant="outline"
                 @click="
@@ -48,6 +87,72 @@ watch(tab, (value) =>
             >
         </template>
     </PageHeader>
+
+    <PanelCard
+        v-if="settingsOpen"
+        class="mb-4"
+        title="My notification choices"
+        description="Choose where each kind of notification reaches you. Security alerts always appear here."
+        flush
+    >
+        <ul class="divide-y">
+            <li
+                v-for="c in categories"
+                :key="c.key"
+                class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 text-[13px]"
+            >
+                <span class="font-semibold">{{ c.label }}</span>
+                <span class="flex gap-5">
+                    <label class="flex items-center gap-2">
+                        <Checkbox
+                            :model-value="choices.preferences[c.key].in_app"
+                            @update:model-value="
+                                (v) =>
+                                    (choices.preferences[c.key].in_app =
+                                        v === true)
+                            "
+                        />
+                        In-app
+                    </label>
+                    <label class="flex items-center gap-2">
+                        <Checkbox
+                            :model-value="choices.preferences[c.key].email"
+                            @update:model-value="
+                                (v) =>
+                                    (choices.preferences[c.key].email =
+                                        v === true)
+                            "
+                        />
+                        Email
+                    </label>
+                </span>
+            </li>
+        </ul>
+        <div class="flex flex-wrap justify-end gap-2 border-t px-5 py-3">
+            <Button
+                v-if="customised"
+                variant="outline"
+                @click="resetPreferences"
+                >Reset to role defaults</Button
+            >
+            <Button :disabled="choices.processing" @click="savePreferences"
+                >Save choices</Button
+            >
+        </div>
+    </PanelCard>
+
+    <PanelTabs
+        v-model="kind"
+        label="Notification type"
+        :tabs="[
+            { key: 'all', label: 'All types' },
+            ...categories.map((c) => ({
+                key: c.key,
+                label: c.label,
+                count: c.unread || undefined,
+            })),
+        ]"
+    />
 
     <PanelTabs
         v-model="tab"

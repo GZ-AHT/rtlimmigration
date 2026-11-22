@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\Email\EmailTrackingController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\Payments\GatewayController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Website\BlogController;
@@ -17,11 +18,12 @@ use App\Http\Controllers\Website\SeoController;
 use App\Http\Controllers\Website\SkillMigrationController;
 use App\Http\Controllers\Website\UniversityController;
 use App\Http\Middleware\ShareWebsiteData;
+use App\Http\Middleware\TrackPageView;
 use Illuminate\Support\Facades\Route;
 
 // Public website (REQ §21, Figma RTLIMMIG). Pages are built in the CMS; a
 // catch-all for custom page slugs is registered last, at the end of this file.
-Route::middleware(ShareWebsiteData::class)->group(function () {
+Route::middleware([ShareWebsiteData::class, TrackPageView::class])->group(function () {
     Route::get('/', [PageController::class, 'home'])->name('home');
     Route::get('contact', [PageController::class, 'contact'])->name('contact');
     Route::get('sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
@@ -83,6 +85,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Shared by all four dashboard areas.
     Route::get('search', SearchController::class)->middleware('throttle:60,1')->name('search');
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::put('notifications/preferences', [NotificationPreferenceController::class, 'update'])->name('notifications.preferences');
     Route::post('notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::post('notifications/{id}/read', [NotificationController::class, 'read'])->name('notifications.read');
 });
@@ -94,5 +97,5 @@ require __DIR__.'/settings.php';
 // every other route wins; single-segment slugs only.
 Route::get('{slug}', [PageController::class, 'show'])
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
-    ->middleware(ShareWebsiteData::class)
+    ->middleware([ShareWebsiteData::class, TrackPageView::class])
     ->name('page');

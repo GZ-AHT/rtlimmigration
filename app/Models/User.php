@@ -30,6 +30,7 @@ use Spatie\Permission\Traits\HasRoles;
 use Throwable;
 
 /**
+ * @property array<string, array{in_app?: bool, email?: bool}>|null $notification_preferences
  * @property int $id
  * @property string $name
  * @property string $email
@@ -76,6 +77,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'two_factor_confirmed_at' => 'datetime',
             'status' => UserStatus::class,
             'last_login_at' => 'datetime',
+            'notification_preferences' => 'array',
         ];
     }
 

@@ -71,7 +71,7 @@ it('hides modules that are not built yet when show_planned is off', function () 
         ->and(collect($groups[0]['items'][1]['children'])->pluck('title')->all())->toBe(['Built child']);
 });
 
-it('marks unbuilt modules as planned with no link', function () {
+it('links every counselor module now that Phase 12 has built Reports', function () {
     config(['navigation.show_planned' => true]);
 
     $items = collect(app(Navigation::class)->for(Area::Counselor, $this->userWithRole(Role::Counselor)))
@@ -81,9 +81,8 @@ it('marks unbuilt modules as planned with no link', function () {
         ->and($items['My Leads']['planned'])->toBeFalse()
         ->and($items['Visa Processing']['planned'])->toBeFalse()
         ->and($items['Email']['planned'])->toBeFalse()
-        ->and($items['Reports']['planned'])->toBeTrue()
-        ->and($items['Reports']['href'])->toBeNull()
-        ->and($items['Reports']['phase'])->toBe(12);
+        ->and($items['Reports']['planned'])->toBeFalse()
+        ->and($items['Reports']['href'])->toBe(route('counselor.reports.hub', absolute: false));
 });
 
 it('shares the sidebar of the current area with the page', function () {

@@ -100,7 +100,7 @@ it('renders the homepage from its sections with live records and menus', functio
         ->has('sections.0.records.countries', 7)
         ->has('sections.0.records.levels', count(StudyLevel::cases()))
         ->where('sections.0.data.image.alt', 'Student outside a modern campus building')
-        ->has('sections.5.records.items', 1) // featured testimonial
+        ->has('sections.6.records.items', 1) // featured testimonial
         ->has('sections.7.records.items', 3) // latest posts
         ->where('menus.main.1.label', 'Visa services')
         ->has('menus.main.1.children', 5)
@@ -484,11 +484,11 @@ it('adds the second banner design to an existing homepage without changing the r
 
 it('shows a photo or video in the video counseling call window', function () {
     $this->get('/')->assertInertia(fn (AssertableInertia $page) => $page
-        ->where('sections.6.type', 'video')
-        ->where('sections.6.data.call_style', 'meeting')
-        ->where('sections.6.data.media_type', 'image')
-        ->where('sections.6.data.adviser_name', 'Your RTL adviser')
-        ->where('sections.6.data.show_timer', true));
+        ->where('sections.2.type', 'video')
+        ->where('sections.2.data.call_style', 'meeting')
+        ->where('sections.2.data.media_type', 'image')
+        ->where('sections.2.data.adviser_name', 'Your RTL adviser')
+        ->where('sections.2.data.show_timer', true));
 
     $video = Media::create(['disk' => 'public', 'path' => 'media/adviser.webm', 'original_name' => 'adviser.webm', 'mime_type' => 'video/webm', 'size' => 1000]);
     cmsPage('meet', [['type' => 'video', 'data' => ['title' => 'Talk', 'call_style' => 'simple', 'media_type' => 'video', 'video' => $video->id]]]);

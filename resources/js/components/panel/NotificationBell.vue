@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import NotificationItem from '@/components/panel/NotificationItem.vue';
@@ -15,6 +15,29 @@ import { index as notificationsIndex, readAll } from '@/routes/notifications';
 const page = usePage();
 const unread = computed(() => page.props.notifications?.unread ?? 0);
 const recent = computed(() => page.props.notifications?.recent ?? []);
+
+// Near real time without a websocket server (REQ §20): every 45 seconds,
+// only while this tab is visible, refresh the unread count and latest items.
+const POLL_MS = 45_000;
+let timer: number | undefined;
+
+function refresh(): void {
+    if (document.visibilityState === 'visible') {
+        router.reload({
+            only: ['notifications'],
+        });
+    }
+}
+
+onMounted(() => {
+    timer = window.setInterval(refresh, POLL_MS);
+    document.addEventListener('visibilitychange', refresh);
+});
+
+onBeforeUnmount(() => {
+    window.clearInterval(timer);
+    document.removeEventListener('visibilitychange', refresh);
+});
 
 function markAllRead(): void {
     router.post(readAll().url, {}, { preserveScroll: true });

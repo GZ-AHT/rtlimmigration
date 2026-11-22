@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Notifications\NotificationCatalog;
+use App\Support\Notifications\NotificationPreferences;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
@@ -16,19 +18,40 @@ use Inertia\Response;
  */
 class NotificationController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, NotificationPreferences $preferences): Response
     {
-        $filter = $request->validate(['filter' => ['nullable', Rule::in(['all', 'unread'])]])['filter'] ?? 'all';
+        $data = $request->validate([
+            'filter' => ['nullable', Rule::in(['all', 'unread'])],
+            'category' => ['nullable', Rule::in(array_keys(NotificationCatalog::CATEGORIES))],
+        ]);
+        $filter = $data['filter'] ?? 'all';
+        $category = $data['category'] ?? null;
+        $user = $request->user();
 
-        $notifications = $request->user()->notifications()
+        $notifications = $user->notifications()
             ->when($filter === 'unread', fn ($q) => $q->whereNull('read_at'))
+            ->when($category !== null, fn ($q) => $q->where('data->category', $category))
             ->paginate(20)
             ->withQueryString()
             ->through(fn (DatabaseNotification $n) => self::present($n));
 
+        $unreadByCategory = $user->unreadNotifications()
+            ->reorder()
+            ->selectRaw("json_unquote(json_extract(data, '$.category')) as category, count(*) as total")
+            ->groupBy('category')->pluck('total', 'category');
+
         return Inertia::render('notifications/Index', [
             'notifications' => $notifications,
             'filter' => $filter,
+            'category' => $category,
+            'categories' => collect(NotificationCatalog::CATEGORIES)->map(fn (string $label, string $key) => [
+                'key' => $key,
+                'label' => $label,
+                'unread' => (int) ($unreadByCategory[$key] ?? 0),
+                'in_app' => $preferences->forUser($user, $key)['in_app'],
+                'email' => $preferences->forUser($user, $key)['email'],
+            ])->values(),
+            'customised' => $user->notification_preferences !== null,
         ]);
     }
 

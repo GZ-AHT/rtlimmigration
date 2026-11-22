@@ -88,9 +88,9 @@ it('lists only published assessments of active countries with questions in the h
 
     $this->get('/')->assertInertia(fn (AssertableInertia $page) => $page
         ->where('sections', fn ($sections) => collect($sections)->firstWhere('type', 'skill_search') !== null)
-        ->has('sections.3.records.countries', 4)
-        ->where('sections.3.type', 'skill_search')
-        ->where('sections.3.records.countries', fn ($c) => ! collect($c)->pluck('slug')->contains('testland') && ! collect($c)->pluck('slug')->contains('new-zealand')));
+        ->has('sections.4.records.countries', 4)
+        ->where('sections.4.type', 'skill_search')
+        ->where('sections.4.records.countries', fn ($c) => ! collect($c)->pluck('slug')->contains('testland') && ! collect($c)->pluck('slug')->contains('new-zealand')));
 
     $this->get('/skill-migration?q=can')->assertInertia(fn (AssertableInertia $page) => $page
         ->component('website/skill/Index')

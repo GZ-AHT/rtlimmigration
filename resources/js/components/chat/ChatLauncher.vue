@@ -11,6 +11,7 @@ import {
 import AppIcon from '@/components/panel/AppIcon.vue';
 import GuestChatPanel from '@/components/chat/GuestChatPanel.vue';
 import type { GuestChatState } from '@/components/chat/GuestChatPanel.vue';
+import { guestChatRequests } from '@/composables/useGuestChat';
 import { headers } from '@/composables/useMessageThread';
 import { widget } from '@/routes/chat/guest';
 
@@ -106,6 +107,13 @@ onMounted(() => {
 
 onBeforeUnmount(() => document.removeEventListener('keydown', onKey));
 
+// Asked to open from elsewhere (the phone action bar).
+watch(guestChatRequests, () => {
+    if (enabled.value && !open.value) {
+        void toggle();
+    }
+});
+
 // Switched off by an admin, or moved to the /chat page: close quietly.
 watch(enabled, (value) => {
     if (!value) {
@@ -179,7 +187,7 @@ watch(enabled, (value) => {
             ref="button"
             type="button"
             class="flex h-[52px] items-center gap-3 rounded-full border border-site-tab-line bg-white pr-5 pl-[17px] text-[14px] leading-5 font-semibold text-site-ink shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition-transform hover:scale-[1.03] focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none sm:w-[178px]"
-            :class="open ? 'hidden sm:flex' : ''"
+            :class="open ? 'hidden sm:flex' : 'max-sm:hidden'"
             :aria-expanded="open"
             aria-controls="chat-popup"
             :aria-label="open ? 'Close chat' : 'Live chat'"

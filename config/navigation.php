@@ -150,12 +150,16 @@ return [
             ['label' => 'Insights', 'items' => [
                 // Finance reports shipped with Phase 5; the rest of REQ §24 arrives in Phase 12.
                 ['title' => 'Reports & Analytics', 'icon' => 'monitoring', 'children' => [
+                    ['title' => 'All reports', 'route' => 'admin.reports.hub', 'permission' => 'reports.view', 'phase' => 12],
                     ['title' => 'Income & expenses', 'route' => 'admin.reports.financial', 'permission' => 'reports.financial', 'phase' => 5],
                     ['title' => 'Counselor-wise collection', 'route' => 'admin.reports.counselors', 'permission' => 'reports.financial', 'phase' => 5],
                     ['title' => 'Student-wise accounts', 'route' => 'admin.reports.students', 'permission' => 'reports.financial', 'phase' => 5],
                     ['title' => 'Export reports', 'route' => 'admin.reports.downloads', 'permission' => 'reports.export', 'phase' => 5],
                 ]],
-                ['title' => 'Notifications', 'icon' => 'notifications', 'route' => null, 'permission' => 'notifications.manage', 'phase' => 12],
+                ['title' => 'Notifications', 'icon' => 'notifications', 'children' => [
+                    ['title' => 'All notifications', 'route' => 'notifications.index', 'permission' => null, 'phase' => 12],
+                    ['title' => 'Templates & settings', 'route' => 'admin.notifications.settings', 'permission' => 'notifications.manage', 'phase' => 12],
+                ]],
                 ['title' => 'Media Library', 'icon' => 'perm_media', 'route' => 'admin.media.index', 'permission' => 'media.view', 'phase' => 9],
             ]],
             ['label' => 'System', 'items' => [
@@ -213,7 +217,7 @@ return [
                 ['title' => 'Follow-up Management', 'icon' => 'event_repeat', 'route' => 'counselor.follow-ups.index', 'permission' => 'leads.update', 'phase' => 2],
             ]],
             ['label' => 'Account', 'items' => [
-                ['title' => 'Reports', 'icon' => 'monitoring', 'route' => null, 'permission' => 'reports.view', 'phase' => 12],
+                ['title' => 'Reports', 'icon' => 'monitoring', 'route' => 'counselor.reports.hub', 'permission' => 'reports.view', 'phase' => 12],
                 ['title' => 'My Profile', 'icon' => 'account_circle', 'route' => 'profile.edit', 'permission' => null, 'phase' => 0],
             ]],
         ],
@@ -249,6 +253,7 @@ return [
                 ['title' => 'Student-wise Accounts', 'icon' => 'school', 'route' => 'accounts.reports.students', 'permission' => 'reports.financial', 'phase' => 5],
             ]],
             ['label' => 'Reports', 'items' => [
+                ['title' => 'All Reports', 'icon' => 'bar_chart', 'route' => 'accounts.reports.hub', 'permission' => 'reports.view', 'phase' => 12],
                 ['title' => 'Financial Reports', 'icon' => 'monitoring', 'route' => 'accounts.reports.financial', 'permission' => 'reports.financial', 'phase' => 5],
                 ['title' => 'Expenses', 'icon' => 'shopping_cart', 'route' => 'accounts.expenses.index', 'permission' => 'expenses.manage', 'phase' => 5],
                 ['title' => 'Export Reports', 'icon' => 'download', 'route' => 'accounts.reports.downloads', 'permission' => 'reports.export', 'phase' => 5],

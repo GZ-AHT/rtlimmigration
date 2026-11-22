@@ -32,7 +32,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::post('users/{user}/invitation', [Admin\UserController::class, 'invite'])->middleware('throttle:6,1')->name('users.invite');
         Route::post('users/{user}/password-reset', [Admin\UserController::class, 'sendPasswordReset'])->middleware('throttle:6,1')->name('users.password-reset');
         Route::post('users/{user}/verification', [Admin\UserController::class, 'sendVerification'])->middleware('throttle:6,1')->name('users.verification');
-        Route::get('users/{user}', [Admin\UserController::class, 'show'])->withTrashed()->name('users.show');
+        Route::get('users/{user}', [Admin\UserController::class, 'show'])->withTrashed()->whereNumber('user')->name('users.show');
         Route::resource('users', Admin\UserController::class)->except('show');
 
         // REQ §6 Role & Permission Management
@@ -108,6 +108,13 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
 
         // REQ §3 / §19 email: mailboxes on the cPanel server, templates, bulk email and delivery logs
         AreaRoutes::email();
+        AreaRoutes::reports();
+
+        // REQ §20 notification templates and settings
+        Route::middleware('can:notifications.manage')->group(function () {
+            Route::get('notifications/settings', [Admin\NotificationSettingsController::class, 'edit'])->name('notifications.settings');
+            Route::put('notifications/settings', [Admin\NotificationSettingsController::class, 'update'])->name('notifications.settings.update');
+        });
         Route::prefix('email')->name('email.')->group(function () {
             Route::get('accounts', [Admin\EmailAccountController::class, 'index'])->name('accounts.index');
             Route::post('accounts', [Admin\EmailAccountController::class, 'store'])->name('accounts.store');
@@ -294,6 +301,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Counselor->accessPermission(
         AreaRoutes::payments(finance: false);
         AreaRoutes::chat();
         AreaRoutes::email();
+        AreaRoutes::reports();
     });
 
 Route::middleware(['auth', 'verified', 'can:'.Area::Accounts->accessPermission()])
@@ -307,6 +315,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Accounts->accessPermission()
         Route::post('payment-methods', [Admin\PaymentSettingsController::class, 'storeMethod'])->name('payment-methods.store');
         Route::put('payment-methods/{method}', [Admin\PaymentSettingsController::class, 'updateMethod'])->name('payment-methods.update');
         AreaRoutes::email();
+        AreaRoutes::reports();
     });
 
 Route::middleware(['auth', 'verified', 'can:'.Area::Portal->accessPermission()])

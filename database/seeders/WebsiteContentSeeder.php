@@ -320,6 +320,22 @@ class WebsiteContentSeeder extends Seeder
                     ['image' => $this->img('pathway-masters.jpg'), 'eyebrow' => 'TAKE THE NEXT STEP', 'title' => 'Master’s', 'text' => "Deepen your expertise and take your\nacademic ambitions further.", 'link' => $this->link('Master’s', '/universities?level=master')],
                 ],
             ]),
+            $this->s('video', [
+                'eyebrow' => 'PERSONAL GUIDANCE. WHEREVER YOU ARE.',
+                'title' => "Big plans.\nLet’s talk,\nface to face.",
+                'description' => 'Connect with an RTL adviser over video. Explore your study options, ask your visa questions, and plan your next step—from wherever you call home.',
+                'button' => 'Book a video consultation',
+                'detail' => 'One-to-one guidance · Online, on your schedule',
+                'image' => $this->img('video-adviser.jpg'),
+                'adviser_name' => 'Your RTL adviser',
+                'room_label' => 'RTL  /  VIDEO COUNSELING',
+                'reassurance' => 'A real conversation. A clearer direction.',
+                'steps' => [
+                    ['title' => 'Choose your time', 'text' => 'Find a slot that works for you.'],
+                    ['title' => 'Share your goals', 'text' => 'Tell us where you want to go.'],
+                    ['title' => 'Meet your adviser', 'text' => 'Leave with a clearer next step.'],
+                ],
+            ], ['background' => 'sand']),
             $this->s('stats', [
                 'items' => [
                     ['value' => '5,000+', 'label' => 'Successful student visas'],
@@ -352,22 +368,6 @@ class WebsiteContentSeeder extends Seeder
                 'link' => $this->link('Read student reviews', '/reviews'),
                 'limit' => 3,
             ]),
-            $this->s('video', [
-                'eyebrow' => 'PERSONAL GUIDANCE. WHEREVER YOU ARE.',
-                'title' => "Big plans.\nLet’s talk,\nface to face.",
-                'description' => 'Connect with an RTL adviser over video. Explore your study options, ask your visa questions, and plan your next step—from wherever you call home.',
-                'button' => 'Book a video consultation',
-                'detail' => 'One-to-one guidance · Online, on your schedule',
-                'image' => $this->img('video-adviser.jpg'),
-                'adviser_name' => 'Your RTL adviser',
-                'room_label' => 'RTL  /  VIDEO COUNSELING',
-                'reassurance' => 'A real conversation. A clearer direction.',
-                'steps' => [
-                    ['title' => 'Choose your time', 'text' => 'Find a slot that works for you.'],
-                    ['title' => 'Share your goals', 'text' => 'Tell us where you want to go.'],
-                    ['title' => 'Meet your adviser', 'text' => 'Leave with a clearer next step.'],
-                ],
-            ], ['background' => 'sand']),
             $this->s('blog', [
                 'eyebrow' => 'INSIGHTS FOR YOUR NEXT STEP',
                 'title' => 'A little knowledge. A world of possibility.',

@@ -51,7 +51,7 @@ function mailbox(array $attributes = []): EmailAccount
 
 beforeEach(function () {
     Http::preventStrayRequests();
-    Http::allowStrayRequests(['http://127.0.0.1:5173/*']);
+    Http::allowStrayRequests(['http://*:5173/*']);
     $this->admin = $this->userWithRole(Role::SuperAdmin);
 });
 
