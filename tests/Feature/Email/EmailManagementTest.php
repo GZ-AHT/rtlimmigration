@@ -673,3 +673,57 @@ describe('unsubscribe from bulk email', function () {
         expect(EmailMessage::sole()->status)->toBe(EmailMessageStatus::Sent);
     });
 });
+
+describe('managing the unsubscribed list', function () {
+    it('lists, searches and counts opted-out addresses, newest first', function () {
+        EmailSuppression::add('old@example.test');
+        EmailSuppression::add('new@example.test', 'admin');
+
+        $this->actingAs($this->admin)->get(route('admin.email.unsubscribed.index'))->assertOk()
+            ->assertInertia(fn (Assert $p) => $p->component('admin/email/Unsubscribed')->where('total', 2)
+                ->where('addresses.data.0.email', 'new@example.test')->where('addresses.data.0.reason', 'Added by an administrator')
+                ->where('addresses.data.1.reason', 'Used the unsubscribe link'));
+        $this->get(route('admin.email.unsubscribed.index', ['search' => 'OLD']))->assertInertia(fn (Assert $p) => $p->has('addresses.data', 1));
+    });
+
+    it('adds an address, in lower case, once, and records who did it', function () {
+        $this->actingAs($this->admin)->post(route('admin.email.unsubscribed.store'), ['email' => '  Mum@Example.test '])->assertSessionHasNoErrors();
+        $this->post(route('admin.email.unsubscribed.store'), ['email' => 'mum@example.test'])->assertSessionHasNoErrors();
+
+        expect(EmailSuppression::sole())->email->toBe('mum@example.test')->reason->toBe('admin')
+            ->and(Activity::query()->where('description', 'Address added to the bulk email opt-out list')->count())->toBe(1);
+
+        $this->post(route('admin.email.unsubscribed.store'), ['email' => 'not an address'])->assertSessionHasErrors('email');
+        $this->post(route('admin.email.unsubscribed.store'), [])->assertSessionHasErrors('email');
+    });
+
+    it('lets an address be allowed again, which puts it back in bulk sends', function () {
+        Mail::fake();
+        $student = Student::factory()->create();
+        EmailSuppression::add($student->user->email);
+        $row = EmailSuppression::sole();
+        $bulk = ['name' => 'N', 'subject' => 'S', 'body' => 'B', 'audience' => ['type' => 'students']];
+
+        $this->actingAs($this->admin)->post(route('admin.email.bulk.store'), $bulk)->assertSessionHasErrors('audience'); // nobody left to send to
+
+        $this->delete(route('admin.email.unsubscribed.destroy', $row))->assertSessionHasNoErrors();
+        expect(EmailSuppression::count())->toBe(0)->and(Activity::query()->where('description', 'Address removed from the bulk email opt-out list')->exists())->toBeTrue();
+
+        $this->post(route('admin.email.bulk.store'), $bulk)->assertSessionHasNoErrors();
+        expect(EmailMessage::pluck('to_email')->all())->toBe([$student->user->email]);
+    });
+
+    it('is for people who manage email only', function () {
+        EmailSuppression::add('keep@example.test');
+        $row = EmailSuppression::sole();
+
+        foreach ([Role::LeadManager, Role::Counselor, Role::Accounts, Role::Student] as $role) {
+            $user = $this->userWithRole($role);
+            $this->actingAs($user)->get('/admin/email/unsubscribed')->assertForbidden();
+            $this->actingAs($user)->post('/admin/email/unsubscribed', ['email' => 'x@example.test'])->assertForbidden();
+            $this->actingAs($user)->delete('/admin/email/unsubscribed/'.$row->id)->assertForbidden();
+        }
+
+        expect(EmailSuppression::pluck('email')->all())->toBe(['keep@example.test']);
+    });
+});

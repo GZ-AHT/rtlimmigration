@@ -15,19 +15,50 @@ use Illuminate\Support\Collection;
 /** REQ §22.3: the dynamic XML sitemap and robots.txt. */
 class SeoController extends Controller
 {
+    /** The files an index lists, in order: type => what it holds. */
+    public const SITEMAPS = ['pages', 'posts', 'universities', 'assessments', 'more'];
+
+    /** `/sitemap.xml` is an index of one sitemap per kind of content, so each stays small and easy to check. */
     public function sitemap(): Response
     {
-        abort_unless(WebsiteSeo::setting('enabled', true) && WebsiteSeo::setting('sitemap_enabled', true) && ! WebsiteSeo::setting('noindex_site', false), 404);
+        $this->ensureEnabled();
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
+
+        foreach ($this->groups() as $type => $entries) {
+            if ($entries->isEmpty()) {
+                continue;
+            }
+
+            $lastmod = $entries->pluck('lastmod')->filter()->max();
+            $xml .= '  <sitemap><loc>'.htmlspecialchars(WebsiteSeo::canonicalFor("sitemap-{$type}.xml"), ENT_XML1).'</loc>'
+                .($lastmod ? '<lastmod>'.$lastmod.'</lastmod>' : '').'</sitemap>'."\n";
+        }
+
+        return response($xml.'</sitemapindex>', 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+    }
+
+    /** One of the sitemaps the index points to (`/sitemap-posts.xml`, …). */
+    public function sitemapOf(string $type): Response
+    {
+        $this->ensureEnabled();
+        $entries = $this->groups()[$type] ?? null;
+        abort_if($entries === null || $entries->isEmpty(), 404);
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n".'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
 
-        foreach ($this->entries() as $e) {
+        foreach ($entries as $e) {
             $xml .= '  <url><loc>'.htmlspecialchars($e['loc'], ENT_XML1).'</loc>'
                 .($e['lastmod'] ? '<lastmod>'.$e['lastmod'].'</lastmod>' : '')
                 .'<changefreq>'.$e['changefreq'].'</changefreq><priority>'.$e['priority'].'</priority></url>'."\n";
         }
 
         return response($xml.'</urlset>', 200, ['Content-Type' => 'application/xml; charset=UTF-8']);
+    }
+
+    private function ensureEnabled(): void
+    {
+        abort_unless(WebsiteSeo::setting('enabled', true) && WebsiteSeo::setting('sitemap_enabled', true) && ! WebsiteSeo::setting('noindex_site', false), 404);
     }
 
     public function robots(): Response
@@ -47,8 +78,12 @@ class SeoController extends Controller
         return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 
-    /** @return Collection<int, array{loc: string, lastmod: string|null, changefreq: string, priority: string}> */
-    private function entries(): Collection
+    /**
+     * Addresses by kind. An address listed twice appears only in the first kind that has it.
+     *
+     * @return array<string, Collection<int, array{loc: string, lastmod: string|null, changefreq: string, priority: string}>>
+     */
+    private function groups(): array
     {
         $entry = fn (string $path, ?CarbonInterface $updated, string $freq, string $priority): array => [
             'loc' => WebsiteSeo::canonicalFor($path),
@@ -78,6 +113,17 @@ class SeoController extends Controller
                 ? ['loc' => $l, 'lastmod' => null, 'changefreq' => 'monthly', 'priority' => '0.5']
                 : $entry($l, null, 'monthly', '0.5'));
 
-        return $pages->concat($posts)->concat($universities)->concat($assessments)->concat($extra)->unique('loc')->values();
+        $seen = [];
+
+        return collect(['pages' => $pages, 'posts' => $posts, 'universities' => $universities, 'assessments' => $assessments, 'more' => $extra])
+            ->map(function (Collection $entries) use (&$seen): Collection {
+                $fresh = $entries->reject(fn (array $e) => isset($seen[$e['loc']]))->unique('loc')->values();
+
+                foreach ($fresh as $e) {
+                    $seen[$e['loc']] = true;
+                }
+
+                return $fresh;
+            })->all();
     }
 }

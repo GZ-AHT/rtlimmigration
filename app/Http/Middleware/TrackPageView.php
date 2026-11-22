@@ -49,7 +49,7 @@ class TrackPageView
 
     private function skip(Request $request): bool
     {
-        if ($request->is('sitemap.xml', 'robots.txt')) {
+        if ($request->is('sitemap.xml', 'sitemap-*.xml', 'robots.txt')) {
             return true;
         }
 

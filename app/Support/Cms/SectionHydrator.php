@@ -235,7 +235,9 @@ class SectionHydrator
     }
 
     /**
-     * Address, an OpenStreetMap embed and a Google Maps link for the visit section.
+     * Address, a map embed and a Google Maps link for the visit section. The
+     * embed is Google's when a Maps key is saved in Integrations and there is an
+     * address; otherwise OpenStreetMap, from the saved coordinates.
      *
      * @param  array<string, mixed>  $data
      * @return array{address: string, embed: string|null, map_url: string}
@@ -246,8 +248,11 @@ class SectionHydrator
         $lat = is_numeric($data['latitude']) ? (float) $data['latitude'] : null;
         $lng = is_numeric($data['longitude']) ? (float) $data['longitude'] : null;
         $embed = null;
+        $mapsKey = trim((string) app(SettingsRepository::class)->get('integrations.google_maps_key', ''));
 
-        if ($lat !== null && $lng !== null && abs($lat) <= 90 && abs($lng) <= 180) {
+        if ($mapsKey !== '' && $address !== '') {
+            $embed = 'https://www.google.com/maps/embed/v1/place?'.http_build_query(['key' => $mapsKey, 'q' => $address]);
+        } elseif ($lat !== null && $lng !== null && abs($lat) <= 90 && abs($lng) <= 180) {
             // A wide box: the map is about 3.7 times wider than it is tall.
             $bbox = implode(',', [$lng - 0.03, $lat - 0.009, $lng + 0.03, $lat + 0.009]);
             $embed = 'https://www.openstreetmap.org/export/embed.html?'.http_build_query(['bbox' => $bbox, 'layer' => 'mapnik', 'marker' => "{$lat},{$lng}"]);

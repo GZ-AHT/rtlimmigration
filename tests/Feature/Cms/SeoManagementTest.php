@@ -50,7 +50,8 @@ it('lists live public pages, posts and universities in the sitemap, and leaves o
     University::create(['name' => 'Closed University', 'slug' => 'closed-university', 'country_id' => Country::where('iso2', 'CA')->value('id'), 'is_active' => false]);
     seoSetting('sitemap_extra', "/special-offer\nhttps://example.com/partner");
 
-    $xml = $this->get('/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8')->getContent();
+    $this->get('/sitemap.xml')->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8');
+    $xml = collect(['pages', 'posts', 'universities', 'more'])->map(fn (string $type) => $this->get("/sitemap-{$type}.xml")->assertOk()->assertHeader('Content-Type', 'application/xml; charset=UTF-8')->getContent())->implode("\n");
 
     expect($xml)->toContain('<loc>'.url('/').'</loc>')
         ->toContain(url('/faq'))->toContain(url('/blog/live-post'))->toContain(url('/universities/maple-university'))
@@ -58,13 +59,43 @@ it('lists live public pages, posts and universities in the sitemap, and leaves o
         ->not->toContain('draft-post')->not->toContain('hidden-post')->not->toContain('closed-university');
 });
 
+it('splits the sitemap into one file per kind of content, listed by an index', function () {
+    BlogPost::create(['title' => 'Live post', 'slug' => 'live-post', 'content' => '<p>x</p>', 'status' => PublishStatus::Published, 'published_at' => now()->subHour()]);
+    seoSetting('sitemap_extra', '/special-offer');
+
+    $index = $this->get('/sitemap.xml')->assertOk()->getContent();
+    expect($index)->toContain('<sitemapindex')->not->toContain('<urlset')
+        ->toContain('<loc>'.url('/sitemap-pages.xml').'</loc>')->toContain('<loc>'.url('/sitemap-posts.xml').'</loc>')->toContain('<loc>'.url('/sitemap-more.xml').'</loc>')
+        ->not->toContain('sitemap-universities.xml')  // nothing to list, so no file
+        ->not->toContain('sitemap-assessments.xml');
+
+    $posts = $this->get('/sitemap-posts.xml')->assertOk()->getContent();
+    expect($posts)->toContain('<urlset')->toContain(url('/blog/live-post'))->not->toContain(url('/faq'));
+    expect($this->get('/sitemap-pages.xml')->getContent())->toContain(url('/faq'))->not->toContain('live-post');
+    expect($this->get('/sitemap-more.xml')->getContent())->toContain(url('/special-offer'));
+
+    // Empty or unknown kinds are not files.
+    $this->get('/sitemap-universities.xml')->assertNotFound();
+    $this->get('/sitemap-nonsense.xml')->assertNotFound();
+});
+
+it('lists an address in one sitemap only', function () {
+    seoSetting('sitemap_extra', '/faq
+/brand-new');
+
+    expect($this->get('/sitemap-pages.xml')->getContent())->toContain(url('/faq'));
+    expect($this->get('/sitemap-more.xml')->getContent())->toContain(url('/brand-new'))->not->toContain(url('/faq'));
+});
+
 it('turns the sitemap off, and hides everything when the site is set to noindex', function () {
     seoSetting('sitemap_enabled', false);
     $this->get('/sitemap.xml')->assertNotFound();
+    $this->get('/sitemap-pages.xml')->assertNotFound();
 
     seoSetting('sitemap_enabled', true);
     seoSetting('noindex_site', true);
     $this->get('/sitemap.xml')->assertNotFound();
+    $this->get('/sitemap-pages.xml')->assertNotFound();
     $this->get('/robots.txt')->assertOk()->assertSee('Disallow: /', false);
 });
 

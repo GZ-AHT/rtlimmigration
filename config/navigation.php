@@ -104,6 +104,7 @@ return [
                     ['title' => 'Templates', 'route' => 'admin.email.templates.index', 'permission' => 'email.manage', 'phase' => 8],
                     ['title' => 'Bulk email', 'route' => 'admin.email.bulk.index', 'permission' => 'email.manage', 'phase' => 8],
                     ['title' => 'Delivery logs', 'route' => 'admin.email.logs.index', 'permission' => 'email.manage', 'phase' => 8],
+                    ['title' => 'Unsubscribed', 'route' => 'admin.email.unsubscribed.index', 'permission' => 'email.manage', 'phase' => 8],
                     ['title' => 'Email settings', 'route' => 'admin.email.settings', 'permission' => 'email.manage', 'phase' => 8],
                 ]],
                 ['title' => 'Live Chat', 'icon' => 'forum', 'children' => [

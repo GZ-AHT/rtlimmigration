@@ -28,6 +28,7 @@ Route::middleware([ShareWebsiteData::class, TrackPageView::class])->group(functi
     Route::get('/', [PageController::class, 'home'])->name('home');
     Route::get('contact', [PageController::class, 'contact'])->name('contact');
     Route::get('sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+    Route::get('sitemap-{type}.xml', [SeoController::class, 'sitemapOf'])->whereIn('type', SeoController::SITEMAPS)->name('sitemap.type');
     Route::get('robots.txt', [SeoController::class, 'robots'])->name('robots');
     Route::get('blog/{slug}', [BlogController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('blog.show');
     Route::get('universities/{slug}', [UniversityController::class, 'show'])->where('slug', '[a-z0-9-]+')->name('universities.show');

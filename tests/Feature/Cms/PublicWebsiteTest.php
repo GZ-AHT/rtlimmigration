@@ -183,6 +183,18 @@ it('builds the Figma contact page with cards and a map from the site settings', 
         ->where('sections.2.records.map_url', fn (string $url) => str_starts_with($url, 'https://www.google.com/maps/search/')));
 });
 
+it('shows a Google map on the contact page once a Maps key is saved, and falls back without one', function () {
+    $embed = fn () => $this->get('/contact')->assertOk()->viewData('page')['props']['sections'][2]['records']['embed'];
+    expect($embed())->toStartWith('https://www.openstreetmap.org/');
+
+    app(SettingsRepository::class)->set('integrations.google_maps_key', 'AIzaSyExampleKey_1234567890abcd', public: true);
+    expect($embed())->toStartWith('https://www.google.com/maps/embed/v1/place?key=AIzaSyExampleKey_1234567890abcd&q=Gulshan')
+        ->toContain('Dhaka');
+
+    app(SettingsRepository::class)->set('integrations.google_maps_key', '', public: true);
+    expect($embed())->toStartWith('https://www.openstreetmap.org/');
+});
+
 it('upgrades an untouched form-only contact page, but not an edited one', function () {
     $contact = Page::where('system_key', 'contact')->first();
     $form = collect($contact->sections)->firstWhere('type', 'contact');

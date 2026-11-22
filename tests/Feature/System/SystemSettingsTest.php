@@ -81,6 +81,18 @@ it('lists admin activity and sign-ins, with search', function () {
 
 /* ----------------------------------------------------------------- settings */
 
+it('saves a Google Maps key and refuses one that does not look like a key', function () {
+    $put = fn (string $key) => $this->actingAs($this->admin)->put(route('admin.system.settings.update', 'integrations'), ['google_maps_key' => $key, 'whatsapp_enabled' => true]);
+
+    $put('AIzaSyExampleKey_1234567890abcd')->assertSessionHasNoErrors();
+    expect(app(SettingsRepository::class)->get('integrations.google_maps_key'))->toBe('AIzaSyExampleKey_1234567890abcd');
+
+    $put('<script>alert(1)</script>')->assertSessionHasErrors('google_maps_key');
+    $put('short')->assertSessionHasErrors('google_maps_key');
+    $put('')->assertSessionHasNoErrors();
+    expect((string) app(SettingsRepository::class)->get('integrations.google_maps_key'))->toBe('');
+});
+
 it('saves settings, validates them, and keeps secrets encrypted and out of the page', function () {
     $this->actingAs($this->admin)->put(route('admin.system.settings.update', 'integrations'), [
         'fb_pixel_id' => '123456789012345', 'recaptcha_enabled' => true, 'recaptcha_site_key' => 'site-key_1', 'recaptcha_secret' => 'super-secret-value',

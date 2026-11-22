@@ -62,6 +62,7 @@ class SystemSettings
                     'recaptcha_enabled' => ['type' => 'toggle', 'label' => 'Protect website forms with Google reCAPTCHA v3'],
                     'recaptcha_site_key' => ['type' => 'text', 'label' => 'reCAPTCHA site key', 'max' => 100, 'pattern' => '/^[A-Za-z0-9_-]+$/'],
                     'recaptcha_secret' => ['type' => 'secret', 'label' => 'reCAPTCHA secret key', 'max' => 100],
+                    'google_maps_key' => ['type' => 'text', 'label' => 'Google Maps key', 'max' => 80, 'pattern' => '/^[A-Za-z0-9_-]{20,80}$/', 'hint' => 'Shows a Google map on the contact page. Create a browser key with the Maps Embed API and restrict it to your website address in Google Cloud: the key is visible in the page, so the restriction is what protects it. Blank keeps the free OpenStreetMap map.'],
                     'whatsapp_enabled' => ['type' => 'toggle', 'label' => 'Show the WhatsApp button on the website', 'hint' => 'The number is set in Site settings → General.'],
                     'whatsapp_message' => ['type' => 'text', 'label' => 'WhatsApp opening message', 'max' => 200],
                 ],

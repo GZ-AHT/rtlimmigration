@@ -10,6 +10,7 @@ export type MediaItem = {
     name: string;
     size: number;
     kind?: 'image' | 'video';
+    used_in?: string[];
     mime?: string;
 };
 

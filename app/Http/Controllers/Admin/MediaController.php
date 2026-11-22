@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Media;
+use App\Support\Cms\MediaUsage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -47,12 +48,15 @@ class MediaController extends Controller
             ->when($search !== '', fn (Builder $q) => $q->where(fn (Builder $q) => $q->where('original_name', 'like', '%'.addcslashes($search, '%_\\').'%')->orWhere('alt', 'like', '%'.addcslashes($search, '%_\\').'%')))
             ->latest('id')
             ->paginate($request->wantsJson() ? 24 : 36)
-            ->withQueryString()
-            ->through(fn (Media $m) => $m->present());
+            ->withQueryString();
 
         if ($request->wantsJson()) {
-            return response()->json($media);
+            return response()->json($media->through(fn (Media $m) => $m->present()));
         }
+
+        // The picker inside editors only needs the file; the library page also shows where it is used.
+        $usage = MediaUsage::for(array_values(array_map(intval(...), $media->pluck('id')->all())));
+        $media = $media->through(fn (Media $m) => [...$m->present(), 'used_in' => $usage[$m->id] ?? []]);
 
         return Inertia::render('admin/media/Index', [
             'media' => $media,
@@ -115,11 +119,29 @@ class MediaController extends Controller
         return $request->wantsJson() ? response()->json($media->present()) : back();
     }
 
-    public function destroy(Media $media): RedirectResponse
+    /**
+     * A file that pages, posts or settings still use is not deleted unless the
+     * request says `force` (the library asks the person first), so a page is
+     * never left with a missing image by accident.
+     */
+    public function destroy(Request $request, Media $media): RedirectResponse
     {
         Gate::authorize('media.manage');
 
+        $usage = MediaUsage::for([$media->id])[$media->id] ?? [];
+
+        if ($usage !== [] && ! $request->boolean('force')) {
+            $this->toast(['type' => 'error', 'message' => __('This file is used in :count place(s), so it was not deleted.', ['count' => count($usage)])]);
+
+            return back();
+        }
+
         $media->delete();
+
+        if ($usage !== []) {
+            activity('cms')->causedBy($request->user())->withProperties(['file' => $media->original_name, 'was_used_in' => $usage])->log('In-use media file deleted');
+        }
+
         $this->toast(['type' => 'success', 'message' => __('File deleted.')]);
 
         return back();

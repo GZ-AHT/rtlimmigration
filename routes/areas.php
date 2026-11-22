@@ -139,6 +139,9 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::post('bulk/preview', [Admin\BulkEmailController::class, 'preview'])->name('bulk.preview');
             Route::post('bulk', [Admin\BulkEmailController::class, 'store'])->middleware('throttle:6,1')->name('bulk.store');
 
+            Route::get('unsubscribed', [Admin\EmailSuppressionController::class, 'index'])->name('unsubscribed.index');
+            Route::post('unsubscribed', [Admin\EmailSuppressionController::class, 'store'])->middleware('throttle:30,1')->name('unsubscribed.store');
+            Route::delete('unsubscribed/{suppression}', [Admin\EmailSuppressionController::class, 'destroy'])->whereNumber('suppression')->name('unsubscribed.destroy');
             Route::get('logs', [Admin\EmailLogController::class, 'index'])->name('logs.index');
             Route::get('logs/{message}', [Admin\EmailLogController::class, 'show'])->whereNumber('message')->name('logs.show');
             Route::post('logs/{message}/retry', [Admin\EmailLogController::class, 'retry'])->whereNumber('message')->name('logs.retry');

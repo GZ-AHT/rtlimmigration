@@ -81,6 +81,7 @@ function saveAlt(): void {
 function remove(): void {
     if (!selected.value) return;
     router.delete(destroy(selected.value.id).url, {
+        data: selected.value.used_in?.length ? { force: true } : {},
         preserveScroll: true,
         onFinish: () => {
             deleting.value = false;
@@ -221,6 +222,20 @@ const kb = (b: number) =>
                     class="font-semibold text-primary hover:underline"
                     >Open full size</a
                 >
+                <div>
+                    <p class="font-semibold">Used in</p>
+                    <ul
+                        v-if="selected.used_in?.length"
+                        class="mt-1 list-disc pl-4 text-muted-foreground"
+                    >
+                        <li v-for="place in selected.used_in" :key="place">
+                            {{ place }}
+                        </li>
+                    </ul>
+                    <p v-else class="text-muted-foreground">
+                        Not used anywhere yet.
+                    </p>
+                </div>
                 <template v-if="canManage">
                     <label class="flex flex-col gap-1.5">
                         <span class="font-semibold"
@@ -255,9 +270,17 @@ const kb = (b: number) =>
 
     <ConfirmDialog
         v-model:open="deleting"
-        title="Delete this image?"
-        description="Pages, posts or logos using it will show no image."
-        confirm-label="Delete"
+        :title="
+            selected?.used_in?.length
+                ? 'Delete a file that is in use?'
+                : 'Delete this image?'
+        "
+        :description="
+            selected?.used_in?.length
+                ? `It is used in ${selected.used_in.length} place${selected.used_in.length === 1 ? '' : 's'} (${selected.used_in.slice(0, 3).join(', ')}${selected.used_in.length > 3 ? ', …' : ''}). Those will show no image.`
+                : 'Nothing uses it, so no page will change.'
+        "
+        :confirm-label="selected?.used_in?.length ? 'Delete anyway' : 'Delete'"
         destructive
         @confirm="remove"
     />
