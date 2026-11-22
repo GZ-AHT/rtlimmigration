@@ -19,21 +19,29 @@ class ImapConnector
         return $account->isActive() && $account->on_server && filled($account->password) && $this->settings->imap()['host'] !== '';
     }
 
-    /** @throws ImapException */
-    public function connect(EmailAccount $account): MailboxConnection
+    /**
+     * @param  array{host: string, port: int, encryption: string}|null  $server  override, used to try settings before saving them
+     *
+     * @throws ImapException
+     */
+    public function connect(EmailAccount $account, ?array $server = null): MailboxConnection
     {
-        if (! $this->ready($account)) {
+        if ($server === null && ! $this->ready($account)) {
             throw new ImapException(__('This mailbox is not set up for receiving yet (it needs a password and the IMAP server).'));
         }
 
-        $imap = $this->settings->imap();
+        if (blank($account->password)) {
+            throw new ImapException(__('This mailbox has no saved password yet.'));
+        }
+
+        $imap = $server ?? $this->settings->imap();
 
         return new WebklexConnection([
             'host' => $imap['host'],
             'port' => $imap['port'],
             'encryption' => $imap['encryption'],
             'validate_cert' => $this->settings->verifyTls(),
-            'username' => $account->email,
+            'username' => $account->loginName(),
             'password' => (string) $account->password,
             'protocol' => 'imap',
             'authentication' => null,

@@ -11,7 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { settings as settingsRoute } from '@/routes/admin/email';
-import { test, update } from '@/routes/admin/email/settings';
+import {
+    test,
+    testImap,
+    testSmtp,
+    update,
+} from '@/routes/admin/email/settings';
 
 const props = defineProps<{
     settings: {
@@ -28,9 +33,16 @@ const props = defineProps<{
         smtp_encryption: 'ssl' | 'tls';
         imap_host: string;
         imap_port: number;
+        imap_encryption: 'ssl' | 'tls';
         tracking_enabled: boolean;
     };
     webmailUrl: string;
+    mailboxes: {
+        id: number;
+        email: string;
+        login_name: string;
+        has_password: boolean;
+    }[];
 }>();
 
 defineOptions({
@@ -55,6 +67,7 @@ const form = useForm({
     smtp_encryption: s.smtp_encryption,
     imap_host: s.imap_host,
     imap_port: String(s.imap_port),
+    imap_encryption: s.imap_encryption,
     tracking_enabled: s.tracking_enabled,
 });
 
@@ -93,6 +106,46 @@ function testConnection(): void {
         },
     );
 }
+
+// --- Test the IMAP and SMTP settings (as typed, before saving) ---------------
+const testMailbox = ref(
+    String(props.mailboxes.find((m) => m.has_password)?.id ?? ''),
+);
+const mailboxOptions = props.mailboxes.map((m) => ({
+    value: String(m.id),
+    label: m.has_password ? m.email : `${m.email} (no password saved)`,
+}));
+const running = ref<'imap' | 'smtp' | null>(null);
+const testErrors = ref<Record<string, string>>({});
+
+function runTest(kind: 'imap' | 'smtp'): void {
+    testErrors.value = {};
+
+    router.post(
+        (kind === 'imap' ? testImap() : testSmtp()).url,
+        {
+            email_account_id: testMailbox.value
+                ? Number(testMailbox.value)
+                : null,
+            host: kind === 'imap' ? form.imap_host : form.smtp_host,
+            port: Number(kind === 'imap' ? form.imap_port : form.smtp_port),
+            encryption:
+                kind === 'imap' ? form.imap_encryption : form.smtp_encryption,
+        },
+        {
+            preserveScroll: true,
+            onStart: () => (running.value = kind),
+            onFinish: () => (running.value = null),
+            onError: (e) => (testErrors.value = e),
+        },
+    );
+}
+
+const testError = (kind: 'imap' | 'smtp'): string | undefined =>
+    testErrors.value[`${kind}_test`] ??
+    testErrors.value.host ??
+    testErrors.value.port ??
+    testErrors.value.email_account_id;
 
 const err = (key: string) =>
     (form.errors as Record<string, string | undefined>)[key] ??
@@ -287,7 +340,7 @@ const err = (key: string) =>
 
         <PanelCard
             title="SMTP (sending)"
-            description="Used when staff send from a mailbox in the system. Blank server uses the cPanel server."
+            description="Used when staff send from a mailbox in the system. Each mailbox signs in with its own login name and password."
         >
             <div class="flex flex-col gap-3.5">
                 <FormField
@@ -341,7 +394,7 @@ const err = (key: string) =>
 
         <PanelCard
             title="IMAP (receiving)"
-            description="Shown to staff who set up a phone or desktop mail app. Roundcube on cPanel is already configured."
+            description="Used to bring received mail into the Inbox, and shown to staff who set up a phone or desktop mail app. Each mailbox signs in with its own login name and password."
         >
             <div class="flex flex-col gap-3.5">
                 <FormField
@@ -356,18 +409,117 @@ const err = (key: string) =>
                         :aria-invalid="invalid"
                     />
                 </FormField>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <FormField
+                        v-slot="{ id, invalid }"
+                        label="Port"
+                        :error="err('imap_port')"
+                    >
+                        <Input
+                            :id="id"
+                            v-model="form.imap_port"
+                            type="number"
+                            :aria-invalid="invalid"
+                        />
+                    </FormField>
+                    <FormField
+                        v-slot="{ id }"
+                        label="Security"
+                        :error="err('imap_encryption')"
+                    >
+                        <SelectInput
+                            :id="id"
+                            v-model="form.imap_encryption"
+                            :options="[
+                                {
+                                    value: 'ssl',
+                                    label: 'SSL/TLS (usually port 993)',
+                                },
+                                {
+                                    value: 'tls',
+                                    label: 'STARTTLS (usually port 143)',
+                                },
+                            ]"
+                        />
+                    </FormField>
+                </div>
+            </div>
+        </PanelCard>
+
+        <PanelCard
+            title="Test the mail server"
+            description="Signs in with the settings above (even before you save them) as the mailbox you choose. Nothing is sent or changed."
+            class="lg:col-span-2"
+        >
+            <div class="flex flex-col gap-3.5">
                 <FormField
-                    v-slot="{ id, invalid }"
-                    label="Port"
-                    :error="err('imap_port')"
+                    v-slot="{ id }"
+                    label="Mailbox to test with"
+                    hint="Uses that mailbox's login name and its saved password."
                 >
-                    <Input
+                    <SelectInput
                         :id="id"
-                        v-model="form.imap_port"
-                        type="number"
-                        :aria-invalid="invalid"
+                        v-model="testMailbox"
+                        :options="mailboxOptions"
+                        placeholder="Choose a mailbox"
                     />
                 </FormField>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div class="flex flex-col gap-1.5">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="running !== null || !testMailbox"
+                            data-test="test-imap"
+                            @click="runTest('imap')"
+                        >
+                            <AppIcon
+                                :name="
+                                    running === 'imap'
+                                        ? 'progress_activity'
+                                        : 'move_to_inbox'
+                                "
+                                :size="18"
+                                :class="running === 'imap' && 'animate-spin'"
+                            />
+                            Test IMAP connection
+                        </Button>
+                        <p
+                            v-if="testError('imap')"
+                            class="text-xs text-danger"
+                            role="alert"
+                        >
+                            {{ testError('imap') }}
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            :disabled="running !== null || !testMailbox"
+                            data-test="test-smtp"
+                            @click="runTest('smtp')"
+                        >
+                            <AppIcon
+                                :name="
+                                    running === 'smtp'
+                                        ? 'progress_activity'
+                                        : 'outgoing_mail'
+                                "
+                                :size="18"
+                                :class="running === 'smtp' && 'animate-spin'"
+                            />
+                            Test SMTP connection
+                        </Button>
+                        <p
+                            v-if="testError('smtp')"
+                            class="text-xs text-danger"
+                            role="alert"
+                        >
+                            {{ testError('smtp') }}
+                        </p>
+                    </div>
+                </div>
             </div>
         </PanelCard>
 

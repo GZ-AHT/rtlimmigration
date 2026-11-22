@@ -23,6 +23,11 @@ class FakeImap extends ImapConnector implements MailboxConnection
 
     public int $connects = 0;
 
+    /** @var array{host: string, port: int, encryption: string}|null */
+    public ?array $lastServer = null;
+
+    public ?string $lastLogin = null;
+
     private int $next = 1;
 
     public function __construct()
@@ -35,9 +40,15 @@ class FakeImap extends ImapConnector implements MailboxConnection
         return $account->isActive() && $account->on_server && filled($account->password);
     }
 
-    public function connect(EmailAccount $account): MailboxConnection
+    public function connect(EmailAccount $account, ?array $server = null): MailboxConnection
     {
         $this->connects++;
+        $this->lastServer = $server;
+        $this->lastLogin = $account->loginName();
+
+        if (blank($account->password)) {
+            throw new ImapException('This mailbox has no saved password yet.');
+        }
 
         if ($this->fail) {
             throw new ImapException('The mail server could not be reached. Check the IMAP server and port.');

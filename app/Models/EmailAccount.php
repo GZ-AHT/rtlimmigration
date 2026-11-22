@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property string $email
  * @property string $local_part
+ * @property string|null $username
  * @property string $domain
  * @property string|null $display_name
  * @property string|null $password
@@ -31,7 +32,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $created_by
  * @property-read Collection<int, User> $users
  */
-#[Fillable(['email', 'local_part', 'domain', 'display_name', 'password', 'quota_mb', 'disk_used_mb', 'status', 'on_server', 'synced_at', 'created_by'])]
+#[Fillable(['email', 'local_part', 'username', 'domain', 'display_name', 'password', 'quota_mb', 'disk_used_mb', 'status', 'on_server', 'synced_at', 'created_by'])]
 #[Hidden(['password'])]
 class EmailAccount extends Model
 {
@@ -80,6 +81,12 @@ class EmailAccount extends Model
     public function canSendSmtp(): bool
     {
         return $this->isActive() && filled($this->password);
+    }
+
+    /** What the mailbox signs in with (IMAP and SMTP): its own username, or its address. */
+    public function loginName(): string
+    {
+        return filled($this->username) ? (string) $this->username : $this->email;
     }
 
     public function fromName(): string

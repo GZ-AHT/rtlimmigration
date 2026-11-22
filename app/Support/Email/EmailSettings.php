@@ -12,6 +12,9 @@ use App\Support\Settings\SettingsRepository;
  */
 class EmailSettings
 {
+    /** Used until an administrator saves another mail server (Email → Settings). */
+    public const DEFAULT_MAIL_HOST = 'mail.rtlimmigration.com';
+
     public function __construct(private SettingsRepository $settings) {}
 
     public function cpanelConfigured(): bool
@@ -78,7 +81,7 @@ class EmailSettings
     public function smtp(): array
     {
         return [
-            'host' => (string) ($this->get('smtp_host') ?: $this->cpanelHost()),
+            'host' => (string) ($this->get('smtp_host', self::DEFAULT_MAIL_HOST) ?: $this->cpanelHost()),
             'port' => (int) $this->get('smtp_port', 465),
             'encryption' => (string) $this->get('smtp_encryption', 'ssl'),
         ];
@@ -88,12 +91,13 @@ class EmailSettings
     public function imap(): array
     {
         $port = (int) $this->get('imap_port', 993);
+        $chosen = (string) $this->get('imap_encryption', '');
 
         return [
-            'host' => (string) ($this->get('imap_host') ?: $this->cpanelHost()),
+            'host' => (string) ($this->get('imap_host', self::DEFAULT_MAIL_HOST) ?: $this->cpanelHost()),
             'port' => $port,
-            // 993 is IMAP over TLS; the usual alternative, 143, upgrades with STARTTLS.
-            'encryption' => $port === 143 ? 'starttls' : 'ssl',
+            // As chosen in Email settings (SSL/TLS or STARTTLS); never chosen: 993 is SSL/TLS, 143 is STARTTLS.
+            'encryption' => in_array($chosen, ['ssl', 'tls'], true) ? ($chosen === 'tls' ? 'starttls' : 'ssl') : ($port === 143 ? 'starttls' : 'ssl'),
         ];
     }
 
@@ -114,10 +118,11 @@ class EmailSettings
             'domains' => $this->domains(),
             'default_quota_mb' => $this->defaultQuotaMb(),
             'webmail_url' => (string) $this->get('webmail_url', ''),
-            'smtp_host' => (string) $this->get('smtp_host', ''),
+            'smtp_host' => (string) $this->get('smtp_host', self::DEFAULT_MAIL_HOST),
             'smtp_port' => (int) $this->get('smtp_port', 465),
             'smtp_encryption' => (string) $this->get('smtp_encryption', 'ssl'),
-            'imap_host' => (string) $this->get('imap_host', ''),
+            'imap_host' => (string) $this->get('imap_host', self::DEFAULT_MAIL_HOST),
+            'imap_encryption' => $this->imap()['encryption'] === 'starttls' ? 'tls' : 'ssl',
             'imap_port' => (int) $this->get('imap_port', 993),
             'tracking_enabled' => $this->trackingEnabled(),
         ];
@@ -129,6 +134,8 @@ class EmailSettings
         foreach (['cpanel_host', 'cpanel_username', 'webmail_url', 'smtp_host', 'imap_host', 'smtp_encryption'] as $key) {
             $this->settings->set("email.{$key}", trim((string) ($data[$key] ?? '')));
         }
+
+        $this->settings->set('email.imap_encryption', in_array($data['imap_encryption'] ?? null, ['ssl', 'tls'], true) ? $data['imap_encryption'] : 'ssl');
 
         foreach (['cpanel_port', 'smtp_port', 'imap_port'] as $key) {
             $this->settings->set("email.{$key}", (int) $data[$key]);

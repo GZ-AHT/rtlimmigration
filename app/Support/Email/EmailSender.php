@@ -100,7 +100,7 @@ class EmailSender
             'scheme' => $smtp['encryption'] === 'ssl' ? 'smtps' : 'smtp',
             'host' => $smtp['host'],
             'port' => $smtp['port'],
-            'username' => $account->email,
+            'username' => $account->loginName(),
             'password' => $account->password,
             'timeout' => 30,
         ]]);

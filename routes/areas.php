@@ -120,6 +120,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::post('accounts', [Admin\EmailAccountController::class, 'store'])->name('accounts.store');
             Route::post('accounts/sync', [Admin\EmailAccountController::class, 'sync'])->middleware('throttle:6,1')->name('accounts.sync');
             Route::put('accounts/{account}', [Admin\EmailAccountController::class, 'update'])->name('accounts.update');
+            Route::put('accounts/{account}/username', [Admin\EmailAccountController::class, 'username'])->name('accounts.username');
             Route::put('accounts/{account}/password', [Admin\EmailAccountController::class, 'password'])->name('accounts.password');
             Route::patch('accounts/{account}/status', [Admin\EmailAccountController::class, 'status'])->name('accounts.status');
             Route::post('accounts/{account}/provision', [Admin\EmailAccountController::class, 'provision'])->name('accounts.provision');
@@ -129,6 +130,8 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::get('settings', [Admin\EmailSettingsController::class, 'edit'])->name('settings');
             Route::put('settings', [Admin\EmailSettingsController::class, 'update'])->name('settings.update');
             Route::post('settings/test', [Admin\EmailSettingsController::class, 'test'])->middleware('throttle:6,1')->name('settings.test');
+            Route::post('settings/test-imap', [Admin\EmailConnectionTestController::class, 'imap'])->middleware('throttle:10,1')->name('settings.test-imap');
+            Route::post('settings/test-smtp', [Admin\EmailConnectionTestController::class, 'smtp'])->middleware('throttle:10,1')->name('settings.test-smtp');
 
             Route::get('templates', [Admin\EmailTemplateController::class, 'index'])->name('templates.index');
             Route::post('templates', [Admin\EmailTemplateController::class, 'store'])->name('templates.store');

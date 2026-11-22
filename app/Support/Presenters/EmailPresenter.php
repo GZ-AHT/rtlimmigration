@@ -20,6 +20,8 @@ class EmailPresenter
             'email' => $account->email,
             'domain' => $account->domain,
             'display_name' => $account->display_name,
+            'username' => $account->username,
+            'login_name' => $account->loginName(),
             'quota_mb' => $account->quota_mb,
             'disk_used_mb' => $account->disk_used_mb,
             'usage_percent' => $account->quota_mb && $account->disk_used_mb !== null ? min(100, (int) round($account->disk_used_mb / $account->quota_mb * 100)) : null,

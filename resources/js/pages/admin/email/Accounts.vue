@@ -35,6 +35,7 @@ import {
     sync,
     test as testRoute,
     update,
+    username as usernameRoute,
 } from '@/routes/admin/email/accounts';
 import { settings as settingsRoute } from '@/routes/admin/email';
 import type { EmailAccountRow, Option, Paginated, TableColumn } from '@/types';
@@ -169,12 +170,24 @@ const addStaffOptions = computed(() =>
 // --- Password ---------------------------------------------------------------
 const passwordFor = ref<EmailAccountRow | null>(null);
 const passwordForm = useForm({ password: '', generate: false });
+const usernameForm = useForm({ username: '' });
 
 function openPassword(account: EmailAccountRow): void {
     passwordFor.value = account;
     passwordForm.reset();
     passwordForm.clearErrors();
     passwordForm.generate = account.on_server;
+    usernameForm.reset();
+    usernameForm.clearErrors();
+    usernameForm.username = account.username ?? '';
+}
+
+function saveUsername(): void {
+    if (!passwordFor.value) return;
+
+    usernameForm.put(usernameRoute(passwordFor.value.id).url, {
+        preserveScroll: true,
+    });
 }
 
 function savePassword(): void {
@@ -713,7 +726,7 @@ function remove(): void {
         <DialogContent class="rounded-[14px] sm:max-w-[460px]">
             <DialogHeader>
                 <DialogTitle class="font-display text-xl font-extrabold"
-                    >Mailbox password</DialogTitle
+                    >Mailbox login and password</DialogTitle
                 >
                 <DialogDescription class="text-xs">
                     {{
@@ -723,6 +736,33 @@ function remove(): void {
                     }}
                 </DialogDescription>
             </DialogHeader>
+            <form
+                class="flex items-end gap-2 border-b pb-3.5"
+                @submit.prevent="saveUsername"
+            >
+                <FormField
+                    v-slot="{ id, invalid, describedBy }"
+                    class="flex-1"
+                    label="Login name"
+                    :error="usernameForm.errors.username"
+                    :hint="`Used to sign in for sending and receiving. Blank uses ${passwordFor?.email ?? 'the address'}.`"
+                >
+                    <Input
+                        :id="id"
+                        v-model="usernameForm.username"
+                        autocomplete="off"
+                        :placeholder="passwordFor?.email"
+                        :aria-invalid="invalid"
+                        :aria-describedby="describedBy"
+                    />
+                </FormField>
+                <Button
+                    type="submit"
+                    variant="outline"
+                    :disabled="usernameForm.processing || !usernameForm.isDirty"
+                    >Save login name</Button
+                >
+            </form>
             <form class="flex flex-col gap-3.5" @submit.prevent="savePassword">
                 <label
                     v-if="passwordFor?.on_server"

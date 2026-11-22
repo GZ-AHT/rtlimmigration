@@ -426,6 +426,9 @@ export type EmailAccountRow = {
     email: string;
     domain: string;
     display_name: string | null;
+    /** What it signs in with on the mail server; blank = its address. */
+    username: string | null;
+    login_name: string;
     quota_mb: number | null;
     disk_used_mb: number | null;
     usage_percent: number | null;

@@ -132,6 +132,24 @@ class EmailAccountController extends Controller
         return back();
     }
 
+    /** The name this mailbox signs in with on the mail server, when it is not its own address. */
+    public function username(Request $request, EmailAccount $account): RedirectResponse
+    {
+        Gate::authorize('email.manage');
+
+        $data = $request->validate([
+            'username' => ['nullable', 'string', 'max:190', 'regex:/^[^\s]+$/'],
+        ], ['username.regex' => __('A login name has no spaces.')]);
+
+        $username = filled($data['username'] ?? null) && $data['username'] !== $account->email ? trim($data['username']) : null;
+        $account->update(['username' => $username]);
+
+        activity('email')->causedBy($request->user())->performedOn($account)->withProperties(['email' => $account->email, 'username' => $username])->log('Changed a mailbox login name');
+        $this->toast(['type' => 'success', 'message' => $username === null ? __('Login name reset to the mailbox address.') : __('Login name saved.')]);
+
+        return back();
+    }
+
     public function password(Request $request, EmailAccount $account, MailboxManager $manager): RedirectResponse
     {
         Gate::authorize('email.manage');

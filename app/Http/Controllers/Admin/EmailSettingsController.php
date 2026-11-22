@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\EmailAccount;
 use App\Support\Email\CpanelClient;
 use App\Support\Email\CpanelException;
 use App\Support\Email\EmailSettings;
@@ -26,6 +27,13 @@ class EmailSettingsController extends Controller
         return Inertia::render('admin/email/Settings', [
             'settings' => $settings->forAdmin(),
             'webmailUrl' => $settings->webmailUrl(),
+            // Mailboxes to try the connection tests with. Never the passwords themselves.
+            'mailboxes' => EmailAccount::query()->orderBy('email')->get()->map(fn (EmailAccount $a) => [
+                'id' => $a->id,
+                'email' => $a->email,
+                'login_name' => $a->loginName(),
+                'has_password' => filled($a->getRawOriginal('password')),
+            ])->all(),
         ]);
     }
 
@@ -49,6 +57,7 @@ class EmailSettingsController extends Controller
             'smtp_encryption' => ['required', Rule::in(['ssl', 'tls'])],
             'imap_host' => ['nullable', 'string', 'max:255', self::HOST],
             'imap_port' => ['required', 'integer', 'between:1,65535'],
+            'imap_encryption' => ['nullable', Rule::in(['ssl', 'tls'])],
             'tracking_enabled' => ['required', 'boolean'],
         ], [
             'cpanel_host.regex' => __('Enter the server name only, e.g. server.example.com, without https:// or a port.'),
