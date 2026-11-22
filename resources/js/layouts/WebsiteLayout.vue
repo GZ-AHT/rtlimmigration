@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import BackToTop from '@/components/website/BackToTop.vue';
 import SiteFooter from '@/components/website/SiteFooter.vue';
 import SiteHeader from '@/components/website/SiteHeader.vue';
 import SiteLaunchers from '@/components/website/SiteLaunchers.vue';
@@ -105,6 +106,7 @@ const theme = computed(() => {
             class="max-sm:pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
         />
         <SiteLaunchers />
+        <BackToTop />
         <Toaster />
     </div>
 </template>
