@@ -29,6 +29,8 @@ const props = defineProps<{
         subject: string;
         body: string;
         forward_of: number | null;
+        forward_of_inbox?: number | null;
+        email_account_id?: string;
         attachments: string[];
     } | null;
     placeholders: Record<string, string>;
@@ -38,7 +40,8 @@ const props = defineProps<{
 }>();
 
 const form = useForm({
-    email_account_id: props.senders[1]?.value ?? '',
+    email_account_id:
+        props.prefill?.email_account_id ?? props.senders[1]?.value ?? '',
     recipient_type: props.recipient?.type ?? '',
     recipient_id: props.recipient ? String(props.recipient.id) : '',
     to_email: props.prefill?.to_email ?? '',
@@ -47,6 +50,9 @@ const form = useForm({
     bcc: '',
     forward_of: props.prefill?.forward_of
         ? String(props.prefill.forward_of)
+        : '',
+    forward_of_inbox: props.prefill?.forward_of_inbox
+        ? String(props.prefill.forward_of_inbox)
         : '',
     email_template_id: '',
     subject: props.prefill?.subject ?? '',
@@ -132,6 +138,7 @@ function send(): void {
         cc: d.cc || null,
         bcc: d.bcc || null,
         forward_of: d.forward_of || null,
+        forward_of_inbox: d.forward_of_inbox || null,
         email_template_id: d.email_template_id || null,
     })).post(props.urls.send, { forceFormData: true });
 }

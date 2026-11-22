@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SyncInboxes;
 use App\Jobs\SyncMailboxes;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
@@ -34,3 +35,6 @@ Schedule::call(fn () => DB::table('not_found_logs')->where('last_seen_at', '<', 
 // Sign-in codes are useless after minutes; keep the table small.
 Schedule::call(fn () => DB::table('otp_codes')->where('created_at', '<', now()->subDay())->delete())
     ->name('otp-codes:prune')->hourly()->withoutOverlapping();
+
+// REQ §3: bring new mail from the cPanel mailboxes into the dashboard (the "Sync" button runs the same code).
+Schedule::job(new SyncInboxes)->name('email:sync-inboxes')->everyFiveMinutes()->withoutOverlapping();

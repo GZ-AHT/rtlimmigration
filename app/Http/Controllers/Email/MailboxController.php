@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\ResolvesAreaRoutes;
 use App\Http\Controllers\Controller;
 use App\Models\EmailAccount;
 use App\Models\EmailMessage;
+use App\Models\MailboxMessage;
 use App\Support\Email\CpanelClient;
 use App\Support\Email\CpanelException;
 use App\Support\Email\EmailSettings;
@@ -50,7 +51,15 @@ class MailboxController extends Controller
             'trashCount' => $mine()->whereNotNull('trashed_at')->count(),
             'sent' => $mine()->when($view === 'trash', fn ($q) => $q->whereNotNull('trashed_at'), fn ($q) => $q->whereNull('trashed_at'))
                 ->with('recipient')->latest('id')->paginate(15)->withQueryString()->through(fn (EmailMessage $m) => EmailPresenter::message($m)),
+            'folderCounts' => [
+                'inbox_unread' => MailboxMessage::query()->visibleTo($user)->where('folder', 'inbox')->where('is_read', false)->count(),
+                'drafts' => MailboxMessage::query()->visibleTo($user)->where('folder', 'drafts')->count(),
+                'spam' => MailboxMessage::query()->visibleTo($user)->where('folder', 'spam')->count(),
+                'trash' => MailboxMessage::query()->visibleTo($user)->where('folder', 'trash')->count(),
+            ],
             'urls' => [
+                'inbox' => $this->areaRoute($request, 'email.inbox'),
+                'sent' => $this->areaRoute($request, 'email.index'),
                 'compose' => $this->areaRoute($request, 'email.compose'),
                 'signature' => $this->areaRoute($request, 'email.signature'),
                 'message' => $this->areaRoute($request, 'email.index'),

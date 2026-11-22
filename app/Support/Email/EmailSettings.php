@@ -84,12 +84,16 @@ class EmailSettings
         ];
     }
 
-    /** @return array{host: string, port: int} */
+    /** @return array{host: string, port: int, encryption: string} */
     public function imap(): array
     {
+        $port = (int) $this->get('imap_port', 993);
+
         return [
             'host' => (string) ($this->get('imap_host') ?: $this->cpanelHost()),
-            'port' => (int) $this->get('imap_port', 993),
+            'port' => $port,
+            // 993 is IMAP over TLS; the usual alternative, 143, upgrades with STARTTLS.
+            'encryption' => $port === 143 ? 'starttls' : 'ssl',
         ];
     }
 

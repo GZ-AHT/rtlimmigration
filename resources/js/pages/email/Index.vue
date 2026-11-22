@@ -4,6 +4,7 @@ import { ref } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import DataTable from '@/components/panel/DataTable.vue';
 import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
+import EmailFolderTabs from '@/components/panel/EmailFolderTabs.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -16,6 +17,7 @@ import { relativeTime } from '@/lib/format';
 import type {
     EmailAccountRow,
     EmailMessageRow,
+    MailFolderCounts,
     Paginated,
     TableColumn,
 } from '@/types';
@@ -36,7 +38,14 @@ const props = defineProps<{
     sent: Paginated<EmailMessageRow>;
     view: 'sent' | 'trash';
     trashCount: number;
-    urls: { compose: string; signature: string; message: string };
+    folderCounts: MailFolderCounts;
+    urls: {
+        compose: string;
+        signature: string;
+        message: string;
+        inbox: string;
+        sent: string;
+    };
     canManage: boolean;
     csrfToken: string;
 }>();
@@ -113,6 +122,8 @@ const columns: TableColumn<EmailMessageRow>[] = [
             </Button>
         </template>
     </PageHeader>
+
+    <EmailFolderTabs active="sent" :urls="urls" :counts="folderCounts" />
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
         <div class="flex flex-col gap-4">

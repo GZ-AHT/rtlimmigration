@@ -117,6 +117,14 @@ class AreaRoutes
             Route::post('email/mailboxes/{account}/webmail', [Email\MailboxController::class, 'webmail'])->whereNumber('account')->middleware('throttle:10,1')->name('email.webmail');
             Route::delete('email/messages/{message}', [Email\MailboxController::class, 'trash'])->whereNumber('message')->name('email.messages.trash');
             Route::patch('email/messages/{message}/restore', [Email\MailboxController::class, 'restore'])->whereNumber('message')->name('email.messages.restore');
+            // Received mail (IMAP): Inbox, Drafts, Spam, Trash.
+            Route::get('email/inbox', [Email\InboxController::class, 'index'])->name('email.inbox');
+            Route::post('email/inbox/sync', [Email\InboxController::class, 'sync'])->middleware('throttle:6,1')->name('email.inbox.sync');
+            Route::get('email/inbox/{mailboxMessage}', [Email\InboxController::class, 'show'])->whereNumber('mailboxMessage')->name('email.inbox.show');
+            Route::get('email/inbox/{mailboxMessage}/attachments/{index}', [Email\InboxController::class, 'attachment'])->whereNumber(['mailboxMessage', 'index'])->name('email.inbox.attachment');
+            Route::patch('email/inbox/{mailboxMessage}/read', [Email\InboxController::class, 'read'])->whereNumber('mailboxMessage')->name('email.inbox.read');
+            Route::patch('email/inbox/{mailboxMessage}/restore', [Email\InboxController::class, 'restore'])->whereNumber('mailboxMessage')->name('email.inbox.restore');
+            Route::delete('email/inbox/{mailboxMessage}', [Email\InboxController::class, 'destroy'])->whereNumber('mailboxMessage')->name('email.inbox.destroy');
             Route::get('email/compose', [Email\ComposeController::class, 'create'])->name('email.compose');
             Route::post('email/compose', [Email\ComposeController::class, 'store'])->middleware('throttle:30,1')->name('email.send');
         });

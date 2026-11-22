@@ -464,6 +464,44 @@ export type EmailMessageRow = {
     click_count: number;
 };
 
+/** Received email (MailboxPresenter::row / detail). */
+export type MailboxMessageRow = {
+    id: number;
+    folder: 'inbox' | 'drafts' | 'spam' | 'trash';
+    from_email: string | null;
+    from_name: string | null;
+    subject: string | null;
+    preview: string | null;
+    is_read: boolean;
+    has_attachments: boolean;
+    received_at: string | null;
+    mailbox: string | null;
+};
+
+export type MailboxMessageDetail = MailboxMessageRow & {
+    to: string[];
+    cc: string[];
+    reply_to: string | null;
+    body_html: string | null;
+    body_text: string | null;
+    attachments: {
+        index: number;
+        name: string;
+        mime: string;
+        size: number;
+        inline: boolean;
+        available: boolean;
+        url: string;
+    }[];
+};
+
+export type MailFolderCounts = {
+    inbox_unread: number;
+    drafts: number;
+    spam: number;
+    trash: number;
+};
+
 export type EmailTemplateItem = {
     id: number;
     name: string;

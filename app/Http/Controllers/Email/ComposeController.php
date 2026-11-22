@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EmailMessage;
 use App\Models\EmailTemplate;
 use App\Models\Lead;
+use App\Models\MailboxMessage;
 use App\Models\Student;
 use App\Models\User;
 use App\Support\Email\EmailSender;
@@ -45,7 +46,14 @@ class ComposeController extends Controller
             'lead' => ['nullable', 'integer'],
             'reply' => ['nullable', 'integer'],
             'forward' => ['nullable', 'integer'],
+            // Reply or forward an email received in a mailbox (Inbox).
+            'inbox' => ['nullable', 'integer'],
+            'mode' => ['nullable', 'in:reply,reply_all,forward'],
         ]);
+
+        $received = isset($preset['inbox'])
+            ? MailboxMessage::query()->visibleTo($user)->with('account')->findOrFail((int) $preset['inbox'])
+            : null;
 
         $source = isset($preset['reply']) || isset($preset['forward'])
             ? $this->ownMessage($user, (int) ($preset['reply'] ?? $preset['forward']))
@@ -62,7 +70,9 @@ class ComposeController extends Controller
                 'id' => $t->id, 'name' => $t->name, 'category' => $t->category, 'subject' => $t->subject, 'body' => $t->body,
             ]),
             'recipient' => $recipient ? $this->describe($recipient) : null,
-            'prefill' => $source ? $this->prefill($source, $forwarding) : null,
+            'prefill' => $received
+                ? $this->prefillReceived($user, $received, $preset['mode'] ?? 'reply')
+                : ($source ? $this->prefill($source, $forwarding) : null),
             'placeholders' => TemplateRenderer::PLACEHOLDERS,
             'signature' => (string) $user->emailSignature?->body,
             'limits' => [
@@ -91,6 +101,7 @@ class ComposeController extends Controller
             'cc' => ['nullable', 'string', 'max:1500'],
             'bcc' => ['nullable', 'string', 'max:1500'],
             'forward_of' => ['nullable', 'integer'],
+            'forward_of_inbox' => ['nullable', 'integer'],
             'email_template_id' => ['nullable', 'integer', Rule::exists(EmailTemplate::class, 'id')],
             'subject' => ['required', 'string', 'max:200'],
             'body' => ['required', 'string', 'max:20000'],
@@ -124,7 +135,10 @@ class ComposeController extends Controller
         $uuid = (string) Str::uuid();
         $forwarded = isset($data['forward_of']) ? $this->ownMessage($user, (int) $data['forward_of']) : null;
         $uploaded = $this->storeAttachments($request->file('files', []), $uuid) ?? [];
-        $attachments = [...$uploaded, ...$this->copyAttachments($forwarded, $uuid)];
+        $forwardedFromInbox = isset($data['forward_of_inbox'])
+            ? MailboxMessage::query()->visibleTo($user)->findOrFail((int) $data['forward_of_inbox'])
+            : null;
+        $attachments = [...$uploaded, ...$this->copyAttachments($forwarded, $uuid), ...$this->copyReceivedAttachments($forwardedFromInbox, $uuid)];
 
         if (count($attachments) > self::MAX_ATTACHMENTS) {
             throw ValidationException::withMessages(['files' => __('Attach at most :max files, including those carried over from the forwarded email.', ['max' => self::MAX_ATTACHMENTS])]);
@@ -229,6 +243,67 @@ class ComposeController extends Controller
             'forward_of' => $forwarding ? $source->id : null,
             'attachments' => $forwarding ? array_map(fn (array $a) => $a['name'], $source->attachments ?? []) : [],
         ];
+    }
+
+    /** @return array{mode: string, to_email: string|null, to_name: string|null, cc: string, subject: string, body: string, forward_of: null, forward_of_inbox: int|null, email_account_id: string, attachments: list<string>} */
+    private function prefillReceived(User $user, MailboxMessage $m, string $mode): array
+    {
+        $forwarding = $mode === 'forward';
+        $original = filled($m->body_text) ? trim((string) $m->body_text) : $this->plainText((string) $m->body_html);
+        $when = $m->received_at?->format('D, j M Y H:i');
+        $who = trim(($m->from_name ? $m->from_name.' ' : '').'<'.$m->from_email.'>');
+        $subject = (string) $m->subject;
+
+        if ($forwarding) {
+            $body = "\n\n---------- Forwarded message ----------\nFrom: {$who}\nDate: {$when}\nSubject: {$subject}\nTo: ".implode(', ', $m->to ?? [])."\n\n{$original}";
+        } else {
+            $quoted = implode("\n", array_map(fn (string $line) => '> '.$line, explode("\n", $original)));
+            $body = "\n\nOn {$when}, {$who} wrote:\n{$quoted}";
+        }
+
+        $to = $m->reply_to ?: $m->from_email;
+        $own = strtolower($m->account->email);
+        $cc = $mode === 'reply_all'
+            ? array_values(array_filter(array_unique([...($m->to ?? []), ...($m->cc ?? [])]), fn (string $a) => strtolower($a) !== $own && strtolower($a) !== strtolower((string) $to)))
+            : [];
+        // Reply from the mailbox the email arrived at, when this user may send from it.
+        $account = SenderAccounts::allows($user, $m->email_account_id) && SenderAccounts::for($user)->contains('id', $m->email_account_id) ? (string) $m->email_account_id : '';
+
+        return [
+            'mode' => $forwarding ? 'forward' : 'reply',
+            'to_email' => $forwarding ? null : $to,
+            'to_name' => $forwarding ? null : $m->from_name,
+            'cc' => implode(', ', array_slice($cc, 0, self::MAX_COPIES)),
+            'subject' => preg_match('/^\s*(re|fwd?)\s*:/i', $subject) === 1 ? $subject : ($forwarding ? 'Fwd: ' : 'Re: ').$subject,
+            'body' => $body,
+            'forward_of' => null,
+            'forward_of_inbox' => $forwarding ? $m->id : null,
+            'email_account_id' => $account,
+            'attachments' => $forwarding ? array_values(array_map(fn (array $a) => $a['name'], array_filter($m->attachments ?? [], fn (array $a) => ! $a['inline'] && $a['path'] !== ''))) : [],
+        ];
+    }
+
+    /**
+     * Attachments of a received email being forwarded, copied into the new email's own folder.
+     *
+     * @return list<array{name: string, path: string, mime: string, size: int}>
+     */
+    private function copyReceivedAttachments(?MailboxMessage $source, string $uuid): array
+    {
+        $disk = Storage::disk((string) config('documents.disk'));
+        $copies = [];
+
+        foreach ($source === null ? [] : ($source->attachments ?? []) as $a) {
+            if ($a['inline'] || $a['path'] === '' || ! $disk->exists($a['path'])) {
+                continue;
+            }
+
+            $path = "email-attachments/{$uuid}/".basename($a['path']);
+            $disk->copy($a['path'], $path);
+            $copies[] = ['name' => $a['name'], 'path' => $path, 'mime' => $a['mime'], 'size' => $a['size']];
+        }
+
+        return $copies;
     }
 
     private function plainText(string $html): string
