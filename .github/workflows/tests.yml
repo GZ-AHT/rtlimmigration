@@ -13,6 +13,31 @@ jobs:
   ci:
     runs-on: ubuntu-latest
 
+    # The test suite runs on MySQL (phpunit.xml), as in production. Real
+    # environment variables win over .env, which `composer setup` copies from
+    # .env.example with no database user.
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: rtl_immigration_testing
+      DB_USERNAME: root
+      DB_PASSWORD: password
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: rtl_immigration_testing
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -22,7 +47,7 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           tools: composer:v2
           coverage: none
 
