@@ -2,11 +2,12 @@
 
 use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Mail\OtpMail;
 use App\Models\User;
 use App\Notifications\AccountInvitation;
 use Illuminate\Auth\Notifications\ResetPassword;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\Models\Role as RoleModel;
@@ -144,14 +145,14 @@ describe('updating', function () {
     });
 
     it('resets verification and emails the new address when the email changes', function () {
-        Notification::fake();
+        Mail::fake();
         $user = $this->userWithRole(Role::Student);
 
         $this->actingAs($this->userWithRole(Role::SuperAdmin))
             ->put(route('admin.users.update', $user), validUser(['email' => 'changed@example.com', 'roles' => [Role::Student->value]]));
 
         expect($user->refresh()->email_verified_at)->toBeNull();
-        Notification::assertSentTo($user, VerifyEmail::class);
+        Mail::assertQueued(OtpMail::class, fn (OtpMail $mail) => $mail->hasTo($user->email));
     });
 
     it('stops other administrators from editing a Super Admin', function () {
@@ -243,8 +244,9 @@ describe('status, deletion and restore', function () {
 });
 
 describe('account emails', function () {
-    it('sends a password reset link and resends verification', function () {
+    it('sends a password reset link and resends a verification code', function () {
         Notification::fake();
+        Mail::fake();
         $admin = $this->userWithRole(Role::SuperAdmin);
         $user = User::factory()->unverified()->create()->assignRole(Role::Student->value);
 
@@ -252,7 +254,7 @@ describe('account emails', function () {
         Notification::assertSentTo($user, ResetPassword::class);
 
         $this->actingAs($admin)->post(route('admin.users.verification', $user))->assertRedirect();
-        Notification::assertSentTo($user, VerifyEmail::class);
+        Mail::assertQueued(OtpMail::class, fn (OtpMail $mail) => $mail->hasTo($user->email));
 
         $this->actingAs($admin)->post(route('admin.users.invite', $user))->assertRedirect();
         Notification::assertSentTo($user, AccountInvitation::class);

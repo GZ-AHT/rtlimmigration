@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Auth\EmailOtpController;
+use App\Http\Controllers\Auth\PasswordOtpController;
 use App\Http\Controllers\Chat\ChatWebhookController;
 use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\Email\EmailTrackingController;
@@ -103,3 +105,17 @@ Route::get('{slug}', [PageController::class, 'show'])
     ->where('slug', '[a-z0-9]+(?:-[a-z0-9]+)*')
     ->middleware([ShareWebsiteData::class, TrackPageView::class])
     ->name('page');
+
+// Six-digit codes for email verification and "forgot password". The Fortify
+// routes password.request / password.email / verification.send still exist
+// (see FortifyServiceProvider); these are the extra steps.
+Route::middleware('auth')->post('email/verify/otp', [EmailOtpController::class, 'verify'])
+    ->middleware('throttle:otp')->name('verification.otp');
+
+Route::middleware('guest')->prefix('forgot-password')->name('password.otp')->group(function () {
+    Route::get('code', [PasswordOtpController::class, 'code']);
+    Route::post('code', [PasswordOtpController::class, 'verify'])->middleware('throttle:otp')->name('.verify');
+    Route::post('resend', [PasswordOtpController::class, 'resend'])->middleware('throttle:otp')->name('.resend');
+    Route::get('new-password', [PasswordOtpController::class, 'reset'])->name('.reset');
+    Route::post('new-password', [PasswordOtpController::class, 'update'])->middleware('throttle:otp')->name('.update');
+});

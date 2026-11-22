@@ -5,10 +5,10 @@ namespace App\Models;
 use App\Enums\Area;
 use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Support\Auth\Otp;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
-use Illuminate\Auth\Notifications\VerifyEmail as VerifyEmailNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -241,26 +241,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     }
 
     /**
-     * Send the email verification notification safely.
+     * Email a six-digit verification code (not a link). Called after
+     * registration, from "resend" and from the admin Users screen. A code sent
+     * in the last 60 seconds is not repeated.
      */
     public function sendEmailVerificationNotification(): void
     {
-        if (app()->environment('local', 'testing') && preg_match('/@example\.(com|net|org)$/i', $this->email)) {
-            Log::info("Email verification requested for {$this->email}.");
-
-            if (config('mail.default') === 'smtp') {
-                return;
-            }
-        }
-
-        try {
-            $this->notify(new VerifyEmailNotification);
-        } catch (Throwable $e) {
-            report($e);
-
-            throw ValidationException::withMessages([
-                'email' => __('We could not deliver the verification email to this address. Please ensure the email address is valid and can receive incoming mail.'),
-            ]);
-        }
+        app(Otp::class)->send($this->email, Otp::VERIFY_EMAIL, $this);
     }
 }

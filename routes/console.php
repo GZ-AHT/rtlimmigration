@@ -30,3 +30,7 @@ Schedule::job(new SyncMailboxes)->name('email:sync-mailboxes')->everyThirtyMinut
 // REQ §22.3: forget 404s nobody has asked for in six months.
 Schedule::call(fn () => DB::table('not_found_logs')->where('last_seen_at', '<', now()->subMonths(6))->delete())
     ->name('not-found-logs:prune')->weeklyOn(1, '03:20')->withoutOverlapping();
+
+// Sign-in codes are useless after minutes; keep the table small.
+Schedule::call(fn () => DB::table('otp_codes')->where('created_at', '<', now()->subDay())->delete())
+    ->name('otp-codes:prune')->hourly()->withoutOverlapping();

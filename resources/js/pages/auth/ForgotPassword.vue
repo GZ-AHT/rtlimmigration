@@ -11,7 +11,7 @@ defineOptions({
     layout: {
         title: 'Forgot password',
         description:
-            'Enter the email associated with your account and we’ll send you a secure password reset link',
+            'Enter the email associated with your account and we’ll email you a 6-digit code to reset your password',
     },
 });
 
@@ -68,9 +68,9 @@ defineProps<{
                 class="animate-spin"
             />
             <AppIcon v-else name="send" :size="18" />
-            <span v-if="processing">Sending reset link…</span>
+            <span v-if="processing">Sending code…</span>
             <template v-else>
-                <span>Send password reset link</span>
+                <span>Send reset code</span>
                 <SiteArrow glyph="→" />
             </template>
         </button>

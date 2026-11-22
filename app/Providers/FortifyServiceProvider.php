@@ -4,10 +4,14 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Http\Controllers\Auth\PasswordOtpController;
+use App\Http\Controllers\Auth\VerificationResendController;
 use App\Models\User;
+use App\Support\Auth\Otp;
 use App\Support\System\SystemSettings;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -17,6 +21,8 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 use Laravel\Fortify\Fortify;
+use Laravel\Fortify\Http\Controllers\EmailVerificationNotificationController;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -25,7 +31,10 @@ class FortifyServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Email verification and "forgot password" use six-digit codes. The
+        // Fortify routes (and their names) stay; these controllers answer them.
+        $this->app->bind(PasswordResetLinkController::class, PasswordOtpController::class);
+        $this->app->bind(EmailVerificationNotificationController::class, VerificationResendController::class);
     }
 
     /**
@@ -87,6 +96,8 @@ class FortifyServiceProvider extends ServiceProvider
 
         Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/VerifyEmail', [
             'status' => $request->session()->get('status'),
+            'email' => $request->user()->email,
+            'resendIn' => app(Otp::class)->cooldownRemaining($request->user()->email, Otp::VERIFY_EMAIL),
         ]));
 
         Fortify::registerView(fn () => Inertia::render('auth/Register', [
@@ -115,6 +126,14 @@ class FortifyServiceProvider extends ServiceProvider
                 (int) SystemSettings::get('security.login_lockout_minutes', 1),
                 (int) SystemSettings::get('security.login_max_attempts', 5),
             )->by($throttleKey);
+        });
+
+        // Code screens: enough for a typo or two, not enough to guess a code.
+        RateLimiter::for('otp', function (Request $request) {
+            return [
+                Limit::perMinute(10)->by('ip:'.$request->ip()),
+                Limit::perMinute(10)->by('who:'.sha1((string) (Auth::check() ? Auth::user()?->getAuthIdentifier() : $request->session()->get('password_otp.email', $request->input('email', ''))))),
+            ];
         });
 
         RateLimiter::for('passkeys', function (Request $request) {

@@ -7,6 +7,7 @@ import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 import { fieldClass } from '@/components/website/form';
 import { update } from '@/routes/password';
+import { update as otpUpdate } from '@/routes/password/otp';
 
 defineOptions({
     layout: {
@@ -17,6 +18,8 @@ defineOptions({
 });
 
 const props = defineProps<{
+    /** 'otp' = after a verified code; otherwise an emailed reset link (sent by an admin). */
+    mode?: 'otp';
     token: string;
     email: string;
     passwordRules: string;
@@ -29,8 +32,10 @@ const inputEmail = ref(props.email);
     <Head title="Reset password" />
 
     <Form
-        v-bind="update.form()"
-        :transform="(data) => ({ ...data, token, email })"
+        v-bind="mode === 'otp' ? otpUpdate.form() : update.form()"
+        :transform="
+            (data) => (mode === 'otp' ? data : { ...data, token, email })
+        "
         :reset-on-success="['password', 'password_confirmation']"
         v-slot="{ errors, processing }"
         class="flex flex-col gap-5"
