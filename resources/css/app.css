@@ -413,3 +413,14 @@
         @apply mt-0;
     }
 }
+
+/*
+ * Phones: the website header and the quick-contact bar are fixed, so keep
+ * anything the browser scrolls to (a focused field, a #link) clear of them.
+ */
+@media (max-width: 639px) {
+    html.website {
+        scroll-padding-top: 6rem;
+        scroll-padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    }
+}

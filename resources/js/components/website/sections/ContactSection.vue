@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, useForm, usePage } from '@inertiajs/vue3';
 import { useRecaptcha } from '@/composables/useRecaptcha';
+import { useRevealStatus } from '@/composables/useRevealStatus';
 import { ref } from 'vue';
 import FormField from '@/components/website/FormField.vue';
 import { fieldClass, selectClass } from '@/components/website/form';
@@ -42,6 +43,8 @@ const query = new URLSearchParams(page.url.split('?')[1] ?? '');
 const preference = query.get('preference') ?? '';
 
 const sent = ref(false);
+const statusBox = ref<HTMLElement | null>(null);
+const revealStatus = useRevealStatus(statusBox);
 const form = useForm({
     name: '',
     email: '',
@@ -71,6 +74,7 @@ async function submit(): Promise<void> {
         onSuccess: () => {
             sent.value = true;
             form.reset();
+            void revealStatus();
         },
     });
 }
@@ -107,7 +111,9 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
 
             <div
                 v-if="sent"
-                class="mt-8 rounded-[14px] border border-site-line bg-site-surface p-6"
+                ref="statusBox"
+                tabindex="-1"
+                class="mt-8 rounded-[14px] border border-site-line bg-site-surface p-6 focus:outline-none"
                 role="status"
             >
                 <p class="text-lg font-bold">
@@ -292,7 +298,7 @@ const describedBy = (key: keyof typeof form.errors, id: string) =>
                 </FormField>
 
                 <!-- Honeypot: hidden from people and screen readers. -->
-                <div class="absolute left-[9999px]" aria-hidden="true">
+                <div class="absolute -left-[9999px]" aria-hidden="true">
                     <label for="enq-website">Website</label>
                     <input
                         id="enq-website"

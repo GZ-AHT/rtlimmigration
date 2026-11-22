@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { useRecaptcha } from '@/composables/useRecaptcha';
+import { useRevealStatus } from '@/composables/useRevealStatus';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteArrow from '@/components/website/SiteArrow.vue';
@@ -38,6 +39,8 @@ const props = defineProps<{
 }>();
 
 const sent = ref(false);
+const statusBox = ref<HTMLElement | null>(null);
+const revealStatus = useRevealStatus(statusBox);
 const form = useForm({
     organisation: '',
     type: '',
@@ -77,6 +80,7 @@ async function submit(): Promise<void> {
         onSuccess: () => {
             sent.value = true;
             form.reset();
+            void revealStatus();
         },
     });
 }
@@ -147,7 +151,9 @@ const groups = [
 
             <div
                 v-if="sent"
-                class="mt-10 rounded-[2px] border border-site-line bg-site-blush-bg p-6"
+                ref="statusBox"
+                tabindex="-1"
+                class="mt-10 rounded-[2px] border border-site-line bg-site-blush-bg p-6 focus:outline-none"
                 role="status"
             >
                 <p class="text-lg font-bold">

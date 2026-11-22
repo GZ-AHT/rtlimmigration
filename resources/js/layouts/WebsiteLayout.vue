@@ -107,6 +107,12 @@ const theme = computed(() => {
         />
         <SiteLaunchers />
         <BackToTop />
-        <Toaster />
+        <Toaster
+            :mobile-offset="{
+                bottom: 'calc(5.5rem + env(safe-area-inset-bottom))',
+                left: '1rem',
+                right: '1rem',
+            }"
+        />
     </div>
 </template>
