@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
-import { ref, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import FormField from '@/components/panel/FormField.vue';
@@ -37,6 +37,7 @@ type Row = {
 const props = defineProps<{
     redirects: Paginated<Row>;
     filters: { search: string };
+    prefill: string;
 }>();
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Redirects', href: index() }] },
@@ -73,6 +74,14 @@ function openNew(): void {
     form.clearErrors();
     open.value = true;
 }
+
+// Arriving from the 404 log: open the add form with that address filled in.
+onMounted(() => {
+    if (props.prefill) {
+        openNew();
+        form.from_path = props.prefill;
+    }
+});
 
 function openEdit(r: Row): void {
     editing.value = r;

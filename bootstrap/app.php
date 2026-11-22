@@ -9,6 +9,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ShareWebsiteData;
 use App\Http\Middleware\VerifyRecaptcha;
 use App\Support\Cms\WebsiteMenus;
+use App\Support\Seo\NotFoundRecorder;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,7 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -28,7 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Payment gateway callbacks and Tawk.to webhooks come from those
         // services, not from our pages.
-        $middleware->validateCsrfTokens(except: ['payments/gateway/*', 'chat/webhook/*']);
+        $middleware->validateCsrfTokens(except: ['payments/gateway/*', 'chat/webhook/*', 'email/unsubscribe/*']);
 
         $middleware->alias(['recaptcha' => VerifyRecaptcha::class]);
 
@@ -48,6 +50,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // REQ §22.3 404 log: note the address, then let the normal 404 page render.
+        $exceptions->render(function (NotFoundHttpException $e, Request $request) {
+            app(NotFoundRecorder::class)->record($request);
+
+            return null;
+        });
 
         // Website-styled error pages (REQ §21.8 404 page). Debug mode keeps
         // Laravel's detailed page for server errors.

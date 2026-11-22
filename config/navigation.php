@@ -145,6 +145,7 @@ return [
                     ['title' => 'Global SEO & sitemap', 'route' => 'admin.cms.settings', 'params' => ['tab' => 'seo'], 'permission' => 'cms.manage', 'phase' => 10],
                     ['title' => 'Redirects', 'route' => 'admin.seo.redirects.index', 'permission' => 'seo.manage', 'phase' => 10],
                     ['title' => 'Broken links', 'route' => 'admin.seo.broken-links.index', 'permission' => 'seo.manage', 'phase' => 10],
+                    ['title' => '404 log', 'route' => 'admin.seo.not-found.index', 'permission' => 'seo.manage', 'phase' => 12],
                 ]],
             ]],
             ['label' => 'Insights', 'items' => [

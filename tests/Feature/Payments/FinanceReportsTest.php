@@ -320,3 +320,71 @@ describe('payment lists', function () {
             ->assertInertia(fn ($page) => $page->component('portal/Payments')->where('dueOnly', true)->has('requests', 1)->where('totals.refunded', '৳5,000'));
     });
 });
+
+describe('yearly comparison', function () {
+    /** This month: 15,000 income, 3,000 expenses (see seedBooks). Same month last year: 7,000 income, 1,000 expenses. */
+    function seedTwoYears($test): void
+    {
+        seedBooks($test);
+        $ledger = app(PaymentLedger::class);
+        $request = $ledger->createRequest($test->student, PaymentType::where('slug', 'visa-processing-fee')->first(), 700000, CarbonImmutable::today()->addWeek(), null, null, $test->counselor);
+        $old = $ledger->recordReceived($request, $test->cash, 700000, null, CarbonImmutable::today(), $test->accounts, null);
+        $old->forceFill(['confirmed_at' => now()->subYear()])->save();
+        Expense::create(['expense_category_id' => $test->rent->id, 'title' => 'Last year rent', 'amount' => 100000, 'spent_on' => today()->subYear(), 'recorded_by' => $test->accounts->id]);
+    }
+
+    it('sets each month against the same month a year earlier', function () {
+        seedTwoYears($this);
+        $i = now()->month - 1;
+
+        $this->actingAs($this->accounts)->get(route('accounts.reports.financial'))->assertOk()
+            ->assertInertia(fn ($page) => $page->where('yearly.year', now()->year)->where('yearly.previous', now()->year - 1)->has('yearly.rows', 12)
+                ->where("yearly.rows.{$i}.value", 1500000)
+                ->where("yearly.rows.{$i}.income_change", 114)
+                ->where('yearly.totals.value', 1500000)
+                ->where('yearly.totals.income_change', 114)
+                ->where('yearly.rows.0.label', 'Jan'));
+    });
+
+    it('shows months with no activity as zero and no percentage', function () {
+        seedTwoYears($this);
+        $empty = now()->month === 1 ? 1 : 0; // any month other than the current one
+
+        $this->actingAs($this->accounts)->get(route('accounts.reports.financial'))
+            ->assertInertia(fn ($page) => $page->where("yearly.rows.{$empty}.value", 0)->where("yearly.rows.{$empty}.income_change", null));
+    });
+
+    it('lets the year be chosen, and refuses nonsense', function () {
+        seedTwoYears($this);
+        $last = now()->year - 1;
+
+        $this->actingAs($this->accounts)->get(route('accounts.reports.financial', ['year' => $last]))
+            ->assertInertia(fn ($page) => $page->where('yearly.year', $last)->where('yearly.previous', $last - 1)->where('yearly.totals.value', 700000)->where('yearly.totals.income_change', null));
+        $this->get(route('accounts.reports.financial', ['year' => 'soon']))->assertSessionHasErrors('year');
+        $this->get(route('accounts.reports.financial', ['year' => 1850]))->assertSessionHasErrors('year');
+    });
+
+    it('follows the end of the chosen period when no year is given', function () {
+        seedTwoYears($this);
+        $last = now()->subYear();
+
+        $this->actingAs($this->accounts)->get(route('accounts.reports.financial', ['from' => $last->copy()->startOfMonth()->toDateString(), 'to' => $last->copy()->endOfMonth()->toDateString()]))
+            ->assertInertia(fn ($page) => $page->where('yearly.year', $last->year));
+    });
+
+    it('exports the comparison with both years in the headings', function () {
+        seedTwoYears($this);
+
+        $csv = $this->actingAs($this->accounts)->get(route('accounts.reports.download', ['report' => 'yearly', 'format' => 'csv']))->assertOk()->streamedContent();
+
+        expect($csv)->toContain('Income '.now()->year)->toContain('Income '.(now()->year - 1))->toContain('Total')->toContain('15000')->toContain('114%');
+        $this->get(route('accounts.reports.downloads'))->assertInertia(fn ($page) => $page->where('reports', fn ($r) => collect($r)->pluck('key')->contains('yearly')));
+    });
+
+    it('is only for people who can see financial reports', function () {
+        seedTwoYears($this);
+
+        $this->actingAs($this->counselor)->get('/accounts/reports/financial')->assertForbidden();
+        $this->actingAs($this->counselor)->get('/accounts/reports/exports/yearly/csv')->assertForbidden();
+    });
+});

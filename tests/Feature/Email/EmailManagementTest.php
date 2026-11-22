@@ -8,6 +8,7 @@ use App\Mail\OutgoingEmail;
 use App\Models\EmailAccount;
 use App\Models\EmailCampaign;
 use App\Models\EmailMessage;
+use App\Models\EmailSuppression;
 use App\Models\EmailTemplate;
 use App\Models\Setting;
 use App\Models\Student;
@@ -596,5 +597,79 @@ describe('automatic mailbox sync', function () {
         $this->actingAs($this->admin)->post(route('admin.email.accounts.sync'))->assertSessionHasNoErrors();
 
         expect(EmailAccount::where('email', 'by-hand@rtl.test')->exists())->toBeTrue();
+    });
+});
+
+describe('unsubscribe from bulk email', function () {
+    /** One queued-and-sent campaign email, rendered the way the mailer renders it. */
+    function bulkMessage(array $attributes = []): EmailMessage
+    {
+        $campaign = EmailCampaign::create(['name' => 'News', 'subject' => 'S', 'body' => 'B', 'audience' => ['type' => 'students'], 'total' => 1]);
+
+        return sentBy(User::factory()->create(), ['email_campaign_id' => $campaign->id, 'to_email' => 'Rafi@Example.test', ...$attributes]);
+    }
+
+    it('adds a footer link and one-click headers to bulk email only', function () {
+        $bulk = bulkMessage();
+        $single = sentBy($this->admin);
+
+        $mail = new OutgoingEmail($bulk);
+        $html = $mail->render();
+        $link = URL::signedRoute('email.unsubscribe', ['message' => $bulk->uuid]);
+
+        expect($html)->toContain('Unsubscribe from bulk email')->toContain('email/unsubscribe/'.$bulk->uuid)
+            ->and($mail->headers()->text)->toHaveKey('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click')
+            ->and($mail->headers()->text['List-Unsubscribe'])->toStartWith('<'.url('email/unsubscribe/'.$bulk->uuid))
+            ->and(str_contains($link, 'signature='))->toBeTrue();
+
+        $plain = new OutgoingEmail($single);
+        expect($plain->render())->not->toContain('Unsubscribe')->and($plain->headers()->text)->not->toHaveKey('List-Unsubscribe');
+    });
+
+    it('shows a button on GET without unsubscribing, and unsubscribes on POST', function () {
+        $bulk = bulkMessage();
+        $url = URL::signedRoute('email.unsubscribe', ['message' => $bulk->uuid]);
+
+        $this->get($url)->assertOk()->assertSee('Unsubscribe from bulk email?')->assertSee('Rafi@Example.test');
+        expect(EmailSuppression::count())->toBe(0);
+
+        $this->post($url)->assertOk()->assertSee('You are unsubscribed');
+        $this->post($url)->assertOk(); // clicking twice is harmless
+        expect(EmailSuppression::sole()->email)->toBe('rafi@example.test');
+    });
+
+    it('refuses unsigned or altered links and one-to-one emails', function () {
+        $bulk = bulkMessage();
+        $single = sentBy($this->admin);
+
+        $this->get(route('email.unsubscribe', $bulk->uuid))->assertForbidden();
+        $this->post(route('email.unsubscribe.store', $bulk->uuid))->assertForbidden();
+        $this->post(URL::signedRoute('email.unsubscribe', ['message' => $single->uuid]))->assertNotFound();
+        $this->post(URL::signedRoute('email.unsubscribe', ['message' => 'not-a-uuid']))->assertNotFound();
+        $this->post(URL::signedRoute('email.unsubscribe', ['message' => $bulk->uuid]).'x')->assertForbidden();
+        expect(EmailSuppression::count())->toBe(0);
+    });
+
+    it('skips unsubscribed addresses in later bulk sends and says how many', function () {
+        Mail::fake();
+        $students = Student::factory()->count(3)->create();
+        EmailSuppression::add(strtoupper($students[0]->user->email)); // stored lower case, matched any case
+
+        $this->actingAs($this->admin)->postJson(route('admin.email.bulk.preview'), ['audience' => ['type' => 'students']])
+            ->assertJson(['count' => 2, 'unsubscribed' => 1]);
+
+        $this->post(route('admin.email.bulk.store'), ['name' => 'N', 'subject' => 'S', 'body' => 'B', 'audience' => ['type' => 'students']])
+            ->assertSessionHasNoErrors()->assertSessionHas('inertia.flash_data.toast.message', fn ($m) => str_contains($m, '2 emails queued') && str_contains($m, '1 unsubscribed'));
+
+        expect(EmailMessage::pluck('to_email')->all())->not->toContain($students[0]->user->email)->toHaveCount(2);
+    });
+
+    it('does not stop one-to-one email to someone who unsubscribed from bulk', function () {
+        Mail::fake();
+        EmailSuppression::add('rafi@example.test');
+
+        $this->actingAs($this->admin)->post(route('admin.email.send'), ['to_email' => 'rafi@example.test', 'subject' => 'Your receipt', 'body' => 'Thanks.'])->assertSessionHasNoErrors();
+
+        expect(EmailMessage::sole()->status)->toBe(EmailMessageStatus::Sent);
     });
 });

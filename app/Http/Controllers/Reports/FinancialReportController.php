@@ -40,6 +40,7 @@ class FinancialReportController extends Controller
         'expenses' => ['Expenses', 'Expense records dated in the period.', true],
         'counselors' => ['Counselor-wise collection', 'Invoiced, collected, refunded and outstanding per counselor.', true],
         'students' => ['Student-wise accounts', 'Fees, payments, refunds and balance for every billed student.', false],
+        'yearly' => ['Yearly comparison', 'Income, expenses and profit for each month of a year against the year before. Uses the year chosen on the report, not the period.', false],
     ];
 
     public function index(Request $request): Response
@@ -74,6 +75,7 @@ class FinancialReportController extends Controller
                 'value' => $m['income'],
                 'display' => Money::format($m['income']),
             ], FinancialReports::monthly($from, $to)),
+            'yearly' => $this->yearlyProps(FinancialReports::yearly($this->year($request, $to->year))),
             'byType' => $breakdown(FinancialReports::incomeByType($from, $to), $summary['income']),
             'byMethod' => $breakdown(FinancialReports::incomeByMethod($from, $to), $summary['income']),
             'byCategory' => $breakdown(FinancialReports::expensesByCategory($from, $to), $summary['expenses']),
@@ -151,7 +153,7 @@ class FinancialReportController extends Controller
                 'description' => $r[1],
                 'dated' => $r[2],
                 'urls' => collect(ReportExporter::FORMATS)->mapWithKeys(fn (string $format) => [
-                    $format => $this->areaRoute($request, 'reports.download', array_filter(['report' => $key, 'format' => $format, 'from' => $r[2] ? $filters['from'] : null, 'to' => $r[2] ? $filters['to'] : null])),
+                    $format => $this->areaRoute($request, 'reports.download', array_filter(['report' => $key, 'format' => $format, 'from' => $r[2] ? $filters['from'] : null, 'to' => $r[2] ? $filters['to'] : null, 'year' => $key === 'yearly' ? $this->year($request, CarbonImmutable::now()->year) : null])),
                 ]),
             ])->values(),
         ]);
@@ -163,7 +165,7 @@ class FinancialReportController extends Controller
 
         [$from, $to] = $this->period($request);
         [$title, , $dated] = self::EXPORTS[$report];
-        $subtitle = $dated ? $from->format('d M Y').' to '.$to->format('d M Y') : 'As of '.now()->format('d M Y');
+        $subtitle = $report === 'yearly' ? $this->year($request, CarbonImmutable::now()->year).' against '.($this->year($request, CarbonImmutable::now()->year) - 1) : ($dated ? $from->format('d M Y').' to '.$to->format('d M Y') : 'As of '.now()->format('d M Y'));
         $money = fn (int|string|null $minor) => round(((int) $minor) / 100, 2);
         $date = fn (mixed $value) => $value ? CarbonImmutable::parse($value)->format('Y-m-d') : '';
 
@@ -209,6 +211,7 @@ class FinancialReportController extends Controller
                     $date($e->spent_on), $e->category->name, $e->title, $e->payee, $e->reference, $money($e->amount), $e->recorder?->name, $e->notes,
                 ]),
             ],
+            'yearly' => $this->yearlyExport($request, $money),
             'counselors' => [
                 ['Counselor', 'Students', 'Invoiced', 'Collected', 'Refunded', 'Outstanding now'],
                 FinancialReports::counselorCollection($from, $to)->map(fn (array $r) => [$r['counselor'], $r['students'], $money($r['invoiced']), $money($r['collected']), $money($r['refunded']), $money($r['outstanding'])]),
@@ -224,6 +227,54 @@ class FinancialReportController extends Controller
         activity('finance')->causedBy($request->user())->withProperties(['report' => $report, 'format' => $format, 'from' => $from->toDateString(), 'to' => $to->toDateString()])->log('Exported report: '.$title);
 
         return $exporter->download($format, $title, $subtitle, $headings, $rows);
+    }
+
+    /** The year to compare, from ?year=, else the given default. */
+    private function year(Request $request, int $default): int
+    {
+        return (int) ($request->validate(['year' => ['nullable', 'integer', 'between:2000,2100']])['year'] ?? $default);
+    }
+
+    /**
+     * @param  array{year: int, previous: int, rows: list<array<string, int|string>>, totals: array<string, int>}  $y
+     * @return array<string, mixed>
+     */
+    private function yearlyProps(array $y): array
+    {
+        $change = fn (int $now, int $before): ?int => $before === 0 ? null : (int) round(($now - $before) / abs($before) * 100);
+        $shape = fn (array $r) => [
+            'label' => $r['label'],
+            'income' => Money::format($r['income']), 'previous_income' => Money::format($r['previous_income']), 'income_change' => $change($r['income'], $r['previous_income']),
+            'expenses' => Money::format($r['expenses']), 'previous_expenses' => Money::format($r['previous_expenses']),
+            'profit' => Money::format((int) abs($r['profit'])), 'profit_negative' => $r['profit'] < 0,
+            'previous_profit' => Money::format((int) abs($r['previous_profit'])), 'previous_profit_negative' => $r['previous_profit'] < 0,
+            'value' => $r['income'], 'display' => Money::format($r['income']),
+        ];
+        $thisYear = CarbonImmutable::now()->year;
+
+        return [
+            'year' => $y['year'],
+            'previous' => $y['previous'],
+            'years' => array_map('strval', range($thisYear, $thisYear - 8)),
+            'rows' => array_map($shape, $y['rows']),
+            'totals' => $shape([...$y['totals'], 'label' => 'Total']),
+        ];
+    }
+
+    /**
+     * @param  callable(int|string|null): float  $money
+     * @return array{0: list<string>, 1: list<list<string|int|float|null>>}
+     */
+    private function yearlyExport(Request $request, callable $money): array
+    {
+        $y = FinancialReports::yearly($this->year($request, CarbonImmutable::now()->year));
+        $change = fn (int $now, int $before): string => $before === 0 ? '' : round(($now - $before) / abs($before) * 100).'%';
+        $rows = array_map(fn (array $r) => [$r['label'], $money($r['income']), $money($r['previous_income']), $change($r['income'], $r['previous_income']), $money($r['expenses']), $money($r['previous_expenses']), $money($r['profit']), $money($r['previous_profit'])], [...$y['rows'], [...$y['totals'], 'label' => 'Total']]);
+
+        return [
+            ['Month', "Income {$y['year']}", "Income {$y['previous']}", 'Change', "Expenses {$y['year']}", "Expenses {$y['previous']}", "Profit {$y['year']}", "Profit {$y['previous']}"],
+            $rows,
+        ];
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Enums\FileStatus;
 use App\Enums\LeadStatus;
 use App\Http\Controllers\Controller;
 use App\Models\EmailCampaign;
+use App\Models\EmailSuppression;
 use App\Models\EmailTemplate;
 use App\Models\Lead;
 use App\Models\Student;
@@ -66,7 +67,10 @@ class BulkEmailController extends Controller
     {
         Gate::authorize('email.manage');
 
-        return response()->json(['count' => $this->recipients($this->audience($request))->count()]);
+        $skipped = 0;
+        $count = $this->recipients($this->audience($request), $skipped)->count();
+
+        return response()->json(['count' => $count, 'unsubscribed' => $skipped]);
     }
 
     public function store(Request $request, EmailSender $sender, TemplateRenderer $renderer): RedirectResponse
@@ -87,7 +91,8 @@ class BulkEmailController extends Controller
             throw ValidationException::withMessages(['email_account_id' => __('You cannot send from this mailbox.')]);
         }
 
-        $recipients = $this->recipients($audience);
+        $skipped = 0;
+        $recipients = $this->recipients($audience, $skipped);
 
         if ($recipients->isEmpty()) {
             throw ValidationException::withMessages(['audience' => __('Nobody with an email address matches this audience.')]);
@@ -132,7 +137,9 @@ class BulkEmailController extends Controller
         });
 
         activity('email')->causedBy($user)->performedOn($campaign)->withProperties(['recipients' => $campaign->total, 'audience' => $audience])->log('Bulk email queued');
-        $this->toast(['type' => 'success', 'message' => __(':count emails queued.', ['count' => $campaign->total])]);
+        $this->toast(['type' => 'success', 'message' => $skipped > 0
+            ? __(':count emails queued. :skipped unsubscribed address(es) skipped.', ['count' => $campaign->total, 'skipped' => $skipped])
+            : __(':count emails queued.', ['count' => $campaign->total])]);
 
         return back();
     }
@@ -162,7 +169,7 @@ class BulkEmailController extends Controller
      * @param  array{type: string, counselor: int|null, status: string|null}  $audience
      * @return \Illuminate\Support\Collection<int, Model>
      */
-    private function recipients(array $audience): \Illuminate\Support\Collection
+    private function recipients(array $audience, int &$skipped = 0): \Illuminate\Support\Collection
     {
         /** @var Collection<int, Model> $rows */
         $rows = $audience['type'] === 'leads'
@@ -179,7 +186,13 @@ class BulkEmailController extends Controller
                 ->when($audience['status'], fn (Builder $q, string $s) => $q->whereHas('files', fn (Builder $f) => $f->where('status', $s)))
                 ->orderBy('id')->get();
 
-        return $rows->unique(fn (Model $m) => strtolower((string) ($m instanceof Student ? $m->user->email : $m->getAttribute('email'))))->values();
+        $address = fn (Model $m): string => strtolower(trim((string) ($m instanceof Student ? $m->user->email : $m->getAttribute('email'))));
+        $unique = $rows->unique($address)->values();
+        $unsubscribed = EmailSuppression::lookup();
+        $kept = $unique->reject(fn (Model $m) => isset($unsubscribed[$address($m)]))->values();
+        $skipped = $unique->count() - $kept->count();
+
+        return $kept;
     }
 
     /** @param array<string, mixed> $audience */

@@ -231,6 +231,9 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::post('redirects', [Admin\Cms\RedirectController::class, 'store'])->name('redirects.store');
             Route::put('redirects/{redirect}', [Admin\Cms\RedirectController::class, 'update'])->name('redirects.update');
             Route::delete('redirects/{redirect}', [Admin\Cms\RedirectController::class, 'destroy'])->name('redirects.destroy');
+            Route::get('not-found', [Admin\Cms\NotFoundLogController::class, 'index'])->name('not-found.index');
+            Route::delete('not-found', [Admin\Cms\NotFoundLogController::class, 'clear'])->name('not-found.clear');
+            Route::delete('not-found/{log}', [Admin\Cms\NotFoundLogController::class, 'destroy'])->whereNumber('log')->name('not-found.destroy');
             Route::get('broken-links', [Admin\Cms\BrokenLinkController::class, 'index'])->name('broken-links.index');
             Route::post('broken-links/scan', [Admin\Cms\BrokenLinkController::class, 'scan'])->middleware('throttle:3,1')->name('broken-links.scan');
         });

@@ -26,3 +26,7 @@ Schedule::call(fn () => DB::table('page_views')->where('viewed_on', '<', now()->
 
 // REQ §19.2: keep cPanel mailboxes, usage and suspensions in step (the "Sync" button still works).
 Schedule::job(new SyncMailboxes)->name('email:sync-mailboxes')->everyThirtyMinutes()->withoutOverlapping();
+
+// REQ §22.3: forget 404s nobody has asked for in six months.
+Schedule::call(fn () => DB::table('not_found_logs')->where('last_seen_at', '<', now()->subMonths(6))->delete())
+    ->name('not-found-logs:prune')->weeklyOn(1, '03:20')->withoutOverlapping();

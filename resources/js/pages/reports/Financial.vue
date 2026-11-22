@@ -1,17 +1,34 @@
 <script setup lang="ts">
-import { Head, Link, setLayoutProps, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, setLayoutProps, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import BarChart from '@/components/panel/BarChart.vue';
 import DateRangeFilter from '@/components/panel/DateRangeFilter.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
+import SelectInput from '@/components/panel/SelectInput.vue';
 import { Button } from '@/components/ui/button';
 import { useFilters } from '@/composables/useFilters';
 import { formatDate } from '@/lib/format';
 import type { DateRange } from '@/types';
 
 type Breakdown = { label: string; count: number; total: string; share: number };
+
+type YearRow = {
+    label: string;
+    income: string;
+    previous_income: string;
+    income_change: number | null;
+    expenses: string;
+    previous_expenses: string;
+    profit: string;
+    profit_negative: boolean;
+    previous_profit: string;
+    previous_profit_negative: boolean;
+    value: number;
+    display: string;
+};
 
 const props = defineProps<{
     filters: DateRange;
@@ -38,6 +55,13 @@ const props = defineProps<{
         value: number;
         display: string;
     }[];
+    yearly: {
+        year: number;
+        previous: number;
+        years: string[];
+        rows: YearRow[];
+        totals: YearRow;
+    };
     byType: Breakdown[];
     byMethod: Breakdown[];
     byCategory: Breakdown[];
@@ -50,6 +74,24 @@ setLayoutProps({
 });
 
 const { filters } = useFilters({ ...props.filters });
+
+const yearOptions = computed(() =>
+    props.yearly.years.map((y) => ({ value: y, label: y })),
+);
+
+// Only the yearly section reloads; the chosen period is kept.
+function chooseYear(year: string): void {
+    router.get(
+        page.url.split('?')[0],
+        { ...filters, year },
+        { preserveScroll: true, preserveState: true, only: ['yearly'] },
+    );
+}
+
+const changeText = (change: number | null): string =>
+    change === null
+        ? '—'
+        : `${change > 0 ? '▲' : change < 0 ? '▼' : ''} ${Math.abs(change)}%`;
 
 const breakdowns = [
     {
@@ -172,6 +214,134 @@ const breakdowns = [
                 description="Confirmed payments."
             >
                 <BarChart :data="monthly" caption="Income by month" />
+            </PanelCard>
+
+            <PanelCard
+                :title="`${yearly.year} compared with ${yearly.previous}`"
+                description="Confirmed payments, expenses and profit for each month against the same month a year earlier."
+            >
+                <div class="mb-4 max-w-[180px]">
+                    <label
+                        for="compare-year"
+                        class="mb-1 block text-xs font-semibold text-muted-foreground"
+                        >Year to compare</label
+                    >
+                    <SelectInput
+                        id="compare-year"
+                        :model-value="String(yearly.year)"
+                        :options="yearOptions"
+                        @update:model-value="chooseYear"
+                    />
+                </div>
+                <BarChart
+                    :data="yearly.rows"
+                    :caption="`Income by month in ${yearly.year}`"
+                />
+                <div class="-mx-5 mt-4 overflow-x-auto">
+                    <table class="w-full min-w-[560px] text-[13px]">
+                        <caption class="sr-only">
+                            Income, expenses and profit by month for
+                            {{
+                                yearly.year
+                            }}
+                            and
+                            {{
+                                yearly.previous
+                            }}
+                        </caption>
+                        <thead>
+                            <tr
+                                class="border-y text-left text-[11px] text-muted-foreground uppercase"
+                            >
+                                <th
+                                    scope="col"
+                                    class="px-5 py-2.5 font-semibold"
+                                >
+                                    Month
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-3 py-2.5 text-right font-semibold"
+                                >
+                                    Income {{ yearly.year }}
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-3 py-2.5 text-right font-semibold"
+                                >
+                                    {{ yearly.previous }}
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-3 py-2.5 text-right font-semibold"
+                                >
+                                    Change
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-3 py-2.5 text-right font-semibold"
+                                >
+                                    Expenses
+                                </th>
+                                <th
+                                    scope="col"
+                                    class="px-5 py-2.5 text-right font-semibold"
+                                >
+                                    Profit
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            <tr
+                                v-for="r in [...yearly.rows, yearly.totals]"
+                                :key="r.label"
+                                :class="
+                                    r.label === 'Total' &&
+                                    'bg-muted/40 font-bold'
+                                "
+                            >
+                                <th
+                                    scope="row"
+                                    class="px-5 py-2.5 text-left font-medium"
+                                >
+                                    {{ r.label }}
+                                </th>
+                                <td class="px-3 py-2.5 text-right">
+                                    {{ r.income }}
+                                </td>
+                                <td
+                                    class="px-3 py-2.5 text-right text-muted-foreground"
+                                >
+                                    {{ r.previous_income }}
+                                </td>
+                                <td
+                                    class="px-3 py-2.5 text-right"
+                                    :class="
+                                        r.income_change === null
+                                            ? 'text-muted-foreground'
+                                            : r.income_change >= 0
+                                              ? 'text-success'
+                                              : 'text-danger'
+                                    "
+                                >
+                                    {{ changeText(r.income_change) }}
+                                </td>
+                                <td class="px-3 py-2.5 text-right">
+                                    {{ r.expenses }}
+                                </td>
+                                <td
+                                    class="px-5 py-2.5 text-right"
+                                    :class="{
+                                        'text-danger': r.profit_negative,
+                                    }"
+                                >
+                                    {{ r.profit_negative ? '−' : ''
+                                    }}{{ r.profit }}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </PanelCard>
 
             <PanelCard title="Month by month" flush>

@@ -127,6 +127,39 @@ class FinancialReports
     }
 
     /**
+     * REQ §9 "Monthly / Yearly Reports": every month of a year next to the
+     * same month a year earlier. Months with no activity show zero.
+     *
+     * @return array{year: int, previous: int, rows: list<array{label: string, income: int, previous_income: int, expenses: int, previous_expenses: int, profit: int, previous_profit: int}>, totals: array{income: int, previous_income: int, expenses: int, previous_expenses: int, profit: int, previous_profit: int}}
+     */
+    public static function yearly(int $year): array
+    {
+        $months = fn (int $y): array => self::monthly(CarbonImmutable::create($y, 1, 1)->startOfDay(), CarbonImmutable::create($y, 12, 31)->endOfDay());
+        $current = $months($year);
+        $before = $months($year - 1);
+
+        $rows = [];
+        $totals = ['income' => 0, 'previous_income' => 0, 'expenses' => 0, 'previous_expenses' => 0, 'profit' => 0, 'previous_profit' => 0];
+
+        foreach ($current as $i => $m) {
+            $p = $before[$i];
+            $row = [
+                'label' => CarbonImmutable::create($year, $i + 1, 1)->format('M'),
+                'income' => $m['income'], 'previous_income' => $p['income'],
+                'expenses' => $m['expenses'], 'previous_expenses' => $p['expenses'],
+                'profit' => $m['profit'], 'previous_profit' => $p['profit'],
+            ];
+            $rows[] = $row;
+
+            foreach ($totals as $key => $value) {
+                $totals[$key] = $value + $row[$key];
+            }
+        }
+
+        return ['year' => $year, 'previous' => $year - 1, 'rows' => $rows, 'totals' => $totals];
+    }
+
+    /**
      * REQ §9.1 "Counselor-wise Collection": money by the counselor a
      * student is assigned to today. Students with no counselor are grouped
      * as "Unassigned".

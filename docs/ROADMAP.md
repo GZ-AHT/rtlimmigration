@@ -61,7 +61,7 @@
 - Day boundaries in reports follow the server timezone (UTC), not Asia/Dhaka, like the rest of the app. That moves to System Settings in Phase 11.
 - Removing an expense hides it from reports but keeps the record. Every report export is written to the activity log.
 - Fixed from Phase 4: Accounts could not use "Record money received" with a bank transfer, because the proof-upload rule still applied.
-- Not built: yearly comparison charts and the non-finance reports of REQ §24 (Phase 12); automatic refunds through the gateway.
+- Not built: automatic refunds through the gateway. (Yearly comparison and the non-finance reports of REQ §24 were built in Phase 12.)
 
 **Phase 6 notes**
 
@@ -149,7 +149,9 @@
 - `App\Support\Cms\WebsiteSeo::make()` now builds title, description, canonical, robots, Open Graph, Twitter, hreflang and JSON-LD. Breadcrumb data is on every inner page, Article data on blog posts, Organization / WebSite / LocalBusiness on the homepage. JSON-LD and analytics are written by `resources/views/app.blade.php` (so crawlers get them without running JavaScript); the rest goes through `SeoHead.vue`.
 - **Technical SEO:** `/sitemap.xml` (live public pages, posts, active universities, published assessments, extra addresses; `noindex` records left out) and `/robots.txt` are dynamic (`SeoController`); `public/robots.txt` was removed so the route answers. Redirects (301 / 302) live at SEO Management → Redirects, run as global middleware so they work for paths no page matches, count hits, and refuse loops, duplicates and system paths. The broken-link monitor (`seo:check-links`, weekly on Monday 03:30, or Scan now) checks links in page sections, posts and menus (400 addresses at most per scan) and lists them at SEO Management → Broken links. The media library has a Missing alt text filter. Page 2 and later of a list get their own canonical (`?page=N`).
 - Needs the scheduler (`schedule:run`) for the weekly scan. Run `php artisan migrate` on the dev DB (adds `seo_meta` columns, `redirects`, `broken_links`).
-- Not done: separate sitemap files per type, a 404 log, and a second language (hreflang only marks English until Q4 adds Bangla). Server-side rendering is not enabled in this project (`config/inertia.php` ssr bundle is off), so the verified path is the server-rendered `<head>` and JSON-LD from the Blade view; the Inertia `<Head>` tags appear once the page loads.
+- **404 log (2026-11-24):** `NotFoundRecorder` notes public GET addresses that answer 404 (not staff areas, scanner probes like `.php` / `wp-`, or signed-in staff; capped at 2,000 addresses; entries unseen for 6 months are pruned weekly). SEO Management → 404 log lists the busiest first with the outside site that linked, a Redirect button that opens the Redirects form with the address filled in, and Remove / Clear.
+- **Yearly comparison (2026-11-24):** the finance report has a year picker and sets each month against the same month a year earlier (income, change %, expenses, profit), with an export.
+- Not done: separate sitemap files per type, and a second language (hreflang only marks English until Q4 adds Bangla). Server-side rendering is not enabled in this project (`config/inertia.php` ssr bundle is off), so the verified path is the server-rendered `<head>` and JSON-LD from the Blade view; the Inertia `<Head>` tags appear once the page loads.
 - Tests: `tests/Feature/Cms/SeoManagementTest.php` (15 tests).
 
 **Phase 9a notes (content admin, 2026-11-18)**
@@ -184,6 +186,7 @@
 - **Email gaps closed (2026-11-23, after an audit that kept Q1 as decided):** Compose has Cc and Bcc (up to 10 addresses each, validated, repeats dropped; Bcc is in the SMTP envelope but not in the message headers). "Sent from the system" has Reply (Re:, quoted original, same student/lead link), Forward (Fwd:, attachments copied to the new email) and Delete. Delete only hides the dashboard copy (`email_messages.trashed_at`): the delivery log, the person's history, reports and the real mailbox are untouched, and it can be restored from the Deleted tab. Emails still queued cannot be deleted. `SyncMailboxes` (queued, unique) runs the cPanel mailbox sync every 30 minutes through the scheduler; the manual Sync button stays. Needs the scheduler and a queue worker.
 - Not built: auto-replies, folders, labels and the address book are Roundcube and cPanel features, so staff use them there. There is no unsubscribe link in bulk email, because the audience is limited to the agency's own students and leads; add one before any marketing use.
 - Not checked against a real cPanel server yet. The UAPI calls follow cPanel's API docs and are faked in tests. Check SSO and creating a mailbox once credentials are available. If a server has a self-signed certificate, untick "Check the server's SSL certificate".
+- **Unsubscribe (2026-11-24):** every bulk email carries an "Unsubscribe from bulk email" link and `List-Unsubscribe` / one-click headers. The link is signed (`email/unsubscribe/{uuid}`); GET only shows a button, POST adds the address to `email_suppressions` (lower case; the route is exempt from CSRF because mail apps post without a token, and the signature protects it). Bulk sends skip those addresses and say how many; one-to-one and system email are unaffected. There is no screen to list or remove suppressions yet.
 - A queue worker must run in production (`php artisan queue:work`, under Supervisor per Q5), or emails stay queued.
 
 **Tawk.to switched off (2026-11-17, owner's decision)**

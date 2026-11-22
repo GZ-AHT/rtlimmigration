@@ -30,6 +30,8 @@ class RedirectController extends Controller
                     'is_active' => $r->is_active, 'hits' => $r->hits, 'last_hit_at' => $r->last_hit_at?->diffForHumans(), 'note' => $r->note ?? '',
                 ]),
             'filters' => ['search' => $search],
+            // From the 404 log: open the add form with this address filled in.
+            'prefill' => mb_substr(trim((string) $request->query('from', '')), 0, 255),
         ]);
     }
 
