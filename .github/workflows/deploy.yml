@@ -2,9 +2,18 @@
 name: RTL Immigration - CI/CD
 
 on:
+  push:
+    branches:
+      - main
+
   workflow_dispatch:
 
+permissions:
+  contents: read
 
+concurrency:
+  group: rtl-immigration-production-deploy
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -45,8 +54,10 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
+
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
+
           ssh-keyscan -t ed25519 -p "$SSH_PORT" "$SSH_HOST" > ~/.ssh/known_hosts
 
           ACTUAL=$(ssh-keygen -lf ~/.ssh/known_hosts | awk '{print $2}')
@@ -99,3 +110,32 @@ jobs:
           ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" \
             "$SSH_USER@$SSH_HOST" \
             "cd '$DEPLOY_PATH' && php -d allow_url_fopen=On ~/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts"
+
+      - name: Run Laravel Deployment Commands
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" \
+            "$SSH_USER@$SSH_HOST" \
+            "cd '$DEPLOY_PATH' && \
+            php artisan package:discover --ansi && \
+            php artisan optimize:clear && \
+            php artisan migrate --force && \
+            php artisan optimize"
+
+      - name: Website Health Check
+        run: |
+          echo "Checking production website..."
+
+          curl --fail --silent --show-error \
+            --retry 5 \
+            --retry-delay 5 \
+            --retry-connrefused \
+            --max-time 30 \
+            https://rtlimmigration.com/ \
+            -o /dev/null
+
+          echo "Production website is responding successfully!"
