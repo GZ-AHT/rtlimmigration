@@ -3,6 +3,7 @@
 use App\Enums\Role;
 use App\Models\Country;
 use App\Models\Ticket;
+use App\Models\University;
 use App\Models\VisaType;
 use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -46,12 +47,12 @@ it('refuses to delete a visa type that has applications', function () {
 it('deletes several universities at once', function () {
     $admin = $this->userWithRole(Role::SuperAdmin);
     $country = Country::create(['name' => 'Bulkland', 'iso2' => 'BL']);
-    $ids = collect(['Alpha', 'Beta', 'Gamma'])->map(fn ($n) => App\Models\University::create([
+    $ids = collect(['Alpha', 'Beta', 'Gamma'])->map(fn ($n) => University::create([
         'name' => $n.' University', 'slug' => strtolower($n), 'country_id' => $country->id,
     ])->id);
 
     $this->actingAs($admin)->delete(route('admin.universities.bulk-destroy'), ['ids' => $ids->take(2)->all()])->assertRedirect();
 
-    expect(App\Models\University::whereKey($ids)->count())->toBe(1);
+    expect(University::whereKey($ids)->count())->toBe(1);
     $this->actingAs($admin)->delete(route('admin.universities.bulk-destroy'), ['ids' => []])->assertSessionHasErrors('ids');
 });
