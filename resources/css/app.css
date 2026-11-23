@@ -109,9 +109,11 @@
        colours, button corners and fonts can be changed in Website CMS →
        Site settings, which sets the --site-* variables on the website root. */
     --font-site:
-        var(--site-body-font, 'Inter'), 'ShurjoWeb', ui-sans-serif, system-ui, sans-serif;
+        var(--site-body-font, 'Inter'), 'ShurjoWeb', ui-sans-serif, system-ui,
+        sans-serif;
     --font-site-heading:
-        var(--site-heading-font, 'Inter'), 'LiShadhinata', 'ShurjoWeb', ui-sans-serif, system-ui, sans-serif;
+        var(--site-heading-font, 'Inter'), 'LiShadhinata', 'ShurjoWeb',
+        ui-sans-serif, system-ui, sans-serif;
     --radius-site-btn: var(--site-btn-radius, 14px);
     --color-site-red: var(--site-primary, #d71920);
     --color-site-red-dark: var(--site-primary-dark, #b5141a);

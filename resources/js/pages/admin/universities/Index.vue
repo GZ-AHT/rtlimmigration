@@ -14,7 +14,13 @@ import TableToolbar from '@/components/panel/TableToolbar.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useFilters } from '@/composables/useFilters';
-import { bulkDestroy, create, destroy, edit, index } from '@/routes/admin/universities';
+import {
+    bulkDestroy,
+    create,
+    destroy,
+    edit,
+    index,
+} from '@/routes/admin/universities';
 import type { Option, Paginated, TableColumn } from '@/types';
 
 type Row = {

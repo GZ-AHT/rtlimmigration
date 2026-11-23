@@ -10,7 +10,12 @@ import TextArea from '@/components/panel/TextArea.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDateTime } from '@/lib/format';
-import { approve, destroy, index, reject } from '@/routes/admin/partner-applications';
+import {
+    approve,
+    destroy,
+    index,
+    reject,
+} from '@/routes/admin/partner-applications';
 import { show as showPartner } from '@/routes/admin/partners';
 import type { Tone } from '@/types';
 

@@ -14,7 +14,12 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { getInitials } from '@/composables/useInitials';
 import { formatDateTime, relativeTime } from '@/lib/format';
-import { destroy, index, reply as replyRoute, update } from '@/routes/admin/tickets';
+import {
+    destroy,
+    index,
+    reply as replyRoute,
+    update,
+} from '@/routes/admin/tickets';
 import type { ActivityEntry, Option, TicketRow } from '@/types';
 
 type Reply = {
