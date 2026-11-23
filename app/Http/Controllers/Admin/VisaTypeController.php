@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -48,6 +49,7 @@ class VisaTypeController extends Controller
                     'delete_url' => route('admin.visa-types.requirements.destroy', [$t, $r], false),
                 ])->values(),
                 'update_url' => route('admin.visa-types.update', $t, false),
+                'delete_url' => route('admin.visa-types.destroy', $t, false),
                 'requirement_url' => route('admin.visa-types.requirements.store', $t, false),
             ]),
             'kinds' => VisaKind::options(),
@@ -83,6 +85,19 @@ class VisaTypeController extends Controller
         $visaType->documentCategories()->sync($data['documents']);
 
         $this->toast(['type' => 'success', 'message' => __('Visa type saved.')]);
+
+        return back();
+    }
+
+    public function destroy(VisaType $visaType): RedirectResponse
+    {
+        if ($visaType->applications()->exists()) {
+            throw ValidationException::withMessages(['visa_type' => __('Applications use this visa type. Switch it off instead.')]);
+        }
+
+        $visaType->delete();
+
+        $this->toast(['type' => 'success', 'message' => __('Visa type deleted.')]);
 
         return back();
     }

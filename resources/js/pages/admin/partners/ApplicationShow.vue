@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import FormField from '@/components/panel/FormField.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -9,7 +10,7 @@ import TextArea from '@/components/panel/TextArea.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { formatDateTime } from '@/lib/format';
-import { approve, index, reject } from '@/routes/admin/partner-applications';
+import { approve, destroy, index, reject } from '@/routes/admin/partner-applications';
 import { show as showPartner } from '@/routes/admin/partners';
 import type { Tone } from '@/types';
 
@@ -48,6 +49,13 @@ type Application = {
 };
 
 const props = defineProps<{ application: Application; canApprove: boolean }>();
+const deleting = ref(false);
+
+function remove(): void {
+    router.delete(destroy(props.application.id).url, {
+        onFinish: () => (deleting.value = false),
+    });
+}
 defineOptions({
     layout: { breadcrumbs: [{ title: 'Partner applications', href: index() }] },
 });
@@ -69,8 +77,24 @@ const a = props.application;
             <Button variant="outline" as-child
                 ><Link :href="index()">All applications</Link></Button
             >
+            <Button
+                v-if="canApprove && !application.partner"
+                variant="outline"
+                @click="deleting = true"
+                >Delete</Button
+            >
         </template>
     </PageHeader>
+
+    <ConfirmDialog
+        :open="deleting"
+        title="Delete this application?"
+        description="The application and its uploaded documents are permanently removed."
+        confirm-label="Delete application"
+        destructive
+        @update:open="(v) => !v && (deleting = false)"
+        @confirm="remove"
+    />
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,1fr)]">
         <PanelCard title="Application">

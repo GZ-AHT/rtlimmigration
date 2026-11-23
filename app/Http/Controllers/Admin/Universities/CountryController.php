@@ -7,7 +7,9 @@ use App\Models\Country;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,6 +59,21 @@ class CountryController extends Controller
             'sort_order' => (int) Country::query()->max('sort_order') + 10,
         ]);
         $this->toast(['type' => 'success', 'message' => __(':country added.', ['country' => $country->name])]);
+
+        return back();
+    }
+
+    public function destroy(Request $request, Country $country): RedirectResponse
+    {
+        abort_unless($request->user()->canAny(['universities.manage', 'assessments.manage']), 403);
+
+        if ($country->universities()->exists() || DB::table('skill_assessments')->where('country_id', $country->id)->exists()) {
+            throw ValidationException::withMessages(['country' => __('Universities or a skill assessment use this country. Deactivate it instead.')]);
+        }
+
+        $country->delete();
+
+        $this->toast(['type' => 'success', 'message' => __(':name deleted.', ['name' => $country->name])]);
 
         return back();
     }

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { toast } from 'vue-sonner';
 import AppIcon from '@/components/panel/AppIcon.vue';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import FormField from '@/components/panel/FormField.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
@@ -44,6 +46,7 @@ type VisaType = {
         delete_url: string;
     }[];
     update_url: string;
+    delete_url: string;
     requirement_url: string;
 };
 
@@ -137,6 +140,20 @@ function saveRequirement(): void {
         });
 }
 
+const deleting = ref<{ name: string; delete_url: string } | null>(null);
+
+function removeType(): void {
+    if (!deleting.value) {
+        return;
+    }
+
+    router.delete(deleting.value.delete_url, {
+        preserveScroll: true,
+        onError: (e) => toast.error(Object.values(e)[0] ?? 'Could not delete.'),
+        onFinish: () => (deleting.value = null),
+    });
+}
+
 function removeRequirement(url: string): void {
     router.delete(url, { preserveScroll: true });
 }
@@ -157,6 +174,16 @@ function removeRequirement(url: string): void {
         </template>
     </PageHeader>
 
+    <ConfirmDialog
+        :open="deleting !== null"
+        :title="`Delete ${deleting?.name ?? 'visa type'}?`"
+        description="Its requirements and document checklist are removed. Visa types that already have applications cannot be deleted; switch them off instead."
+        confirm-label="Delete visa type"
+        destructive
+        @update:open="(v) => !v && (deleting = null)"
+        @confirm="removeType"
+    />
+
     <EmptyState
         v-if="!types.length"
         icon="flight_takeoff"
@@ -171,6 +198,13 @@ function removeRequirement(url: string): void {
                 />
                 <button type="button" class="tiny-action" @click="open(t)">
                     Edit
+                </button>
+                <button
+                    type="button"
+                    class="tiny-action !text-danger"
+                    @click="deleting = t"
+                >
+                    Delete
                 </button>
             </template>
             <p class="text-xs text-muted-foreground">

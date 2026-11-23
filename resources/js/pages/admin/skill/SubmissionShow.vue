@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
 import StatusBadge from '@/components/panel/StatusBadge.vue';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/format';
 import { index as assessmentsIndex } from '@/routes/admin/skill-assessments';
-import { index } from '@/routes/admin/skill-assessments/submissions';
+import { destroy, index } from '@/routes/admin/skill-assessments/submissions';
 
 /** One visitor's assessment: answers, points, category scores and the advice they saw. */
-defineProps<{
+const props = defineProps<{
+    canDelete: boolean;
     submission: {
         id: number;
         name: string;
@@ -37,6 +40,14 @@ defineProps<{
         }[];
     };
 }>();
+const deleting = ref(false);
+
+function remove(): void {
+    router.delete(destroy(props.submission.id).url, {
+        onFinish: () => (deleting.value = false),
+    });
+}
+
 defineOptions({
     layout: {
         breadcrumbs: [
@@ -69,8 +80,21 @@ defineOptions({
                     >Result page</a
                 ></Button
             >
+            <Button v-if="canDelete" variant="outline" @click="deleting = true"
+                >Delete</Button
+            >
         </template>
     </PageHeader>
+
+    <ConfirmDialog
+        :open="deleting"
+        title="Delete this submission?"
+        description="The visitor's answers and score are permanently removed. A lead created from it is kept."
+        confirm-label="Delete submission"
+        destructive
+        @update:open="(v) => !v && (deleting = false)"
+        @confirm="remove"
+    />
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <PanelCard title="Answers" flush>

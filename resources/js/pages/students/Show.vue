@@ -2,6 +2,7 @@
 import { Head, Link, router, setLayoutProps, useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import DocumentChecklist from '@/components/documents/DocumentChecklist.vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import DataTable from '@/components/panel/DataTable.vue';
@@ -200,6 +201,23 @@ const counselorId = ref(
 );
 const assignNote = ref('');
 const busy = ref(false);
+const deleting = ref(false);
+
+function removeStudent(): void {
+    if (!props.urls.deleteUser) {
+        return;
+    }
+
+    router.delete(props.urls.deleteUser, {
+        onStart: () => (busy.value = true),
+        onError: (e) =>
+            toast.error(Object.values(e)[0] ?? 'Could not delete student.'),
+        onFinish: () => {
+            busy.value = false;
+            deleting.value = false;
+        },
+    });
+}
 const counselorOptions = computed<Option[]>(() =>
     props.counselors.map((c) => ({
         value: c.value,
@@ -300,8 +318,27 @@ const fileColumns: TableColumn<FileRow>[] = [
                     ><AppIcon name="manage_accounts" :size="18"
                 /></Link>
             </Button>
+            <Button
+                v-if="urls.deleteUser"
+                variant="outline"
+                aria-label="Delete student"
+                @click="deleting = true"
+            >
+                <AppIcon name="delete" :size="18" />
+            </Button>
         </template>
     </PageHeader>
+
+    <ConfirmDialog
+        :open="deleting"
+        title="Delete this student?"
+        description="Their account is deactivated and signed out. Files, payments and history are kept, and an admin can restore the account from Users."
+        confirm-label="Delete student"
+        destructive
+        :loading="busy"
+        @update:open="(v) => !v && (deleting = false)"
+        @confirm="removeStudent"
+    />
 
     <PanelTabs v-model="tab" label="Student sections" :tabs="tabs" />
 

@@ -127,6 +127,25 @@ class PartnerApplicationController extends Controller
         return back();
     }
 
+    public function destroy(Request $request, PartnerApplication $application): RedirectResponse
+    {
+        Gate::authorize('partners.approve');
+
+        if ($application->partner()->exists()) {
+            throw ValidationException::withMessages(['application' => __('This application became a partner. Manage or suspend the partner instead.')]);
+        }
+
+        DB::transaction(function () use ($application) {
+            $application->documents->each->delete();
+            $application->delete();
+        });
+
+        activity('partners')->causedBy($request->user())->log('Partner application deleted: '.$application->organisation);
+        $this->toast(['type' => 'success', 'message' => __('Application deleted.')]);
+
+        return to_route('admin.partner-applications.index');
+    }
+
     private function ensurePending(PartnerApplication $application): void
     {
         if ($application->status !== 'pending') {

@@ -27,6 +27,11 @@ class TicketPolicy
         return $user->can('tickets.manage');
     }
 
+    public function delete(User $user, Ticket $ticket): bool
+    {
+        return $user->can('tickets.manage');
+    }
+
     public function assign(User $user, Ticket $ticket): bool
     {
         return $user->can('tickets.assign');

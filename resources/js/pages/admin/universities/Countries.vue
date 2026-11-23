@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
+import { toast } from 'vue-sonner';
 import AppIcon from '@/components/panel/AppIcon.vue';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import DataTable from '@/components/panel/DataTable.vue';
 import FormField from '@/components/panel/FormField.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
@@ -20,7 +22,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { flag } from '@/lib/flag';
-import { index, store, update } from '@/routes/admin/countries';
+import { destroy, index, store, update } from '@/routes/admin/countries';
 import type { TableColumn } from '@/types';
 
 /**
@@ -76,6 +78,20 @@ const patch = (row: Row, data: Partial<Row>) =>
         preserveScroll: true,
         only: ['countries', 'flash'],
     });
+
+const removing = ref<Row | null>(null);
+
+function remove(): void {
+    if (!removing.value) {
+        return;
+    }
+
+    router.delete(destroy(removing.value.id).url, {
+        preserveScroll: true,
+        onError: (e) => toast.error(Object.values(e)[0] ?? 'Could not delete.'),
+        onFinish: () => (removing.value = null),
+    });
+}
 
 const open = ref(false);
 const editing = ref<Row | null>(null);
@@ -185,9 +201,26 @@ function save(): void {
                 >
                     {{ row.is_active ? 'Deactivate' : 'Activate' }}
                 </button>
+                <button
+                    type="button"
+                    class="tiny-action !text-danger"
+                    @click="removing = row"
+                >
+                    Delete
+                </button>
             </template>
         </DataTable>
     </PanelCard>
+
+    <ConfirmDialog
+        :open="removing !== null"
+        :title="`Delete ${removing?.name ?? 'country'}?`"
+        description="Countries with universities or a skill assessment cannot be deleted; deactivate them instead."
+        confirm-label="Delete country"
+        destructive
+        @update:open="(v) => !v && (removing = null)"
+        @confirm="remove"
+    />
 
     <Dialog v-model:open="open">
         <DialogContent class="rounded-[14px] sm:max-w-[440px]">

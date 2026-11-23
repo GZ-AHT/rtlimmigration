@@ -141,6 +141,7 @@ class TicketController extends Controller
             'can' => [
                 'update' => $request->user()->can('update', $ticket),
                 'assign' => $request->user()->can('assign', $ticket),
+                'delete' => $request->user()->can('delete', $ticket),
             ],
         ]);
     }
@@ -166,6 +167,17 @@ class TicketController extends Controller
         $this->toast(['type' => 'success', 'message' => __('Ticket updated.')]);
 
         return back();
+    }
+
+    public function destroy(Ticket $ticket): RedirectResponse
+    {
+        Gate::authorize('delete', $ticket);
+
+        $ticket->delete();
+
+        $this->toast(['type' => 'success', 'message' => __('Ticket :number deleted.', ['number' => $ticket->ticket_number])]);
+
+        return to_route('admin.tickets.index');
     }
 
     public function reply(Request $request, Ticket $ticket, ManageTicket $manage): RedirectResponse

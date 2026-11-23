@@ -210,6 +210,7 @@ class StudentController extends Controller
                 'self' => $this->areaRoute($request, 'students.show', $student),
                 'assign' => $this->areaHas($request, 'students.assign') ? $this->areaRoute($request, 'students.assign', $student) : null,
                 'lead' => $student->lead && $user->can('view', $student->lead) ? $this->areaRoute($request, 'leads.show', $student->lead) : null,
+                'deleteUser' => ! $student->user->trashed() && $user->can('delete', $student->user) && Route::has('admin.users.destroy') ? route('admin.users.destroy', $student->user_id, false) : null,
                 'user' => $user->can('view', $student->user) && Route::has('admin.users.show') ? route('admin.users.show', $student->user_id, false) : null,
                 'profile' => $this->areaRoute($request, 'students.profile.edit', $student),
                 'openFile' => $this->areaRoute($request, 'students.files.store', $student),

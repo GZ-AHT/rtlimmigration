@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Country;
 use App\Models\SkillAssessmentSubmission;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -80,10 +81,23 @@ class SubmissionController extends Controller
                     ];
                 }, $submission->snapshot['questions']),
             ],
+            'canDelete' => request()->user()->can('assessments.manage'),
         ]);
     }
 
     /** @return array<string, mixed> */
+    public function destroy(Request $request, SkillAssessmentSubmission $submission): RedirectResponse
+    {
+        Gate::authorize('assessments.manage');
+
+        $submission->delete();
+
+        activity('skill-assessments')->causedBy($request->user())->log('Skill assessment submission deleted: '.$submission->name);
+        $this->toast(['type' => 'success', 'message' => __('Submission deleted.')]);
+
+        return to_route('admin.skill-assessments.submissions.index');
+    }
+
     private static function row(SkillAssessmentSubmission $s): array
     {
         return [

@@ -2,6 +2,7 @@
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import { toast } from 'vue-sonner';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import EmptyState from '@/components/panel/EmptyState.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
@@ -13,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { getInitials } from '@/composables/useInitials';
 import { formatDateTime, relativeTime } from '@/lib/format';
-import { index, reply as replyRoute, update } from '@/routes/admin/tickets';
+import { destroy, index, reply as replyRoute, update } from '@/routes/admin/tickets';
 import type { ActivityEntry, Option, TicketRow } from '@/types';
 
 type Reply = {
@@ -42,7 +43,7 @@ const props = defineProps<{
         categories: Option[];
         assignees: Option[];
     };
-    can: { update: boolean; assign: boolean };
+    can: { update: boolean; assign: boolean; delete: boolean };
 }>();
 
 defineOptions({
@@ -68,6 +69,15 @@ function sendReply(): void {
             preserveScroll: true,
             onSuccess: () => reply.reset(),
         });
+}
+
+const deleting = ref(false);
+
+function remove(): void {
+    router.delete(destroy(props.ticket.id).url, {
+        onError: (e) => toast.error(Object.values(e)[0] ?? 'Could not delete.'),
+        onFinish: () => (deleting.value = false),
+    });
 }
 
 function save(field: keyof typeof details.value): void {
@@ -103,8 +113,26 @@ function save(field: keyof typeof details.value): void {
                 :tone="ticket.status_tone"
                 class="self-center"
             />
+            <Button
+                v-if="can.delete"
+                variant="outline"
+                aria-label="Delete ticket"
+                @click="deleting = true"
+            >
+                <AppIcon name="delete" :size="18" />
+            </Button>
         </template>
     </PageHeader>
+
+    <ConfirmDialog
+        :open="deleting"
+        title="Delete this ticket?"
+        description="The ticket and all its replies will be permanently removed."
+        confirm-label="Delete ticket"
+        destructive
+        @update:open="(v) => !v && (deleting = false)"
+        @confirm="remove"
+    />
 
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1.8fr)_minmax(300px,1fr)]">
         <div class="flex min-w-0 flex-col gap-4">

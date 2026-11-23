@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::get('visa-types', [Admin\VisaTypeController::class, 'index'])->name('visa-types.index');
             Route::post('visa-types', [Admin\VisaTypeController::class, 'store'])->name('visa-types.store');
             Route::put('visa-types/{visaType}', [Admin\VisaTypeController::class, 'update'])->name('visa-types.update');
+            Route::delete('visa-types/{visaType}', [Admin\VisaTypeController::class, 'destroy'])->name('visa-types.destroy');
             Route::post('visa-types/{visaType}/requirements', [Admin\VisaTypeController::class, 'storeRequirement'])->name('visa-types.requirements.store');
             Route::delete('visa-types/{visaType}/requirements/{requirement}', [Admin\VisaTypeController::class, 'destroyRequirement'])->name('visa-types.requirements.destroy');
 
@@ -88,7 +89,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::put('ticket-categories/{category}', [Admin\TicketCategoryController::class, 'update'])->name('ticket-categories.update');
         Route::delete('ticket-categories/{category}', [Admin\TicketCategoryController::class, 'destroy'])->name('ticket-categories.destroy');
         Route::post('tickets/{ticket}/replies', [Admin\TicketController::class, 'reply'])->name('tickets.reply');
-        Route::resource('tickets', Admin\TicketController::class)->except(['edit', 'destroy']);
+        Route::resource('tickets', Admin\TicketController::class)->except(['edit']);
 
         // REQ §18 Live chat (Tawk.to)
         Route::get('chat/settings', [Admin\ChatSettingsController::class, 'edit'])->name('chat.settings');
@@ -255,6 +256,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::put('universities/{university}/courses/{course}', [Admin\Universities\UniversityController::class, 'updateCourse'])->name('universities.courses.update');
         Route::delete('universities/{university}/courses/{course}', [Admin\Universities\UniversityController::class, 'destroyCourse'])->name('universities.courses.destroy');
         Route::get('countries', [Admin\Universities\CountryController::class, 'index'])->name('countries.index');
+        Route::delete('countries/{country}', [Admin\Universities\CountryController::class, 'destroy'])->name('countries.destroy');
         Route::patch('countries/{country}', [Admin\Universities\CountryController::class, 'update'])->name('countries.update');
 
         // Country-based skill migration assessments
@@ -269,6 +271,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::delete('skill-assessments/categories/{category}', [Admin\SkillAssessments\CategoryController::class, 'destroy'])->name('skill-assessments.categories.destroy');
         Route::get('skill-assessments/submissions', [Admin\SkillAssessments\SubmissionController::class, 'index'])->name('skill-assessments.submissions.index');
         Route::get('skill-assessments/submissions/{submission}', [Admin\SkillAssessments\SubmissionController::class, 'show'])->name('skill-assessments.submissions.show');
+        Route::delete('skill-assessments/submissions/{submission}', [Admin\SkillAssessments\SubmissionController::class, 'destroy'])->name('skill-assessments.submissions.destroy');
         Route::get('skill-assessments/{assessment}/edit', [Admin\SkillAssessments\AssessmentController::class, 'edit'])->name('skill-assessments.edit');
         Route::put('skill-assessments/{assessment}', [Admin\SkillAssessments\AssessmentController::class, 'update'])->name('skill-assessments.update');
         Route::delete('skill-assessments/{assessment}', [Admin\SkillAssessments\AssessmentController::class, 'destroy'])->name('skill-assessments.destroy');
@@ -279,6 +282,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::get('partner-applications/{application}', [Admin\Partners\PartnerApplicationController::class, 'show'])->name('partner-applications.show');
         Route::post('partner-applications/{application}/approve', [Admin\Partners\PartnerApplicationController::class, 'approve'])->name('partner-applications.approve');
         Route::post('partner-applications/{application}/reject', [Admin\Partners\PartnerApplicationController::class, 'reject'])->name('partner-applications.reject');
+        Route::delete('partner-applications/{application}', [Admin\Partners\PartnerApplicationController::class, 'destroy'])->name('partner-applications.destroy');
         Route::get('partners', [Admin\Partners\PartnerController::class, 'index'])->name('partners.index');
         Route::get('partners/{partner}', [Admin\Partners\PartnerController::class, 'show'])->name('partners.show');
         Route::put('partners/{partner}', [Admin\Partners\PartnerController::class, 'update'])->name('partners.update');
