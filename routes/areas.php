@@ -249,6 +249,7 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::get('universities', [Admin\Universities\UniversityController::class, 'index'])->name('universities.index');
         Route::get('universities/create', [Admin\Universities\UniversityController::class, 'create'])->name('universities.create');
         Route::post('universities', [Admin\Universities\UniversityController::class, 'store'])->name('universities.store');
+        Route::delete('universities', [Admin\Universities\UniversityController::class, 'bulkDestroy'])->name('universities.bulk-destroy');
         Route::get('universities/{university}/edit', [Admin\Universities\UniversityController::class, 'edit'])->name('universities.edit');
         Route::put('universities/{university}', [Admin\Universities\UniversityController::class, 'update'])->name('universities.update');
         Route::delete('universities/{university}', [Admin\Universities\UniversityController::class, 'destroy'])->name('universities.destroy');

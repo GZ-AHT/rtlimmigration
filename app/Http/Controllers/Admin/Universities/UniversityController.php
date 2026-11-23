@@ -121,6 +121,22 @@ class UniversityController extends Controller
         return redirect()->route('admin.universities.index');
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        Gate::authorize('universities.manage');
+
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1', 'max:200'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $count = University::query()->whereKey($data['ids'])->get()->each->delete()->count();
+
+        $this->toast(['type' => 'success', 'message' => trans_choice(':count university and its courses deleted.|:count universities and their courses deleted.', $count, ['count' => $count])]);
+
+        return back();
+    }
+
     public function storeCourse(Request $request, University $university): RedirectResponse
     {
         Gate::authorize('universities.manage');

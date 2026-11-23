@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
+import { toast } from 'vue-sonner';
 import AppIcon from '@/components/panel/AppIcon.vue';
+import ConfirmDialog from '@/components/panel/ConfirmDialog.vue';
 import DataTable from '@/components/panel/DataTable.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
@@ -9,8 +12,9 @@ import StatusBadge from '@/components/panel/StatusBadge.vue';
 import TablePagination from '@/components/panel/TablePagination.vue';
 import TableToolbar from '@/components/panel/TableToolbar.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useFilters } from '@/composables/useFilters';
-import { create, edit, index } from '@/routes/admin/universities';
+import { bulkDestroy, create, destroy, edit, index } from '@/routes/admin/universities';
 import type { Option, Paginated, TableColumn } from '@/types';
 
 type Row = {
@@ -40,10 +44,60 @@ const { filters, reset } = useFilters(
 );
 
 const columns: TableColumn<Row>[] = [
+    ...(props.canManage ? [{ key: 'select', label: '', class: 'w-10' }] : []),
     { key: 'name', label: 'University' },
     { key: 'courses_count', label: 'Courses', align: 'right', hideBelow: 'sm' },
     { key: 'status', label: 'Status' },
 ];
+
+// Row checkboxes for group delete; a single trash action reuses the same dialog.
+const selected = ref<number[]>([]);
+const pending = ref<number[] | null>(null);
+const busy = ref(false);
+const pageIds = computed(() => props.universities.data.map((u) => u.id));
+const allSelected = computed(
+    () =>
+        pageIds.value.length > 0 &&
+        pageIds.value.every((id) => selected.value.includes(id)),
+);
+
+function toggle(id: number, on: boolean): void {
+    selected.value = on
+        ? [...new Set([...selected.value, id])]
+        : selected.value.filter((v) => v !== id);
+}
+
+function toggleAll(on: boolean): void {
+    selected.value = on ? [...pageIds.value] : [];
+}
+
+function remove(): void {
+    const ids = pending.value;
+
+    if (!ids?.length) {
+        return;
+    }
+
+    const options = {
+        preserveScroll: true,
+        onStart: () => (busy.value = true),
+        onSuccess: () => {
+            selected.value = selected.value.filter((id) => !ids.includes(id));
+        },
+        onError: (e: Record<string, string>) =>
+            toast.error(Object.values(e)[0] ?? 'Could not delete.'),
+        onFinish: () => {
+            busy.value = false;
+            pending.value = null;
+        },
+    };
+
+    if (ids.length === 1) {
+        router.delete(destroy(ids[0]).url, options);
+    } else {
+        router.delete(bulkDestroy().url, { ...options, data: { ids } });
+    }
+}
 </script>
 
 <template>
@@ -97,6 +151,32 @@ const columns: TableColumn<Row>[] = [
                 >
             </template>
         </TableToolbar>
+        <div
+            v-if="canManage && universities.data.length"
+            class="flex items-center gap-3 border-b border-border px-[18px] py-2.5 text-[13px]"
+        >
+            <label class="flex items-center gap-2">
+                <Checkbox
+                    :model-value="allSelected"
+                    aria-label="Select all universities on this page"
+                    @update:model-value="(v) => toggleAll(v === true)"
+                />
+                {{
+                    selected.length
+                        ? `${selected.length} selected`
+                        : 'Select all'
+                }}
+            </label>
+            <Button
+                v-if="selected.length"
+                variant="outline"
+                size="sm"
+                class="ml-auto"
+                @click="pending = [...selected]"
+            >
+                <AppIcon name="delete" :size="16" /> Delete selected
+            </Button>
+        </div>
         <DataTable
             :columns="columns"
             :rows="universities.data"
@@ -104,6 +184,13 @@ const columns: TableColumn<Row>[] = [
             empty-title="No universities yet"
             empty-icon="account_balance"
         >
+            <template #cell-select="{ row }">
+                <Checkbox
+                    :model-value="selected.includes(row.id)"
+                    :aria-label="`Select ${row.name}`"
+                    @update:model-value="(v) => toggle(row.id, v === true)"
+                />
+            </template>
             <template #cell-name="{ row }">
                 <div class="flex items-center gap-3">
                     <img
@@ -150,6 +237,15 @@ const columns: TableColumn<Row>[] = [
                     />
                     <span>{{ canManage ? 'Edit' : 'View' }}</span>
                 </Link>
+                <button
+                    v-if="canManage"
+                    type="button"
+                    class="tiny-action !text-danger"
+                    @click="pending = [row.id]"
+                >
+                    <AppIcon name="delete" :size="13" />
+                    <span>Delete</span>
+                </button>
             </template>
         </DataTable>
         <TablePagination
@@ -157,4 +253,21 @@ const columns: TableColumn<Row>[] = [
             :meta="universities"
         />
     </PanelCard>
+
+    <ConfirmDialog
+        :open="pending !== null"
+        :title="
+            pending && pending.length > 1
+                ? `Delete ${pending.length} universities?`
+                : 'Delete this university?'
+        "
+        description="The university and all its courses are permanently removed from the website and the pathway finder."
+        :confirm-label="
+            pending && pending.length > 1 ? 'Delete selected' : 'Delete'
+        "
+        destructive
+        :loading="busy"
+        @update:open="(v) => !v && (pending = null)"
+        @confirm="remove"
+    />
 </template>

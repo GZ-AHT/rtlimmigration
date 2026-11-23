@@ -42,3 +42,16 @@ it('refuses to delete a visa type that has applications', function () {
         expect(VisaType::find($type->id))->toBeNull();
     }
 });
+
+it('deletes several universities at once', function () {
+    $admin = $this->userWithRole(Role::SuperAdmin);
+    $country = Country::create(['name' => 'Bulkland', 'iso2' => 'BL']);
+    $ids = collect(['Alpha', 'Beta', 'Gamma'])->map(fn ($n) => App\Models\University::create([
+        'name' => $n.' University', 'slug' => strtolower($n), 'country_id' => $country->id,
+    ])->id);
+
+    $this->actingAs($admin)->delete(route('admin.universities.bulk-destroy'), ['ids' => $ids->take(2)->all()])->assertRedirect();
+
+    expect(App\Models\University::whereKey($ids)->count())->toBe(1);
+    $this->actingAs($admin)->delete(route('admin.universities.bulk-destroy'), ['ids' => []])->assertSessionHasErrors('ids');
+});
