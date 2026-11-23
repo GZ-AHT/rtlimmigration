@@ -63,7 +63,7 @@ class CounselorController extends Controller
             'counselors' => $counselors->map(fn (Counselor $c) => [
                 'id' => $c->id,
                 'name' => $c->user->name,
-                'email' => $c->user->email,
+                'email' => $c->user->contact_email,
                 'designation' => $c->designation,
                 'availability' => $c->availability->value,
                 'availability_label' => $c->availability->label(),
@@ -115,7 +115,7 @@ class CounselorController extends Controller
                 'id' => $counselor->id,
                 'user_id' => $userId,
                 'name' => $counselor->user->name,
-                'email' => $counselor->user->email,
+                'email' => $counselor->user->contact_email,
                 'phone' => $counselor->phone,
                 'designation' => $counselor->designation,
                 'bio' => $counselor->bio,

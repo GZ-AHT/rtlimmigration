@@ -181,7 +181,7 @@ class StudentController extends Controller
             'emails' => $user->can('email.access') ? [
                 'items' => EmailMessage::query()
                     ->where(fn ($q) => $q->where(fn ($q) => $q->where('recipient_type', $student->getMorphClass())->where('recipient_id', $student->id))
-                        ->orWhere('to_email', $student->user->email))
+                        ->orWhere('to_email', $student->user->contact_email))
                     ->with('sender:id,name')->latest('id')->limit(50)->get()
                     ->map(fn (EmailMessage $m) => EmailPresenter::message($m))->values(),
                 'compose_url' => $this->areaHas($request, 'email.compose') ? $this->areaRoute($request, 'email.compose', ['student' => $student->id]) : null,

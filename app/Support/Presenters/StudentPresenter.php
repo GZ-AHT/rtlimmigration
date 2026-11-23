@@ -15,7 +15,7 @@ class StudentPresenter
             'id' => $student->id,
             'student_number' => $student->student_number,
             'name' => $student->user->name,
-            'email' => $student->user->email,
+            'email' => $student->user->contact_email,
             'phone' => $student->phone,
             'counselor' => $student->counselor?->name,
             'source' => $student->source->label(),

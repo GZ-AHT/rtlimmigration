@@ -106,7 +106,7 @@ class OperationalReports
             'breakdowns' => [$this->breakdown('By source', $bySource)],
             'headings' => ['Registered', 'Student no.', 'Name', 'Email', 'Phone', 'Source', 'Counselor'],
             'rows' => $base()->with(['user', 'counselor'])->latest('students.id')->lazy(500)->map(fn (Student $s) => [
-                $s->created_at?->format('Y-m-d'), $s->student_number, $s->user->name, $s->user->email, $s->phone,
+                $s->created_at?->format('Y-m-d'), $s->student_number, $s->user->name, $s->user->contact_email, $s->phone,
                 $s->source->label(), $s->counselor?->name,
             ]),
         ];

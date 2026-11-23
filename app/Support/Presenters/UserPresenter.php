@@ -21,7 +21,7 @@ class UserPresenter
         return [
             'id' => $user->id,
             'name' => $user->name,
-            'email' => $user->email,
+            'email' => $user->contact_email,
             'roles' => $user->roles->pluck('name')->map(fn (string $r) => self::roleLabel($r))->values(),
             'status' => $user->trashed() ? 'deleted' : $user->status->value,
             'email_verified' => $user->email_verified_at !== null,
@@ -42,7 +42,7 @@ class UserPresenter
         return [
             'id' => $user->id,
             'name' => $user->name,
-            'email' => $user->email,
+            'email' => $user->contact_email,
             'roles' => $user->roles->pluck('name')->values(),
             'role_labels' => $user->roles->pluck('name')->map(fn (string $r) => self::roleLabel($r))->values(),
             'status' => $user->status->value,

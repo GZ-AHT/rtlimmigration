@@ -12,6 +12,7 @@ use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,6 +35,7 @@ use Throwable;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property string|null $original_email the real address of a deleted user (`email` holds a placeholder)
  * @property CarbonInterface|null $email_verified_at
  * @property string $password
  * @property string|null $two_factor_secret
@@ -53,6 +55,51 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, HasRoles, LogsActivity, Notifiable, PasskeyAuthenticatable, SoftDeletes, TwoFactorAuthenticatable;
+
+    /**
+     * A deleted user keeps its row (payments, files and history reference it)
+     * but gives up its email, so the address can register again and uniqueness
+     * still holds for every live account. Restoring takes the address back
+     * unless somebody else registered it meanwhile.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (User $user) {
+            if ($user->isForceDeleting() || $user->original_email !== null) {
+                return;
+            }
+
+            $user->forceFill([
+                'original_email' => $user->email,
+                'email' => self::placeholderEmail((int) $user->getKey()),
+            ])->saveQuietly();
+        });
+
+        static::restoring(function (User $user) {
+            if ($user->original_email === null) {
+                return;
+            }
+
+            if (self::query()->where('email', $user->original_email)->whereKeyNot($user->getKey())->exists()) {
+                throw ValidationException::withMessages(['user' => __('This email address now belongs to another account, so this user cannot be restored.')]);
+            }
+
+            $user->email = $user->original_email;
+            $user->original_email = null;
+        });
+    }
+
+    /** An address that can never receive mail or collide with a real one. */
+    public static function placeholderEmail(int $id): string
+    {
+        return "deleted-{$id}-".now()->timestamp.'@deleted.invalid';
+    }
+
+    /** The person's real address, also for deleted users. */
+    protected function contactEmail(): Attribute
+    {
+        return Attribute::get(fn () => $this->original_email ?? $this->email);
+    }
 
     /**
      * Defaults for new models, matching the column defaults, so a user is
