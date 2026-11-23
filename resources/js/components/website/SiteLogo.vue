@@ -27,7 +27,8 @@ const mark = computed(() => name.value.split(/\s+/)[0]);
 <template>
     <Link
         href="/"
-        class="inline-flex shrink-0 items-center gap-1.5"
+        translate="no"
+        class="notranslate inline-flex shrink-0 items-center gap-1.5"
         :aria-label="`${name}, home`"
     >
         <img

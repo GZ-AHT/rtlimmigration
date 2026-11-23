@@ -12,7 +12,8 @@ withDefaults(
 
 <template>
     <span
-        class="icon shrink-0"
+        translate="no"
+        class="icon notranslate shrink-0"
         :class="{ 'icon-filled': filled }"
         :style="{
             fontSize: `${size}px`,

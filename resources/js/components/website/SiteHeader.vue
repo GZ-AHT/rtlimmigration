@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import SiteButton from '@/components/website/SiteButton.vue';
 import SiteLink from '@/components/website/SiteLink.vue';
+import LanguageSwitcher from '@/components/website/LanguageSwitcher.vue';
 import SiteLogo from '@/components/website/SiteLogo.vue';
 import { isCurrent, useSite } from '@/composables/useSite';
 import type { MenuLink } from '@/types/website';
@@ -190,7 +191,8 @@ onBeforeUnmount(() => {
                 <a
                     v-if="text('general', 'contact_email')"
                     :href="`mailto:${text('general', 'contact_email')}`"
-                    class="flex items-center gap-1.5 truncate font-medium text-white hover:text-site-blush sm:w-65.5"
+                    translate="no"
+                    class="notranslate flex items-center gap-1.5 truncate font-medium text-white hover:text-site-blush sm:w-65.5"
                 >
                     <AppIcon
                         name="mail"
@@ -204,7 +206,8 @@ onBeforeUnmount(() => {
                 <a
                     v-if="text('general', 'phone')"
                     :href="`tel:${text('general', 'phone').replace(/\s/g, '')}`"
-                    class="hidden items-center gap-1.5 font-medium whitespace-nowrap text-white hover:text-site-blush sm:inline-flex"
+                    translate="no"
+                    class="notranslate hidden items-center gap-1.5 font-medium whitespace-nowrap text-white hover:text-site-blush sm:inline-flex"
                 >
                     <AppIcon
                         name="call"
@@ -230,11 +233,12 @@ onBeforeUnmount(() => {
                             .trim()
                     }}</span>
                 </span>
+                <LanguageSwitcher class="ml-auto lg:ml-0" />
                 <template v-if="flag('header', 'show_login', true)">
                     <Link
                         v-if="user"
                         href="/dashboard"
-                        class="ml-auto inline-flex items-center gap-1.5 font-medium whitespace-pre text-white hover:text-site-blush lg:ml-0"
+                        class="inline-flex items-center gap-1.5 font-medium whitespace-pre text-white hover:text-site-blush"
                     >
                         <AppIcon
                             name="account_circle"
@@ -247,7 +251,7 @@ onBeforeUnmount(() => {
                     <Link
                         v-else
                         href="/login"
-                        class="ml-auto inline-flex items-center gap-1.5 font-medium whitespace-pre text-white hover:text-site-blush lg:ml-0"
+                        class="inline-flex items-center gap-1.5 font-medium whitespace-pre text-white hover:text-site-blush"
                     >
                         <AppIcon
                             name="login"

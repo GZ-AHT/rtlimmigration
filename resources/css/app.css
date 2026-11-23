@@ -20,6 +20,25 @@
  * The shadcn-style semantic names (primary, muted, accent...) map to the
  * panel palette so the starter-kit UI primitives inherit it automatically.
  */
+/* Bangla glyphs only (unicode-range), so English text keeps its own fonts. */
+@font-face {
+    font-family: 'ShurjoWeb';
+    src: url('../fonts/ShurjoWeb-400.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0980-09FF, U+200C-200D, U+25CC;
+}
+
+@font-face {
+    font-family: 'LiShadhinata';
+    src: url('../fonts/LiShadhinata-Unicode.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+    unicode-range: U+0980-09FF, U+200C-200D, U+25CC;
+}
+
 @theme inline {
     --font-sans:
         'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
@@ -90,9 +109,9 @@
        colours, button corners and fonts can be changed in Website CMS →
        Site settings, which sets the --site-* variables on the website root. */
     --font-site:
-        var(--site-body-font, 'Inter'), ui-sans-serif, system-ui, sans-serif;
+        var(--site-body-font, 'Inter'), 'ShurjoWeb', ui-sans-serif, system-ui, sans-serif;
     --font-site-heading:
-        var(--site-heading-font, 'Inter'), ui-sans-serif, system-ui, sans-serif;
+        var(--site-heading-font, 'Inter'), 'LiShadhinata', 'ShurjoWeb', ui-sans-serif, system-ui, sans-serif;
     --radius-site-btn: var(--site-btn-radius, 14px);
     --color-site-red: var(--site-primary, #d71920);
     --color-site-red-dark: var(--site-primary-dark, #b5141a);

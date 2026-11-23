@@ -2,6 +2,8 @@
     // Public website and auth pages are light-only (roadmap Q9, Q11) and carry the
     // Super Admin's site-wide custom code (Q16); admin and portal pages don't.
     $isWebsite = str_starts_with($page['component'] ?? '', 'website/') || str_starts_with($page['component'] ?? '', 'auth/');
+    // Free Google Translate (English → Bangla) is for the public website only, never auth, portal or admin.
+    $isPublicSite = str_starts_with($page['component'] ?? '', 'website/');
     $siteCode = $isWebsite ? app(\App\Support\Settings\SettingsRepository::class) : null;
 @endphp
 <!DOCTYPE html>
@@ -26,6 +28,16 @@
         </script>
 
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
+        @if ($isPublicSite)
+            {{-- Hide every piece of Google Translate chrome: top banner, tooltip, and the body offset it adds. --}}
+            <style>
+                .goog-te-banner-frame, .goog-te-banner-frame.skiptranslate, iframe.skiptranslate,
+                .skiptranslate > iframe, #goog-gt-tt, .goog-tooltip, .goog-te-balloon-frame { display: none !important; }
+                .goog-text-highlight { background: none !important; box-shadow: none !important; }
+                body { top: 0 !important; position: static !important; }
+                #google_translate_element, .goog-te-gadget { display: none !important; }
+            </style>
+        @endif
         <style>
             html {
                 background-color: #f7f8fa;
@@ -81,6 +93,39 @@
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />
+        @if ($isPublicSite)
+            {{-- Testing only: Google Translate Element, driven by the EN | বাংলা switcher in the header. --}}
+            <div id="google_translate_element" class="notranslate" aria-hidden="true" style="display:none"></div>
+            <script>
+                // Google Translate wraps text nodes in <font>; without this, Vue's patching
+                // throws on those nodes and text stops updating or goes missing.
+                (function () {
+                    var remove = Node.prototype.removeChild;
+                    Node.prototype.removeChild = function (child) {
+                        if (child.parentNode !== this) {
+                            return child;
+                        }
+                        return remove.apply(this, arguments);
+                    };
+                    var insert = Node.prototype.insertBefore;
+                    Node.prototype.insertBefore = function (node, ref) {
+                        if (ref && ref.parentNode !== this) {
+                            return node;
+                        }
+                        return insert.apply(this, arguments);
+                    };
+                })();
+
+                function googleTranslateElementInit() {
+                    new google.translate.TranslateElement({
+                        pageLanguage: 'en',
+                        includedLanguages: 'en,bn',
+                        autoDisplay: false,
+                    }, 'google_translate_element');
+                }
+            </script>
+            <script async src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+        @endif
         @if ($siteCode)
             {!! $siteCode->get('code.body_js') !!}
         @endif

@@ -229,7 +229,8 @@ const columns = computed(() => [
                             />
                             <a
                                 :href="`tel:${text('general', 'phone').replace(/\s/g, '')}`"
-                                class="hover:text-white"
+                                translate="no"
+                                class="notranslate hover:text-white"
                                 >{{ text('general', 'phone') }}</a
                             >
                         </li>
@@ -244,7 +245,8 @@ const columns = computed(() => [
                             />
                             <a
                                 :href="`mailto:${text('general', 'contact_email')}`"
-                                class="break-all hover:text-white"
+                                translate="no"
+                                class="notranslate break-all hover:text-white"
                                 >{{ text('general', 'contact_email') }}</a
                             >
                         </li>
