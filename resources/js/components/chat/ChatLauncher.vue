@@ -151,7 +151,7 @@ watch(enabled, (value) => {
                 </button>
             </div>
 
-            <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+            <div class="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-4">
                 <p
                     v-if="loading && !state"
                     class="py-10 text-center text-sm text-site-muted"

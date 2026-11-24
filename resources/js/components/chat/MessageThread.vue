@@ -193,13 +193,13 @@ function size(bytes: number): string {
 </script>
 
 <template>
-    <div class="flex min-h-0 flex-col">
+    <div class="flex min-h-0 flex-col" :class="compact ? 'flex-1' : ''">
         <div
             ref="scroller"
             class="flex flex-col gap-2.5 overflow-y-auto px-1 py-2"
             :class="
                 compact
-                    ? 'h-[min(45vh,360px)] min-h-[200px]'
+                    ? 'min-h-[180px] flex-1'
                     : 'h-[min(60vh,560px)] min-h-[320px]'
             "
             role="log"

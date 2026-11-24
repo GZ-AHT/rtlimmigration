@@ -217,7 +217,8 @@ const label = 'mb-2 block text-sm leading-[19.5px] font-medium text-site-ink';
 </script>
 
 <template>
-    <div>
+    <!-- In the popup the thread fills the space left, so only the thread scrolls, not the popup too. -->
+    <div :class="compact ? 'flex min-h-0 flex-1 flex-col' : ''">
         <p
             class="text-[11px] font-semibold tracking-wide text-site-red uppercase"
         >
@@ -292,7 +293,9 @@ const label = 'mb-2 block text-sm leading-[19.5px] font-medium text-site-ink';
                 This chat has been paused. Please contact us by email or phone.
             </p>
 
-            <div class="mt-5">
+            <div
+                :class="compact ? 'mt-4 flex min-h-0 flex-1 flex-col' : 'mt-5'"
+            >
                 <MessageThread
                     :thread="thread"
                     :messages-url="messagesIndex.url()"
