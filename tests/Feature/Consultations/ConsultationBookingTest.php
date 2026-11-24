@@ -549,3 +549,14 @@ it('never fails a saved booking because the team notification or the email faile
 
     expect(ConsultationBooking::count())->toBe(1);
 });
+
+it('words the confirmation by whether a meeting link exists yet', function () {
+    $booking = cbPending();
+
+    $without = (new ConsultationMail($booking, 'confirmed'))->render();
+    expect($without)->toContain('We will email you the meeting link before your appointment.')->not->toContain('Join the video consultation');
+
+    $booking->forceFill(['meeting_provider' => 'zoom', 'meeting_url' => 'https://zoom.us/j/1'])->save();
+    $with = (new ConsultationMail($booking->fresh(), 'confirmed'))->render();
+    expect($with)->toContain('Your meeting link is below.')->toContain('https://zoom.us/j/1')->toContain('Join the video consultation');
+});

@@ -55,7 +55,9 @@ class ConsultationMail extends Mailable implements ShouldQueue
 
         [$heading, $lines] = match ($this->kind) {
             'received' => [__('We received your request'), [__('Thank you for booking a video consultation. Our team will review your request and email you when it is confirmed. Nothing is confirmed until then.')]],
-            'confirmed' => [__('Your consultation is confirmed'), [__('Your video consultation is confirmed. We will email the meeting link if it is not below.')]],
+            'confirmed' => [__('Your consultation is confirmed'), [$b->meeting_url !== null
+                ? __('Your video consultation is confirmed. Your meeting link is below.')
+                : __('Your video consultation is confirmed. We will email you the meeting link before your appointment.')]],
             'meeting' => [__('Your meeting link'), [__('Here are the details for your video consultation.')]],
             'rescheduled' => [__('Your consultation was rescheduled'), [__('Your appointment has moved to a new time. Please note the new details below.')]],
             'cancelled' => [__('Your consultation was cancelled'), array_filter([__('Your video consultation has been cancelled.'), (string) ($this->extra['reason'] ?? '')])],
