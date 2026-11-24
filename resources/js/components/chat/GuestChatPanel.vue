@@ -9,6 +9,8 @@ import {
     watch,
 } from 'vue';
 import MessageThread from '@/components/chat/MessageThread.vue';
+import PhoneInput from '@/components/chat/PhoneInput.vue';
+import type { Country } from '@/components/chat/PhoneInput.vue';
 import { headers, holdReply, uuid } from '@/composables/useMessageThread';
 import { renderTurnstile } from '@/lib/turnstile';
 import { contact } from '@/routes';
@@ -32,6 +34,8 @@ export type GuestChatState = {
     thread: (PortalThread & { status: string | null }) | null;
     composer: ChatComposerLimits;
     formToken: string;
+    countries: Country[];
+    defaultCountry: string;
     captcha: { siteKey: string | null; required: boolean };
     canLink: boolean;
     portalChatUrl: string | null;
@@ -42,7 +46,12 @@ const emit = defineEmits<{ started: [] }>();
 
 /* ---------------- Start form ---------------- */
 
-const form = reactive({ name: '', email: '', body: '', website: '' });
+const form = reactive({
+    name: '',
+    phone: '',
+    country: props.defaultCountry,
+    website: '',
+});
 const errors = ref<Record<string, string>>({});
 const notice = ref<string | null>(null);
 const sending = ref(false);
@@ -91,6 +100,15 @@ async function startChat(): Promise<void> {
     errors.value = {};
     notice.value = null;
 
+    if (!form.name.trim() || !form.phone.trim()) {
+        errors.value = {
+            ...(form.name.trim() ? {} : { name: 'Enter your full name.' }),
+            ...(form.phone.trim() ? {} : { phone: 'Enter your phone number.' }),
+        };
+
+        return;
+    }
+
     if (needsCaptcha.value && !startToken.value) {
         notice.value = 'Please complete the security check.';
 
@@ -106,7 +124,6 @@ async function startChat(): Promise<void> {
             credentials: 'same-origin',
             body: JSON.stringify({
                 ...form,
-                email: form.email || null,
                 form_token: props.formToken,
                 captcha_token: startToken.value,
                 client_id: uuid(),
@@ -119,7 +136,7 @@ async function startChat(): Promise<void> {
             };
 
             // Show the typing indicator before the automatic reply appears.
-            if (created.auto_reply) {
+            if (created.auto_reply && created.auto_reply.typing_ms > 0) {
                 holdReply(
                     created.auto_reply.message.id,
                     created.auto_reply.typing_ms,
@@ -290,7 +307,7 @@ const label = 'mb-2 block text-sm leading-[19.5px] font-medium text-site-ink';
                 class="mt-4 rounded-[10px] border border-site-red/30 bg-site-red/5 p-3 text-sm text-site-red"
                 role="status"
             >
-                This chat has been paused. Please contact us by email or phone.
+                This chat has been paused. Please contact us by phone.
             </p>
 
             <div
@@ -331,7 +348,7 @@ const label = 'mb-2 block text-sm leading-[19.5px] font-medium text-site-ink';
             @submit.prevent="startChat"
         >
             <div>
-                <label for="gc-name" :class="label">Your name *</label>
+                <label for="gc-name" :class="label">Full name *</label>
                 <input
                     id="gc-name"
                     v-model="form.name"
@@ -352,47 +369,25 @@ const label = 'mb-2 block text-sm leading-[19.5px] font-medium text-site-ink';
                 </p>
             </div>
             <div>
-                <label for="gc-email" :class="label">Email (optional)</label>
-                <input
-                    id="gc-email"
-                    v-model="form.email"
-                    type="email"
-                    autocomplete="email"
-                    maxlength="255"
-                    :class="field"
-                    :aria-invalid="!!errors.email || undefined"
-                    aria-describedby="gc-email-err"
+                <label for="gc-phone" :class="label">Phone number *</label>
+                <PhoneInput
+                    id="gc-phone"
+                    v-model:country="form.country"
+                    v-model:phone="form.phone"
+                    :countries="countries"
+                    :field-class="field"
+                    :invalid="!!errors.phone"
+                    described-by="gc-phone-err"
                 />
                 <p
-                    v-if="errors.email"
-                    id="gc-email-err"
+                    v-if="errors.phone"
+                    id="gc-phone-err"
                     class="mt-1.5 text-xs text-site-red"
+                    role="alert"
                 >
-                    {{ errors.email }}
+                    {{ errors.phone }}
                 </p>
             </div>
-            <div :class="span">
-                <label for="gc-body" :class="label">How can we help? *</label>
-                <textarea
-                    id="gc-body"
-                    v-model="form.body"
-                    rows="4"
-                    :maxlength="composer.max_body"
-                    required
-                    placeholder="Tell us what you'd like to study, where, and any questions you have…"
-                    :class="[field, 'h-[120px] resize-y py-[13px]']"
-                    :aria-invalid="!!errors.body || undefined"
-                    aria-describedby="gc-body-err"
-                />
-                <p
-                    v-if="errors.body"
-                    id="gc-body-err"
-                    class="mt-1.5 text-xs text-site-red"
-                >
-                    {{ errors.body }}
-                </p>
-            </div>
-
             <!-- Honeypot: hidden from people and screen readers. -->
             <div class="absolute -left-[9999px]" aria-hidden="true">
                 <label for="gc-website">Website</label>

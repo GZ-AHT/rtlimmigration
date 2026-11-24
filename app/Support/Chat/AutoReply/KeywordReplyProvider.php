@@ -13,9 +13,14 @@ class KeywordReplyProvider implements ReplyProvider
 {
     public function __construct(private AutoReplySettings $settings) {}
 
+    public function needsHuman(ChatConversation $conversation, string $message): bool
+    {
+        return KeywordMatcher::matchesAny($message, $this->settings->handoverKeywords());
+    }
+
     public function reply(ChatConversation $conversation, string $message): ?string
     {
-        $text = self::normalize($message);
+        $text = KeywordMatcher::normalize($message);
         $best = null;
         $bestScore = 0;
 
@@ -27,7 +32,7 @@ class KeywordReplyProvider implements ReplyProvider
             $score = 0;
 
             foreach ($rule['keywords'] as $keyword) {
-                $score += self::score($text, self::normalize($keyword));
+                $score += KeywordMatcher::score($text, $keyword);
             }
 
             // Strictly greater: on a tie the rule listed first wins.
@@ -38,22 +43,5 @@ class KeywordReplyProvider implements ReplyProvider
         }
 
         return $best;
-    }
-
-    private static function normalize(string $text): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', mb_strtolower($text)));
-    }
-
-    private static function score(string $text, string $keyword): int
-    {
-        if ($keyword === '') {
-            return 0;
-        }
-
-        // Letters, digits and combining marks (Bangla vowel signs) count as part of a word.
-        $pattern = '/(?<![\p{L}\p{N}\p{M}])'.preg_quote($keyword, '/').'(?![\p{L}\p{N}\p{M}])/u';
-
-        return preg_match($pattern, $text) === 1 ? 2 * (substr_count($keyword, ' ') + 1) : 0;
     }
 }

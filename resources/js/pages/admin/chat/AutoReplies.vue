@@ -5,10 +5,13 @@ import AppIcon from '@/components/panel/AppIcon.vue';
 import FormField from '@/components/panel/FormField.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
 import PanelCard from '@/components/panel/PanelCard.vue';
+import ImageField from '@/components/cms/ImageField.vue';
+import SelectInput from '@/components/panel/SelectInput.vue';
 import TextArea from '@/components/panel/TextArea.vue';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import type { MediaItem, Option } from '@/types';
 import { autoReplies } from '@/routes/admin/chat';
 import { update } from '@/routes/admin/chat/auto-replies';
 
@@ -26,8 +29,16 @@ const props = defineProps<{
         enabled: boolean;
         assistant_name: string;
         fallback: string;
+        welcome: string;
         rules: Rule[];
+        handover_enabled: boolean;
+        handover_agent_name: string;
+        handover_agent_id: number | null;
+        handover_avatar: MediaItem | null;
+        handover_message: string;
+        handover_keywords: string[];
     };
+    agents: Option[];
     limits: { rules: number; keywords: number; reply: number };
 }>();
 
@@ -51,7 +62,14 @@ const form = reactive({
     enabled: props.settings.enabled,
     assistant_name: props.settings.assistant_name,
     fallback: props.settings.fallback,
+    welcome: props.settings.welcome,
     rules: props.settings.rules.map(toRow),
+    handover_enabled: props.settings.handover_enabled,
+    handover_agent_name: props.settings.handover_agent_name,
+    handover_agent_id: String(props.settings.handover_agent_id ?? ''),
+    handover_avatar: props.settings.handover_avatar as MediaItem | null,
+    handover_message: props.settings.handover_message,
+    handover_keywords: props.settings.handover_keywords.join(', '),
 });
 const saving = ref(false);
 const errors = ref<Record<string, string>>({});
@@ -83,6 +101,18 @@ function save(): void {
             enabled: form.enabled,
             assistant_name: form.assistant_name,
             fallback: form.fallback,
+            welcome: form.welcome,
+            handover_enabled: form.handover_enabled,
+            handover_agent_name: form.handover_agent_name,
+            handover_agent_id: form.handover_agent_id
+                ? Number(form.handover_agent_id)
+                : null,
+            handover_avatar: form.handover_avatar?.id ?? null,
+            handover_message: form.handover_message,
+            handover_keywords: form.handover_keywords
+                .split(/[,\n]/)
+                .map((k) => k.trim())
+                .filter(Boolean),
             rules: form.rules.map((r) => ({
                 id: r.id,
                 name: r.name,
@@ -141,6 +171,20 @@ function save(): void {
                     </template>
                 </FormField>
                 <FormField
+                    label="Opening greeting"
+                    :error="errors.welcome"
+                    hint="The first message in a new chat, since visitors only give their name and phone number. {site_name} becomes the website name."
+                >
+                    <template #default="{ id }">
+                        <TextArea
+                            :id="id"
+                            v-model="form.welcome"
+                            :rows="2"
+                            :maxlength="300"
+                        />
+                    </template>
+                </FormField>
+                <FormField
                     label="When nothing matches"
                     :error="errors.fallback"
                     hint="Sent once, when no reply below fits the message."
@@ -151,6 +195,82 @@ function save(): void {
                             v-model="form.fallback"
                             :rows="2"
                             :maxlength="limits.reply"
+                        />
+                    </template>
+                </FormField>
+            </div>
+        </PanelCard>
+
+        <PanelCard
+            title="Hand over to a person"
+            description="When a visitor asks for a person, the chat switches to human support and the assistant stops replying. The visitor sees a welcome from the agent below."
+        >
+            <div class="flex flex-col gap-4">
+                <label class="flex items-center gap-2 text-[13px]">
+                    <Checkbox
+                        :model-value="form.handover_enabled"
+                        @update:model-value="
+                            (v) => (form.handover_enabled = v === true)
+                        "
+                    />
+                    Switch to human support when a visitor asks for a person
+                </label>
+                <FormField
+                    label="Agent name"
+                    :error="errors.handover_agent_name"
+                    hint="Shown to the visitor, for example MD Hasnat."
+                >
+                    <template #default="{ id }">
+                        <Input
+                            :id="id"
+                            v-model="form.handover_agent_name"
+                            maxlength="60"
+                        />
+                    </template>
+                </FormField>
+                <FormField
+                    label="Support agent account"
+                    :error="errors.handover_agent_id"
+                    hint="The chat is assigned to this person. Their picture comes from the one below, or from their author profile (Blog → Authors)."
+                >
+                    <template #default="{ id }">
+                        <SelectInput
+                            :id="id"
+                            v-model="form.handover_agent_id"
+                            :options="agents"
+                            placeholder="No one in particular"
+                        />
+                    </template>
+                </FormField>
+                <ImageField
+                    v-model="form.handover_avatar"
+                    label="Agent profile picture"
+                    hint="Optional. Without a picture a professional default avatar is shown."
+                />
+                <FormField
+                    label="Welcome message"
+                    :error="errors.handover_message"
+                    hint="{agent_name} becomes the agent name."
+                >
+                    <template #default="{ id }">
+                        <TextArea
+                            :id="id"
+                            v-model="form.handover_message"
+                            :rows="2"
+                            :maxlength="300"
+                        />
+                    </template>
+                </FormField>
+                <FormField
+                    label="Words that ask for a person"
+                    :error="errors.handover_keywords"
+                    hint="Separate with commas, for example human, real person, talk to an adviser."
+                >
+                    <template #default="{ id }">
+                        <TextArea
+                            :id="id"
+                            v-model="form.handover_keywords"
+                            :rows="3"
                         />
                     </template>
                 </FormField>

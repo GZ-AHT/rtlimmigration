@@ -279,6 +279,7 @@ const columns = computed<TableColumn<ChatRow>[]>(() => [
                             row.subject ??
                             row.preview ??
                             row.visitor_email ??
+                            row.visitor_phone ??
                             '—'
                         }}</span
                     >

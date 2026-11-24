@@ -491,3 +491,34 @@
         animation: none;
     }
 }
+
+/* Video consultation popup: steps slide in the direction you are going. */
+.consult-fwd-enter-active,
+.consult-fwd-leave-active,
+.consult-back-enter-active,
+.consult-back-leave-active {
+    transition:
+        opacity 0.2s ease,
+        transform 0.2s ease;
+}
+
+.consult-fwd-enter-from,
+.consult-back-leave-to {
+    opacity: 0;
+    transform: translateX(24px);
+}
+
+.consult-fwd-leave-to,
+.consult-back-enter-from {
+    opacity: 0;
+    transform: translateX(-24px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .consult-fwd-enter-active,
+    .consult-fwd-leave-active,
+    .consult-back-enter-active,
+    .consult-back-leave-active {
+        transition: none;
+    }
+}

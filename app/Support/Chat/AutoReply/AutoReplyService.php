@@ -45,9 +45,13 @@ class AutoReplyService
 
         $messages = $conversation->chatMessages();
 
-        // A person has joined: stay out of the way.
-        if ((clone $messages)->where('sender_type', ChatMessage::STAFF)->exists()) {
+        // A person has joined (or was asked for): stay out of the way.
+        if ($conversation->handed_over_at !== null || (clone $messages)->where('sender_type', ChatMessage::STAFF)->exists()) {
             return null;
+        }
+
+        if ($this->settings->handoverEnabled() && $this->provider->needsHuman($conversation, (string) $visitorMessage->body)) {
+            return $this->handOver($conversation, $visitorMessage);
         }
 
         if ((clone $messages)->where('sender_type', ChatMessage::BOT)->where('created_at', '>=', now()->subHour())->count() >= self::PER_HOUR) {
@@ -67,6 +71,27 @@ class AutoReplyService
         }
 
         return $this->messaging->automated($conversation, $body, Uuid::uuid5(Uuid::NAMESPACE_URL, "chat-auto-reply:{$visitorMessage->id}")->toString());
+    }
+
+    /** The greeting a new chat opens with, once. Null when automatic replies are off or the greeting is blank. */
+    public function welcome(ChatConversation $conversation): ?ChatMessage
+    {
+        if (! $this->settings->enabled() || $conversation->kind !== ChatKind::Guest) {
+            return null;
+        }
+
+        $body = $this->render($this->settings->welcome());
+
+        return $body === '' ? null : $this->messaging->automated($conversation, $body, Uuid::uuid5(Uuid::NAMESPACE_URL, "chat-welcome:{$conversation->id}")->toString());
+    }
+
+    /** Switches the chat to human support with the welcome message from the support agent. */
+    private function handOver(ChatConversation $conversation, ChatMessage $visitorMessage): ?ChatMessage
+    {
+        $agent = SupportAgent::configured();
+        $welcome = trim(strtr($this->settings->handoverMessage(), ['{agent_name}' => SupportAgent::name($agent)]));
+
+        return $this->messaging->handover($conversation, $agent, $welcome, Uuid::uuid5(Uuid::NAMESPACE_URL, "chat-handover:{$visitorMessage->id}")->toString());
     }
 
     /** How long the typing indicator shows before the reply appears, in milliseconds. */

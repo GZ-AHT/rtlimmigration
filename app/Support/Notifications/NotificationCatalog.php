@@ -6,6 +6,9 @@ use App\Notifications\ApplicationUpdated;
 use App\Notifications\ChatActivity;
 use App\Notifications\ChatMessageReceived;
 use App\Notifications\ChatSecurityAlert;
+use App\Notifications\ConsultationBooked;
+use App\Notifications\ConsultationCancelled;
+use App\Notifications\ConsultationRescheduleRequested;
 use App\Notifications\DocumentReviewed;
 use App\Notifications\DocumentUploaded;
 use App\Notifications\FileOpeningFeeNeeded;
@@ -44,6 +47,9 @@ class NotificationCatalog
     /** @var array<class-string, array{label: string, category: string, mandatory: bool}> */
     public const TYPES = [
         NewLeadReceived::class => ['label' => 'New website enquiry', 'category' => 'system', 'mandatory' => false],
+        ConsultationBooked::class => ['label' => 'New consultation booking', 'category' => 'system', 'mandatory' => false],
+        ConsultationCancelled::class => ['label' => 'Consultation cancelled by the customer', 'category' => 'system', 'mandatory' => false],
+        ConsultationRescheduleRequested::class => ['label' => 'Consultation reschedule requested', 'category' => 'system', 'mandatory' => false],
         PartnerApplicationReceived::class => ['label' => 'New partner application', 'category' => 'system', 'mandatory' => false],
         SecurityAlert::class => ['label' => 'Security alert', 'category' => 'system', 'mandatory' => true],
         ChatSecurityAlert::class => ['label' => 'Chat security alert', 'category' => 'system', 'mandatory' => true],

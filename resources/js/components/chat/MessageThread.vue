@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { toast } from 'vue-sonner';
+import ChatAvatar from '@/components/chat/ChatAvatar.vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import { Button } from '@/components/ui/button';
 import { useMessageThread } from '@/composables/useMessageThread';
@@ -27,6 +28,8 @@ const props = defineProps<{
     emptyText: string;
     placeholder?: string;
     onCaptchaRequired?: () => Promise<string | null>;
+    /** Staff only: where to report that the agent is typing. */
+    typingUrl?: string;
     /** Shorter message area, for the website chat popup. */
     compact?: boolean;
 }>();
@@ -41,9 +44,11 @@ const thread = useMessageThread({
     perspective: props.perspective,
     senderName: props.senderName,
     onCaptchaRequired: props.onCaptchaRequired,
+    typingUrl: props.typingUrl,
 });
 
-const { visible, typing, hasMore, loadingEarlier, offline } = thread;
+const { visible, typing, agentTyping, hasMore, loadingEarlier, offline } =
+    thread;
 
 // Messages already on screen when the thread opened do not animate in.
 const initialKeys = new Set(visible.value.map((m) => m.key));
@@ -73,7 +78,7 @@ function onScroll(): void {
 
 // Follow new messages only when the reader is already at the bottom.
 watch(
-    () => [visible.value.length, typing.value],
+    () => [visible.value.length, typing.value, !!agentTyping.value],
     () => {
         if (nearBottom.value) {
             scrollToBottom(true);
@@ -235,136 +240,195 @@ function size(bytes: number): string {
                 </p>
                 <div
                     v-else
-                    class="flex max-w-[88%] flex-col sm:max-w-[75%]"
+                    class="flex max-w-[92%] items-end gap-2 sm:max-w-[80%]"
                     :class="[
-                        isMine(m) ? 'items-end self-end' : 'self-start',
+                        isMine(m) ? 'self-end' : 'self-start',
                         isNew(m) ? 'chat-msg-in' : '',
                     ]"
                 >
-                    <span class="mb-0.5 px-1 text-[11px] text-muted-foreground">
-                        <b class="font-semibold text-foreground">{{
-                            isMine(m) ? 'You' : m.sender_name
-                        }}</b>
-                        · {{ formatDateTime(m.created_at) }}
-                        <span
-                            v-if="m.automated"
-                            class="ml-1 inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-px text-[10px] font-semibold text-muted-foreground"
-                            title="This is an automatic reply, not a person."
-                            ><AppIcon
-                                name="smart_toy"
-                                :size="11"
-                            />Automated</span
-                        >
-                        <span
-                            v-if="staffBadge(m)"
-                            class="ml-1 inline-flex items-center gap-0.5 rounded bg-warning-soft px-1.5 py-px text-[10px] font-semibold text-warning"
-                            :title="
-                                m.moderation.reasons.join(', ') || undefined
-                            "
-                            ><AppIcon name="flag" :size="11" />{{
-                                staffBadge(m)
-                            }}</span
-                        >
-                    </span>
-                    <p
-                        v-if="isRedacted(m)"
-                        class="rounded-2xl rounded-bl-md border border-dashed px-3.5 py-2.5 text-[12px] text-muted-foreground italic"
-                    >
-                        <AppIcon
-                            name="shield"
-                            :size="13"
-                            class="align-[-2px]"
-                        />
-                        This message is held by the safety checks and is waiting
-                        for a moderator.
-                    </p>
+                    <ChatAvatar
+                        v-if="!isMine(m) && (m.human || m.automated)"
+                        :kind="m.human ? 'human' : 'bot'"
+                        :src="m.avatar"
+                        :name="m.sender_name"
+                        class="mb-5"
+                    />
                     <div
-                        v-else
-                        class="flex flex-col gap-1.5 rounded-2xl px-3.5 py-2.5 text-[13px] break-words"
-                        :class="[
-                            isMine(m)
-                                ? 'rounded-br-md bg-primary text-primary-foreground'
-                                : 'rounded-bl-md bg-muted text-foreground',
-                            m.state === 'sending' ? 'opacity-70' : '',
-                            m.state === 'failed' ? 'ring-2 ring-danger/60' : '',
-                            m.moderation.state === 'not_delivered'
-                                ? 'opacity-60'
-                                : '',
-                        ]"
+                        class="flex min-w-0 flex-col"
+                        :class="isMine(m) ? 'items-end' : ''"
                     >
-                        <span v-if="m.body" class="whitespace-pre-line">{{
-                            m.body
-                        }}</span>
-                        <template v-for="a in m.attachments" :key="a.id">
-                            <a
-                                v-if="a.url"
-                                :href="a.url"
-                                target="_blank"
-                                rel="noopener"
-                                class="inline-flex items-center gap-1.5 rounded-lg bg-background/15 px-2 py-1 text-[12px] font-semibold underline-offset-2 hover:underline"
-                                ><AppIcon name="attach_file" :size="15" />
-                                <span class="truncate">{{ a.name }}</span>
-                                <span class="shrink-0 font-normal opacity-75">{{
-                                    size(a.size)
-                                }}</span></a
+                        <span
+                            class="mb-0.5 px-1 text-[11px] text-muted-foreground"
+                        >
+                            <b class="font-semibold text-foreground">{{
+                                isMine(m) ? 'You' : m.sender_name
+                            }}</b>
+                            · {{ formatDateTime(m.created_at) }}
+                            <span
+                                v-if="m.automated"
+                                class="ml-1 inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-px text-[10px] font-semibold text-muted-foreground"
+                                title="This is an automatic reply, not a person."
+                                ><AppIcon
+                                    name="smart_toy"
+                                    :size="11"
+                                />Automated</span
                             >
                             <span
-                                v-else
-                                class="inline-flex items-center gap-1.5 text-[12px]"
-                                ><AppIcon name="attach_file" :size="15" />
-                                {{ a.name }}</span
+                                v-if="m.human && !isMine(m)"
+                                class="ml-1 inline-flex items-center gap-0.5 rounded bg-success-soft px-1.5 py-px text-[10px] font-semibold text-success"
+                                title="You are chatting with a person on our support team."
+                                ><AppIcon
+                                    name="support_agent"
+                                    :size="11"
+                                />Support team</span
                             >
-                        </template>
+                            <span
+                                v-if="staffBadge(m)"
+                                class="ml-1 inline-flex items-center gap-0.5 rounded bg-warning-soft px-1.5 py-px text-[10px] font-semibold text-warning"
+                                :title="
+                                    m.moderation.reasons.join(', ') || undefined
+                                "
+                                ><AppIcon name="flag" :size="11" />{{
+                                    staffBadge(m)
+                                }}</span
+                            >
+                        </span>
+                        <p
+                            v-if="isRedacted(m)"
+                            class="rounded-2xl rounded-bl-md border border-dashed px-3.5 py-2.5 text-[12px] text-muted-foreground italic"
+                        >
+                            <AppIcon
+                                name="shield"
+                                :size="13"
+                                class="align-[-2px]"
+                            />
+                            This message is held by the safety checks and is
+                            waiting for a moderator.
+                        </p>
+                        <div
+                            v-else
+                            class="flex flex-col gap-1.5 rounded-2xl px-3.5 py-2.5 text-[13px] break-words"
+                            :class="[
+                                isMine(m)
+                                    ? 'rounded-br-md bg-primary text-primary-foreground'
+                                    : m.human
+                                      ? 'rounded-bl-md border border-success/25 bg-success-soft text-foreground'
+                                      : 'rounded-bl-md bg-muted text-foreground',
+                                m.state === 'sending' ? 'opacity-70' : '',
+                                m.state === 'failed'
+                                    ? 'ring-2 ring-danger/60'
+                                    : '',
+                                m.moderation.state === 'not_delivered'
+                                    ? 'opacity-60'
+                                    : '',
+                            ]"
+                        >
+                            <span v-if="m.body" class="whitespace-pre-line">{{
+                                m.body
+                            }}</span>
+                            <template v-for="a in m.attachments" :key="a.id">
+                                <a
+                                    v-if="a.url"
+                                    :href="a.url"
+                                    target="_blank"
+                                    rel="noopener"
+                                    class="inline-flex items-center gap-1.5 rounded-lg bg-background/15 px-2 py-1 text-[12px] font-semibold underline-offset-2 hover:underline"
+                                    ><AppIcon name="attach_file" :size="15" />
+                                    <span class="truncate">{{ a.name }}</span>
+                                    <span
+                                        class="shrink-0 font-normal opacity-75"
+                                        >{{ size(a.size) }}</span
+                                    ></a
+                                >
+                                <span
+                                    v-else
+                                    class="inline-flex items-center gap-1.5 text-[12px]"
+                                    ><AppIcon name="attach_file" :size="15" />
+                                    {{ a.name }}</span
+                                >
+                            </template>
+                        </div>
+                        <span
+                            v-if="isMine(m)"
+                            class="mt-0.5 flex items-center gap-1 px-1 text-[11px]"
+                            :class="
+                                m.state === 'failed'
+                                    ? 'text-danger'
+                                    : 'text-muted-foreground'
+                            "
+                            :role="m.state === 'failed' ? 'alert' : undefined"
+                        >
+                            <template v-if="m.state === 'sending'"
+                                ><AppIcon name="schedule" :size="13" />
+                                Sending…</template
+                            >
+                            <template v-else-if="m.state === 'failed'">
+                                <AppIcon name="error" :size="13" />
+                                {{ m.error }}
+                                <button
+                                    type="button"
+                                    class="font-semibold underline"
+                                    @click="thread.retry(m)"
+                                >
+                                    Retry
+                                </button>
+                                <button
+                                    type="button"
+                                    class="underline"
+                                    @click="thread.discard(m)"
+                                >
+                                    Delete
+                                </button>
+                            </template>
+                            <template
+                                v-else-if="m.moderation.state === 'pending'"
+                                ><AppIcon name="hourglass_top" :size="13" />
+                                {{ m.moderation.label }}</template
+                            >
+                            <template
+                                v-else-if="
+                                    m.moderation.state === 'not_delivered'
+                                "
+                                ><span
+                                    class="flex items-center gap-1 text-danger"
+                                    ><AppIcon name="block" :size="13" />
+                                    {{ m.moderation.label }}</span
+                                ></template
+                            >
+                            <template v-else
+                                ><AppIcon name="done" :size="13" />
+                                Sent</template
+                            >
+                        </span>
                     </div>
-                    <span
-                        v-if="isMine(m)"
-                        class="mt-0.5 flex items-center gap-1 px-1 text-[11px]"
-                        :class="
-                            m.state === 'failed'
-                                ? 'text-danger'
-                                : 'text-muted-foreground'
-                        "
-                        :role="m.state === 'failed' ? 'alert' : undefined"
-                    >
-                        <template v-if="m.state === 'sending'"
-                            ><AppIcon name="schedule" :size="13" />
-                            Sending…</template
-                        >
-                        <template v-else-if="m.state === 'failed'">
-                            <AppIcon name="error" :size="13" />
-                            {{ m.error }}
-                            <button
-                                type="button"
-                                class="font-semibold underline"
-                                @click="thread.retry(m)"
-                            >
-                                Retry
-                            </button>
-                            <button
-                                type="button"
-                                class="underline"
-                                @click="thread.discard(m)"
-                            >
-                                Delete
-                            </button>
-                        </template>
-                        <template v-else-if="m.moderation.state === 'pending'"
-                            ><AppIcon name="hourglass_top" :size="13" />
-                            {{ m.moderation.label }}</template
-                        >
-                        <template
-                            v-else-if="m.moderation.state === 'not_delivered'"
-                            ><span class="flex items-center gap-1 text-danger"
-                                ><AppIcon name="block" :size="13" />
-                                {{ m.moderation.label }}</span
-                            ></template
-                        >
-                        <template v-else
-                            ><AppIcon name="done" :size="13" /> Sent</template
-                        >
-                    </span>
                 </div>
             </template>
+
+            <div
+                v-if="agentTyping && !typing"
+                class="chat-msg-in flex max-w-[92%] items-end gap-2 self-start sm:max-w-[80%]"
+                role="status"
+            >
+                <ChatAvatar
+                    kind="human"
+                    :src="agentTyping.avatar"
+                    :name="agentTyping.name"
+                    class="mb-5"
+                />
+                <div class="flex flex-col">
+                    <span class="mb-0.5 px-1 text-[11px] text-muted-foreground"
+                        >{{ agentTyping.name }} is typing…</span
+                    >
+                    <div
+                        class="flex items-center gap-1 rounded-2xl rounded-bl-md border border-success/25 bg-success-soft px-4 py-3.5"
+                        aria-hidden="true"
+                    >
+                        <span class="chat-dot" />
+                        <span class="chat-dot" style="animation-delay: 0.15s" />
+                        <span class="chat-dot" style="animation-delay: 0.3s" />
+                    </div>
+                </div>
+            </div>
 
             <div
                 v-if="typing"
@@ -448,6 +512,7 @@ function size(bytes: number): string {
                     aria-label="Message"
                     class="field-sizing-content max-h-40 min-h-9 flex-1 resize-none rounded-md border border-input bg-transparent px-3 py-2 text-[13px] shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                     @keydown="onKeydown"
+                    @input="thread.pingTyping()"
                 />
                 <Button
                     type="submit"

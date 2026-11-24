@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import BackToTop from '@/components/website/BackToTop.vue';
 import SiteFooter from '@/components/website/SiteFooter.vue';
 import SiteHeader from '@/components/website/SiteHeader.vue';
+import ConsultationModal from '@/components/website/ConsultationModal.vue';
 import SiteLaunchers from '@/components/website/SiteLaunchers.vue';
 import { Toaster } from '@/components/ui/sonner';
 import { useSite } from '@/composables/useSite';
@@ -106,6 +107,7 @@ const theme = computed(() => {
             class="max-sm:pb-[calc(4.75rem+env(safe-area-inset-bottom))]"
         />
         <SiteLaunchers />
+        <ConsultationModal />
         <BackToTop />
         <Toaster
             :mobile-offset="{

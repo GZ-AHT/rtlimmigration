@@ -250,6 +250,23 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::post('broken-links/scan', [Admin\Cms\BrokenLinkController::class, 'scan'])->middleware('throttle:3,1')->name('broken-links.scan');
         });
 
+        // Video consultations: bookings, calendar and availability
+        Route::prefix('consultations')->name('consultations.')->group(function () {
+            Route::get('/', [Admin\Consultations\ConsultationController::class, 'index'])->name('index');
+            Route::get('calendar', [Admin\Consultations\CalendarController::class, 'index'])->name('calendar');
+            Route::get('availability', [Admin\Consultations\AvailabilityController::class, 'edit'])->name('availability');
+            Route::put('availability', [Admin\Consultations\AvailabilityController::class, 'update'])->name('availability.update');
+            Route::get('{booking}', [Admin\Consultations\ConsultationController::class, 'show'])->whereNumber('booking')->name('show');
+            Route::post('{booking}/approve', [Admin\Consultations\ConsultationController::class, 'approve'])->whereNumber('booking')->name('approve');
+            Route::post('{booking}/reject', [Admin\Consultations\ConsultationController::class, 'reject'])->whereNumber('booking')->name('reject');
+            Route::post('{booking}/cancel', [Admin\Consultations\ConsultationController::class, 'cancel'])->whereNumber('booking')->name('cancel');
+            Route::post('{booking}/complete', [Admin\Consultations\ConsultationController::class, 'complete'])->whereNumber('booking')->name('complete');
+            Route::post('{booking}/reschedule', [Admin\Consultations\ConsultationController::class, 'reschedule'])->whereNumber('booking')->name('reschedule');
+            Route::put('{booking}/meeting', [Admin\Consultations\ConsultationController::class, 'meeting'])->whereNumber('booking')->name('meeting');
+            Route::post('{booking}/meeting/send', [Admin\Consultations\ConsultationController::class, 'sendMeeting'])->whereNumber('booking')->middleware('throttle:10,1')->name('meeting.send');
+            Route::post('{booking}/notes', [Admin\Consultations\ConsultationController::class, 'note'])->whereNumber('booking')->name('notes.store');
+        });
+
         // REQ §15 University Management
         Route::get('universities', [Admin\Universities\UniversityController::class, 'index'])->name('universities.index');
         Route::get('universities/create', [Admin\Universities\UniversityController::class, 'create'])->name('universities.create');

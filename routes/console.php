@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Consultations\ConsultationBookings;
 use App\Jobs\SyncInboxes;
 use App\Jobs\SyncMailboxes;
 use Illuminate\Support\Facades\DB;
@@ -38,3 +39,6 @@ Schedule::call(fn () => DB::table('otp_codes')->where('created_at', '<', now()->
 
 // REQ §3: bring new mail from the cPanel mailboxes into the dashboard (the "Sync" button runs the same code).
 Schedule::job(new SyncInboxes)->name('email:sync-inboxes')->everyFiveMinutes()->withoutOverlapping();
+
+// Video consultations: email the reminder for appointments starting within a day.
+Schedule::call(fn () => app(ConsultationBookings::class)->sendReminders())->name('consultations:remind')->hourly()->withoutOverlapping();

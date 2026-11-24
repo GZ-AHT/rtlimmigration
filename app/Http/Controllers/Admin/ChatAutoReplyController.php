@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Support\Chat\AutoReply\AutoReplySettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,6 +21,8 @@ class ChatAutoReplyController extends Controller
 
         return Inertia::render('admin/chat/AutoReplies', [
             'settings' => $settings->forAdmin(),
+            'agents' => User::query()->where('status', UserStatus::Active->value)->whereHas('roles')->orderBy('name')->get(['id', 'name'])
+                ->map(fn (User $u) => ['value' => (string) $u->id, 'label' => $u->name])->values()->all(),
             'limits' => [
                 'rules' => AutoReplySettings::MAX_RULES,
                 'keywords' => AutoReplySettings::MAX_KEYWORDS,
@@ -35,6 +39,14 @@ class ChatAutoReplyController extends Controller
             'enabled' => ['required', 'boolean'],
             'assistant_name' => ['required', 'string', 'max:40'],
             'fallback' => ['required', 'string', 'max:'.AutoReplySettings::MAX_REPLY],
+            'welcome' => ['required', 'string', 'max:300'],
+            'handover_enabled' => ['required', 'boolean'],
+            'handover_agent_name' => ['required', 'string', 'max:60'],
+            'handover_agent_id' => ['nullable', 'integer', 'exists:users,id'],
+            'handover_avatar' => ['nullable', 'integer', 'exists:media,id'],
+            'handover_message' => ['required', 'string', 'max:300'],
+            'handover_keywords' => ['present', 'array', 'max:'.AutoReplySettings::MAX_KEYWORDS * 2],
+            'handover_keywords.*' => ['required', 'string', 'max:60'],
             'rules' => ['present', 'array', 'max:'.AutoReplySettings::MAX_RULES],
             'rules.*.id' => ['nullable', 'string', 'max:40'],
             'rules.*.name' => ['required', 'string', 'max:80'],

@@ -8,6 +8,7 @@ use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\ChatMessageAttachment;
 use App\Support\Chat\AutoReply\AutoReplySettings;
+use App\Support\Chat\AutoReply\SupportAgent;
 use App\Support\Chat\ChatSecuritySettings;
 use App\Support\Chat\Security\ContentInspector;
 use Closure;
@@ -28,6 +29,8 @@ class ChatPresenter
             'status_tone' => $c->status->toneFor($c->kind),
             'visitor' => $c->visitorLabel(),
             'visitor_email' => $c->visitor_email,
+            'visitor_phone' => $c->visitor_phone,
+            'handed_over' => $c->handed_over_at !== null,
             'location' => implode(', ', array_filter([$c->visitor_city, $c->visitor_country])) ?: null,
             'subject' => $c->subject,
             'preview' => $c->first_message ? (string) str($c->first_message)->squish()->limit(140) : null,
@@ -90,8 +93,14 @@ class ChatPresenter
                 ChatMessage::SYSTEM => null,
                 ChatMessage::BOT => app(AutoReplySettings::class)->assistantName(),
                 ChatMessage::VISITOR => $viewer['visitor_name'] ?? __('Visitor'),
+                ChatMessage::STAFF => $m->user === null && $m->user_id === null ? SupportAgent::name(null) : ($m->user ? SupportAgent::name($m->user) : __('Former user')),
                 default => $m->user->name ?? __('Former user'),
             },
+            'avatar' => match ($m->sender_type) {
+                ChatMessage::STAFF => SupportAgent::avatarUrl($m->user),
+                default => null,
+            },
+            'human' => $m->sender_type === ChatMessage::STAFF,
             'body' => $redacted ? null : $m->body,
             'attachments' => $redacted ? [] : $m->attachments->map(fn (ChatMessageAttachment $a) => [
                 'id' => $a->id,

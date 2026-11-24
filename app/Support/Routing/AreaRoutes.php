@@ -101,6 +101,7 @@ class AreaRoutes
             // Portal threads and website chats: polled every few seconds while open.
             Route::get('chat/{conversation}/messages', [Chat\ChatMessageController::class, 'index'])->whereNumber('conversation')->middleware('throttle:120,1')->name('chat.messages.index');
             Route::post('chat/{conversation}/messages', [Chat\ChatMessageController::class, 'store'])->whereNumber('conversation')->middleware('throttle:30,1')->name('chat.messages.store');
+            Route::post('chat/{conversation}/typing', [Chat\ChatMessageController::class, 'typing'])->whereNumber('conversation')->middleware('throttle:60,1')->name('chat.typing');
             Route::get('chat/attachments/{attachment}', [Chat\ChatMessageController::class, 'attachment'])->whereNumber('attachment')->name('chat.attachments.show');
         });
     }

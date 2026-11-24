@@ -110,7 +110,8 @@ class PortalMessaging
             [$message, $previousLastId] = DB::transaction(function () use ($conversation, $sender, $senderType, $body, $stored, $clientId, $verdict) {
                 // Serialises writers on this thread so IDs, counts and the last-message pointer agree.
                 $locked = ChatConversation::query()->lockForUpdate()->findOrFail($conversation->id);
-                $previousLastId = (int) $locked->last_message_id;
+                // The assistant's own replies are not something a person has to read, so they do not count here.
+                $previousLastId = (int) $locked->chatMessages()->where('sender_type', '!=', ChatMessage::BOT)->max('id');
 
                 $message = $locked->chatMessages()->create([
                     'seq' => ++$locked->last_seq,
@@ -209,9 +210,10 @@ class PortalMessaging
 
     /**
      * An automatic reply. Stored once per $clientId (a retry returns the first one), and it
-     * notifies no one, reopens nothing and is not moderated: it is our own text.
+     * notifies no one, reopens nothing and is not moderated: it is our own text. Null when the
+     * chat has been handed to a person meanwhile: the assistant never talks over them.
      */
-    public function automated(ChatConversation $conversation, string $body, string $clientId): ChatMessage
+    public function automated(ChatConversation $conversation, string $body, string $clientId): ?ChatMessage
     {
         if ($existing = $this->findByClientId($conversation, $clientId)) {
             return $existing;
@@ -220,6 +222,11 @@ class PortalMessaging
         try {
             $message = DB::transaction(function () use ($conversation, $body, $clientId) {
                 $locked = ChatConversation::query()->lockForUpdate()->findOrFail($conversation->id);
+
+                if ($locked->handed_over_at !== null) {
+                    return null;
+                }
+
                 $message = $locked->chatMessages()->create(['seq' => ++$locked->last_seq, 'sender_type' => ChatMessage::BOT, 'body' => $body, 'client_id' => $clientId]);
                 $locked->forceFill(['last_message_id' => $message->id, 'last_message_at' => $message->created_at, 'message_count' => $locked->message_count + 1])->save();
                 $conversation->setRawAttributes($locked->getAttributes(), true);
@@ -228,6 +235,47 @@ class PortalMessaging
             });
         } catch (UniqueConstraintViolationException $e) {
             return $this->findByClientId($conversation, $clientId) ?? throw $e;
+        }
+
+        if ($message === null) {
+            return null;
+        }
+
+        $message->load(['attachments', 'user:id,name']);
+        ChatMessagePosted::dispatch($message);
+
+        return $message;
+    }
+
+    /**
+     * Hands the chat from the assistant to a person: marks it, assigns the agent when the
+     * chat has no one yet, and posts the welcome message as a staff message (so automatic
+     * replies stop). Done once; null when the chat was already handed over.
+     */
+    public function handover(ChatConversation $conversation, ?User $agent, string $welcome, string $clientId): ?ChatMessage
+    {
+        $message = DB::transaction(function () use ($conversation, $agent, $welcome, $clientId) {
+            $locked = ChatConversation::query()->lockForUpdate()->findOrFail($conversation->id);
+
+            if ($locked->handed_over_at !== null) {
+                return null;
+            }
+
+            $message = $locked->chatMessages()->create(['seq' => ++$locked->last_seq, 'user_id' => $agent?->id, 'sender_type' => ChatMessage::STAFF, 'body' => $welcome, 'client_id' => $clientId]);
+            $locked->forceFill([
+                'handed_over_at' => now(),
+                'assigned_to' => $locked->assigned_to ?? $agent?->id,
+                'last_message_id' => $message->id,
+                'last_message_at' => $message->created_at,
+                'message_count' => $locked->message_count + 1,
+            ])->save();
+            $conversation->setRawAttributes($locked->getAttributes(), true);
+
+            return $message;
+        });
+
+        if ($message === null) {
+            return null;
         }
 
         $message->load(['attachments', 'user:id,name']);

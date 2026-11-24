@@ -284,10 +284,10 @@ class OperationalReports
                 ['label' => 'Messages per chat', 'value' => $total > 0 ? round($messages / $total, 1) : '—'],
             ],
             'breakdowns' => [$this->breakdown('By type', $byKind), $this->breakdown('By status', $byStatus)],
-            'headings' => ['Reference', 'Started', 'Type', 'Visitor', 'Email', 'Status', 'Messages', 'Assigned to', 'Last message'],
+            'headings' => ['Reference', 'Started', 'Type', 'Visitor', 'Email', 'Phone', 'Status', 'Messages', 'Assigned to', 'Last message'],
             'rows' => $base()->with('assignee')->latest('chat_conversations.id')->lazy(500)->map(fn (ChatConversation $c) => [
                 $c->reference, $c->created_at?->format('Y-m-d H:i'), ucfirst(str_replace('_', ' ', $c->kind->value)),
-                $c->visitor_name, $c->visitor_email, $c->status->label(), (int) $c->message_count, $c->assignee?->name, $c->last_message_at?->format('Y-m-d H:i'),
+                $c->visitor_name, $c->visitor_email, $c->visitor_phone, $c->status->label(), (int) $c->message_count, $c->assignee?->name, $c->last_message_at?->format('Y-m-d H:i'),
             ]),
         ];
     }

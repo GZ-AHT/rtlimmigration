@@ -12,6 +12,7 @@ use App\Http\Controllers\NotificationPreferenceController;
 use App\Http\Controllers\Payments\GatewayController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Website\BlogController;
+use App\Http\Controllers\Website\ConsultationController;
 use App\Http\Controllers\Website\EnquiryController;
 use App\Http\Controllers\Website\GuestChatController;
 use App\Http\Controllers\Website\NewsletterController;
@@ -77,6 +78,17 @@ Route::get('email/c/{message}', [EmailTrackingController::class, 'click'])->midd
 
 // REQ §11 website chat for visitors without an account. CSRF-protected like
 // every web route; the visitor's chat is found from their session cookie.
+// Video consultation booking popup (verify email, pick a time) and the customer's signed manage page.
+Route::post('consultation/code', [ConsultationController::class, 'sendCode'])->middleware('throttle:6,1')->name('consultation.code');
+Route::post('consultation/verify', [ConsultationController::class, 'verifyCode'])->middleware('throttle:12,1')->name('consultation.verify');
+Route::get('consultation/availability', [ConsultationController::class, 'availability'])->middleware('throttle:60,1')->name('consultation.availability');
+Route::post('consultation/book', [ConsultationController::class, 'book'])->middleware('throttle:10,1')->name('consultation.book');
+Route::middleware(['signed', 'throttle:30,1'])->group(function () {
+    Route::get('consultation/manage/{reference}', [ConsultationController::class, 'manage'])->middleware(ShareWebsiteData::class)->where('reference', 'CB-[A-Z0-9]{6}')->name('consultation.manage');
+    Route::post('consultation/manage/{reference}/cancel', [ConsultationController::class, 'cancel'])->where('reference', 'CB-[A-Z0-9]{6}')->name('consultation.manage.cancel');
+    Route::post('consultation/manage/{reference}/reschedule', [ConsultationController::class, 'reschedule'])->where('reference', 'CB-[A-Z0-9]{6}')->name('consultation.manage.reschedule');
+});
+
 Route::get('chat', [GuestChatController::class, 'show'])->middleware(ShareWebsiteData::class)->name('chat.guest');
 Route::get('chat/widget', [GuestChatController::class, 'widget'])->middleware('throttle:60,1')->name('chat.guest.widget');
 Route::post('chat/start', [GuestChatController::class, 'start'])->middleware('throttle:10,1')->name('chat.guest.start');

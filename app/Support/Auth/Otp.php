@@ -23,6 +23,9 @@ class Otp
 
     public const PASSWORD_RESET = 'password_reset';
 
+    /** Confirms an email address before a video consultation is booked (no account needed). */
+    public const BOOKING = 'booking';
+
     public const TTL_MINUTES = 5;
 
     public const COOLDOWN_SECONDS = 60;
@@ -52,9 +55,11 @@ class Otp
      * Pass no user for an unknown address: nothing is sent but the cooldown
      * still starts, so the response never reveals whether the address exists.
      *
+     * A purpose that works for anyone (booking) passes $name instead of a user, and always sends.
+     *
      * @return int seconds to wait (0 = a code was sent or pretended to be)
      */
-    public function send(string $email, string $purpose, ?User $user): int
+    public function send(string $email, string $purpose, ?User $user, ?string $name = null): int
     {
         $email = Str::lower($email);
 
@@ -65,7 +70,7 @@ class Otp
         Cache::put($this->cooldownKey($email, $purpose), time() + self::COOLDOWN_SECONDS, self::COOLDOWN_SECONDS);
         Cache::forget($this->failKey($email, $purpose));
 
-        if (! $user) {
+        if (! $user && $name === null) {
             return 0;
         }
 
@@ -80,7 +85,7 @@ class Otp
             'expires_at' => now()->addMinutes(self::TTL_MINUTES),
         ]);
 
-        Mail::to($user->email)->send(new OtpMail($user->name, $code, $purpose));
+        Mail::to($user->email ?? $email)->send(new OtpMail($user->name ?? (string) $name, $code, $purpose));
 
         return 0;
     }

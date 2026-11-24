@@ -31,6 +31,8 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property string|null $property_name
  * @property string|null $visitor_name
  * @property string|null $visitor_email
+ * @property string|null $visitor_phone website chat phone number, E.164
+ * @property CarbonInterface|null $handed_over_at when the chat was handed from the assistant to a person
  * @property string|null $visitor_city
  * @property string|null $visitor_country
  * @property string|null $subject
@@ -55,7 +57,7 @@ use Spatie\Activitylog\Support\LogOptions;
  * @property-read ChatGuest|null $guest
  */
 #[Fillable([
-    'kind', 'external_id', 'reference', 'status', 'property_id', 'property_name', 'visitor_name', 'visitor_email',
+    'kind', 'external_id', 'reference', 'status', 'property_id', 'property_name', 'visitor_name', 'visitor_email', 'visitor_phone', 'handed_over_at',
     'visitor_city', 'visitor_country', 'subject', 'first_message', 'messages', 'message_count', 'tags',
     'student_id', 'lead_id', 'assigned_to', 'started_at', 'ended_at', 'last_message_id', 'last_message_at', 'last_seq',
 ])]
@@ -80,6 +82,7 @@ class ChatConversation extends Model
             'last_seq' => 'integer',
             'last_message_at' => 'datetime',
             'started_at' => 'datetime',
+            'handed_over_at' => 'datetime',
             'ended_at' => 'datetime',
         ];
     }
@@ -168,7 +171,7 @@ class ChatConversation extends Model
 
     public function visitorLabel(): string
     {
-        return $this->visitor_name ?: ($this->visitor_email ?: __('Visitor'));
+        return $this->visitor_name ?: ($this->visitor_email ?: ($this->visitor_phone ?: __('Visitor')));
     }
 
     /**

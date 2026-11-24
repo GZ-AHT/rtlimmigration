@@ -69,7 +69,11 @@ export const headers = (): Record<string, string> => ({
 
 type ErrorBody = {
     message?: PortalMessage | string;
-    auto_reply?: { message: PortalMessage; typing_ms: number };
+    auto_reply?: {
+        message: PortalMessage;
+        typing_ms: number;
+        handover: boolean;
+    };
     errors?: Record<string, string[]>;
     captcha_required?: boolean;
 };
@@ -87,6 +91,8 @@ export function useMessageThread(options: {
     onIncoming?: () => void;
     /** Asked for a CAPTCHA token when the server requires one (website chat). */
     onCaptchaRequired?: () => Promise<string | null>;
+    /** Staff only: pinged while typing, so the visitor sees "… is typing". */
+    typingUrl?: string;
 }) {
     const messages = ref<ThreadMessage[]>(
         options.initial.messages.map(fromServer),
@@ -96,8 +102,13 @@ export function useMessageThread(options: {
     const loadingEarlier = ref(false);
     const offline = ref(false);
     const status = ref<string | null>(null);
+    /** The team member who is typing a reply right now (shown to visitors and students only). */
+    const agentTyping = ref<{ name: string; avatar: string | null } | null>(
+        null,
+    );
 
-    let timer: ReturnType<typeof setInterval> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let lastPing = 0;
     let inFlight: AbortController | null = null;
 
     /** Adds or replaces messages by server ID or client ID; keeps ID order. */
@@ -156,9 +167,11 @@ export function useMessageThread(options: {
                 messages: PortalMessage[];
                 cursor: number;
                 status: string | null;
+                typing?: { name: string; avatar: string | null } | null;
             };
 
             offline.value = false;
+            agentTyping.value = data.typing ?? null;
             status.value = data.status;
             cursor.value = Math.max(cursor.value, data.cursor);
             const known = new Set(messages.value.map((m) => m.id));
@@ -342,13 +355,42 @@ export function useMessageThread(options: {
         }
     }
 
+    /** Staff: tell the server they are typing (at most every 3 seconds). */
+    function pingTyping(): void {
+        if (!options.typingUrl || Date.now() - lastPing < 3000) {
+            return;
+        }
+
+        lastPing = Date.now();
+        void fetch(options.typingUrl, {
+            method: 'POST',
+            headers: headers(),
+            credentials: 'same-origin',
+        }).catch(() => undefined);
+    }
+
+    // Poll faster once a person is in the chat, so their replies and typing show quickly.
+    function nextDelay(): number {
+        return options.perspective !== 'staff' &&
+            (agentTyping.value || messages.value.some((m) => m.human))
+            ? 2500
+            : POLL_MS;
+    }
+
+    function schedule(): void {
+        timer = setTimeout(async () => {
+            await refresh();
+            schedule();
+        }, nextDelay());
+    }
+
     onMounted(() => {
-        timer = setInterval(() => void refresh(), POLL_MS);
+        schedule();
         document.addEventListener('visibilitychange', onVisibility);
     });
 
     onBeforeUnmount(() => {
-        clearInterval(timer);
+        clearTimeout(timer);
         inFlight?.abort();
         document.removeEventListener('visibilitychange', onVisibility);
     });
@@ -366,6 +408,8 @@ export function useMessageThread(options: {
         messages,
         visible,
         typing,
+        agentTyping,
+        pingTyping,
         hasMore,
         loadingEarlier,
         offline,

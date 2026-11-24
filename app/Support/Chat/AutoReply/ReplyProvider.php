@@ -13,5 +13,8 @@ use App\Models\ChatConversation;
  */
 interface ReplyProvider
 {
+    /** True when the visitor asks for a person, or the provider decides a person is needed. */
+    public function needsHuman(ChatConversation $conversation, string $message): bool;
+
     public function reply(ChatConversation $conversation, string $message): ?string;
 }

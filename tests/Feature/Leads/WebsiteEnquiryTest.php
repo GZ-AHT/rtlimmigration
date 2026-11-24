@@ -56,7 +56,7 @@ it('turns a website enquiry into a new lead and alerts lead managers', function 
 });
 
 it('validates the required fields and consent', function () {
-    $this->post(route('enquiry.store'), enquiry(['name' => '', 'email' => 'bad', 'consent' => false, 'service_id' => 999]))
+    $this->post(route('enquiry.store'), enquiry(['name' => '', 'email' => 'bad', 'consent' => false, 'service_id' => (int) Service::max('id') + 1000]))
         ->assertSessionHasErrors(['name', 'email', 'consent', 'service_id']);
 
     expect(Lead::count())->toBe(0);

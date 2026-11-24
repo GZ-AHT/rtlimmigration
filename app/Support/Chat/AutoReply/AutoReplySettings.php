@@ -2,6 +2,7 @@
 
 namespace App\Support\Chat\AutoReply;
 
+use App\Models\Media;
 use App\Support\Settings\SettingsRepository;
 
 /**
@@ -23,6 +24,19 @@ class AutoReplySettings
 
     public const DEFAULT_NAME = 'RTL Assistant';
 
+    public const DEFAULT_WELCOME = 'Hello! Welcome to {site_name}. How can we help you today?';
+
+    public const DEFAULT_AGENT = 'MD Hasnat';
+
+    public const DEFAULT_HANDOVER = 'You are now connected with {agent_name}. How can I assist you?';
+
+    public const DEFAULT_HANDOVER_KEYWORDS = [
+        'human', 'real person', 'live agent', 'live chat agent', 'support agent', 'customer service', 'representative',
+        'talk to a person', 'speak to a person', 'talk to someone', 'speak to someone', 'talk to a human', 'speak to a human',
+        'talk to an adviser', 'speak to an adviser', 'talk to adviser', 'talk to an advisor', 'speak to an advisor',
+        'talk to a counselor', 'speak to a counselor', 'talk to your team',
+    ];
+
     public function __construct(private SettingsRepository $settings) {}
 
     public function enabled(): bool
@@ -42,6 +56,54 @@ class AutoReplySettings
         $name = trim((string) $this->settings->get('chat_auto_reply.assistant_name', self::DEFAULT_NAME));
 
         return $name !== '' ? $name : self::DEFAULT_NAME;
+    }
+
+    /** The greeting a new chat opens with (chats now start from a name and phone number, without a first message). */
+    public function welcome(): string
+    {
+        return trim((string) $this->settings->get('chat_auto_reply.welcome', self::DEFAULT_WELCOME));
+    }
+
+    public function handoverEnabled(): bool
+    {
+        return (bool) $this->settings->get('chat_auto_reply.handover_enabled', true);
+    }
+
+    public function handoverAgentName(): string
+    {
+        $name = trim((string) $this->settings->get('chat_auto_reply.handover_agent_name', self::DEFAULT_AGENT));
+
+        return $name !== '' ? $name : self::DEFAULT_AGENT;
+    }
+
+    /** The staff member the visitor is "connected with": their profile picture and assignment. */
+    public function handoverAgentId(): ?int
+    {
+        $id = $this->settings->get('chat_auto_reply.handover_agent_id');
+
+        return is_numeric($id) && (int) $id > 0 ? (int) $id : null;
+    }
+
+    public function handoverAvatarId(): ?int
+    {
+        $id = $this->settings->get('chat_auto_reply.handover_avatar');
+
+        return is_numeric($id) && (int) $id > 0 ? (int) $id : null;
+    }
+
+    public function handoverMessage(): string
+    {
+        $text = trim((string) $this->settings->get('chat_auto_reply.handover_message', self::DEFAULT_HANDOVER));
+
+        return $text !== '' ? $text : self::DEFAULT_HANDOVER;
+    }
+
+    /** @return list<string> */
+    public function handoverKeywords(): array
+    {
+        $stored = $this->settings->get('chat_auto_reply.handover_keywords');
+
+        return is_array($stored) ? array_values(array_filter(array_map('strval', $stored))) : self::DEFAULT_HANDOVER_KEYWORDS;
     }
 
     /** @return list<array{id: string, name: string, keywords: list<string>, reply: string, active: bool}> */
@@ -70,15 +132,34 @@ class AutoReplySettings
         return $rules;
     }
 
-    /** @return array{enabled: bool, assistant_name: string, fallback: string, rules: list<array{id: string, name: string, keywords: list<string>, reply: string, active: bool}>} */
+    /** @return array<string, mixed> */
     public function forAdmin(): array
     {
-        return ['enabled' => $this->enabled(), 'assistant_name' => $this->assistantName(), 'fallback' => $this->fallback(), 'rules' => $this->rules()];
+        $avatar = $this->handoverAvatarId();
+
+        return [
+            'enabled' => $this->enabled(), 'assistant_name' => $this->assistantName(), 'fallback' => $this->fallback(), 'rules' => $this->rules(),
+            'welcome' => $this->welcome(),
+            'handover_enabled' => $this->handoverEnabled(),
+            'handover_agent_name' => $this->handoverAgentName(),
+            'handover_agent_id' => $this->handoverAgentId(),
+            'handover_avatar' => $avatar ? Media::query()->find($avatar)?->present() : null,
+            'handover_message' => $this->handoverMessage(),
+            'handover_keywords' => $this->handoverKeywords(),
+        ];
     }
 
-    /** @param  array{enabled: bool, assistant_name: string, fallback: string, rules: list<array<string, mixed>>}  $data validated */
+    /** @param  array<string, mixed>  $data validated */
     public function save(array $data): void
     {
+        $this->settings->set('chat_auto_reply.welcome', trim((string) $data['welcome']));
+        $this->settings->set('chat_auto_reply.handover_enabled', (bool) $data['handover_enabled']);
+        $this->settings->set('chat_auto_reply.handover_agent_name', trim((string) $data['handover_agent_name']));
+        $this->settings->set('chat_auto_reply.handover_agent_id', $data['handover_agent_id'] ?? null);
+        $this->settings->set('chat_auto_reply.handover_avatar', $data['handover_avatar'] ?? null);
+        $this->settings->set('chat_auto_reply.handover_message', trim((string) $data['handover_message']));
+        $this->settings->set('chat_auto_reply.handover_keywords', array_values(array_unique(array_filter(array_map(fn ($k) => mb_strtolower(trim((string) $k)), (array) ($data['handover_keywords'] ?? []))))));
+
         $this->settings->set('chat_auto_reply.enabled', (bool) $data['enabled']);
         $this->settings->set('chat_auto_reply.assistant_name', trim($data['assistant_name']));
         $this->settings->set('chat_auto_reply.fallback', trim($data['fallback']));

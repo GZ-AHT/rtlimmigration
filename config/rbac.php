@@ -108,6 +108,10 @@ return [
             'chat.manage' => 'Manage live chat settings and keys',
             'chat.moderate' => 'Review flagged chat messages and approve or reject them',
         ],
+        'Consultations' => [
+            'consultations.view' => 'View video consultation bookings and the calendar',
+            'consultations.manage' => 'Approve, reschedule and cancel consultations, send meeting links and set availability',
+        ],
         'Tickets & contacts' => [
             'tickets.view' => 'View tickets and contact inquiries',
             'tickets.manage' => 'Reply to and update tickets',
@@ -171,6 +175,7 @@ return [
             'counselors.view',
             'tickets.view', 'tickets.manage', 'tickets.assign',
             'assessments.view',
+            'consultations.view', 'consultations.manage',
             'email.access', 'chat.access', 'chat.view-all',
             'reports.view',
         ],

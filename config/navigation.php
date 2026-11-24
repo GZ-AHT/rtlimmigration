@@ -143,6 +143,11 @@ return [
                     ['title' => 'Testimonials', 'route' => 'admin.cms.testimonials.index', 'permission' => 'cms.manage', 'phase' => 9],
                     ['title' => 'Newsletter', 'route' => 'admin.cms.newsletter.index', 'permission' => 'cms.manage', 'phase' => 9],
                 ]],
+                ['title' => 'Video Consultations', 'icon' => 'video_call', 'children' => [
+                    ['title' => 'Bookings', 'route' => 'admin.consultations.index', 'permission' => 'consultations.view', 'phase' => 13],
+                    ['title' => 'Calendar', 'route' => 'admin.consultations.calendar', 'permission' => 'consultations.view', 'phase' => 13],
+                    ['title' => 'Availability', 'route' => 'admin.consultations.availability', 'permission' => 'consultations.manage', 'phase' => 13],
+                ]],
                 ['title' => 'SEO Management', 'icon' => 'travel_explore', 'children' => [
                     ['title' => 'Global SEO & sitemap', 'route' => 'admin.seo.settings', 'permission' => 'seo.manage', 'phase' => 10],
                     ['title' => 'Redirects', 'route' => 'admin.seo.redirects.index', 'permission' => 'seo.manage', 'phase' => 10],

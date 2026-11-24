@@ -10,6 +10,7 @@ use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\ChatMessageAttachment;
 use App\Support\Chat\ChatSecuritySettings;
+use App\Support\Chat\ChatTyping;
 use App\Support\Chat\Security\AttachmentInspector;
 use App\Support\Chat\Security\AttachmentRejected;
 use App\Support\Chat\Security\ChatActor;
@@ -77,6 +78,18 @@ class ChatMessageController extends Controller
         );
     }
 
+    /** Called while a team member types a reply, so the visitor sees "… is typing". */
+    public function typing(Request $request, ChatConversation $conversation): JsonResponse
+    {
+        abort_unless($conversation->isNative(), 404);
+        $conversation->loadMissing('student:id,user_id,counselor_id');
+        Gate::authorize('reply', $conversation);
+
+        ChatTyping::agentTyping($conversation, $request->user());
+
+        return response()->json(['ok' => true]);
+    }
+
     public function attachment(Request $request, ChatMessageAttachment $attachment): StreamedResponse
     {
         $conversation = $attachment->message->conversation;
@@ -129,6 +142,11 @@ class ChatMessageController extends Controller
         $cursor = (int) $conversation->last_seq;
         $meta = ['cursor' => $cursor, 'status' => $conversation->status->value];
 
+        // Visitors and students see when a team member is typing; staff do not need to.
+        if ($viewer['side'] !== ChatMessage::STAFF) {
+            $meta['typing'] = ChatTyping::current($conversation);
+        }
+
         if ($after !== null && $after >= $cursor) {
             return response()->json(['messages' => [], ...$meta]);
         }
@@ -179,6 +197,10 @@ class ChatMessageController extends Controller
         $verdict = $this->judge($actor, $senderType, $body);
 
         $message = $this->messaging->post($conversation, $actor->user, $senderType, $body, $inspected, $data['client_id'] ?? null, $verdict);
+
+        if ($senderType === ChatMessage::STAFF) {
+            ChatTyping::clear($conversation);
+        }
 
         if ($message->wasRecentlyCreated && $verdict->status !== ModerationStatus::Approved) {
             $this->reportVerdict($actor, $conversation, $message, $verdict);

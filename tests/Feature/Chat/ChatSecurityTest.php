@@ -83,7 +83,7 @@ function csGuestStart($test, array $data = [], string $ip = '203.0.113.20')
 {
     return $test->withServerVariables(['REMOTE_ADDR' => $ip])->postJson(route('chat.guest.start'), [
         'name' => 'Rafi Ahmed',
-        'email' => 'rafi@example.com',
+        'phone' => '01712345678',
         'body' => 'Hello, I want to study in Canada.',
         'form_token' => Crypt::encryptString((string) (time() - 30)),
         ...$data,

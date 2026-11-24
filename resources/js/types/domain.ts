@@ -336,6 +336,8 @@ export type ChatRow = {
     status_tone: Tone;
     visitor: string;
     visitor_email: string | null;
+    visitor_phone: string | null;
+    handed_over: boolean;
     location: string | null;
     subject: string | null;
     preview: string | null;
@@ -374,6 +376,10 @@ export type PortalMessage = {
     sender_type: ChatSenderType;
     /** An automatic reply, not a person. */
     automated?: boolean;
+    /** A message from a person on the support team. */
+    human?: boolean;
+    /** Profile picture of the support person, if they have one. */
+    avatar?: string | null;
     sender_name: string | null;
     body: string | null;
     attachments: {

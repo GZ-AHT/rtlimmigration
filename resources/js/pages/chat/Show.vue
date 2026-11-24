@@ -44,6 +44,7 @@ const props = defineProps<{
         index: string;
         messages: string;
         send: string;
+        typing: string;
         update: string;
         lead: string;
         student: string | null;
@@ -126,11 +127,13 @@ function removeTag(tag: string): void {
 
 const lead = useForm({
     name:
-        c.value.visitor_email || c.value.visitor !== 'Visitor'
+        c.value.visitor_email ||
+        c.value.visitor_phone ||
+        c.value.visitor !== 'Visitor'
             ? c.value.visitor
             : '',
     email: c.value.visitor_email ?? '',
-    phone: '',
+    phone: c.value.visitor_phone ?? '',
 });
 
 function createLead(): void {
@@ -154,6 +157,7 @@ const bubble: Record<string, string> = {
             [
                 c.subject ? c.visitor : null,
                 c.visitor_email,
+                c.visitor_phone,
                 c.location,
                 formatDateTime(c.started_at),
             ]
@@ -162,6 +166,12 @@ const bubble: Record<string, string> = {
         "
     >
         <template #actions>
+            <StatusBadge
+                v-if="c.handed_over"
+                label="Human support"
+                tone="success"
+                class="self-center"
+            />
             <StatusBadge
                 :label="c.status_label"
                 :tone="c.status_tone"
@@ -199,6 +209,7 @@ const bubble: Record<string, string> = {
                 :thread="thread"
                 :messages-url="urls.messages"
                 :send-url="urls.send"
+                :typing-url="urls.typing"
                 perspective="staff"
                 :sender-name="me"
                 :composer="composer"

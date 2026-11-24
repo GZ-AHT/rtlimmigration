@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import CallWindow from '@/components/website/CallWindow.vue';
-import SiteButton from '@/components/website/SiteButton.vue';
+import SiteArrow from '@/components/website/SiteArrow.vue';
+import { openConsultationBooking } from '@/composables/useConsultationBooking';
 import type { SiteImage } from '@/types/website';
 
 /**
  * Figma "Video counseling" (node 12:128). The video window (CallWindow)
- * is an illustration with a photo or video of the adviser; the button opens the consultation form with "video" chosen
- * (roadmap Q6: a marketing section that leads to the enquiry form).
+ * is an illustration with a photo or video of the adviser; the button opens the video consultation
+ * booking popup (ConsultationModal), not the contact page.
  */
 defineProps<{
     data: {
@@ -53,13 +54,16 @@ defineProps<{
                 >
                     {{ data.description }}
                 </p>
-                <SiteButton
+                <!-- Opens the booking popup (verify email, pick a time) instead of the contact page. -->
+                <button
                     v-if="data.button"
-                    href="/contact?preference=video"
-                    size="tall"
-                    class="mt-11 min-w-[274px] max-sm:mt-6 max-sm:w-full"
-                    >{{ data.button }}</SiteButton
+                    type="button"
+                    class="mt-11 inline-flex h-[54px] min-w-[274px] items-center justify-center gap-2.5 rounded-site-btn bg-site-red px-5 text-[14px] font-semibold whitespace-nowrap text-white transition-colors hover:bg-site-red-dark focus-visible:ring-4 focus-visible:ring-site-red/30 focus-visible:outline-none max-sm:mt-6 max-sm:w-full"
+                    @click="openConsultationBooking"
                 >
+                    {{ data.button }}
+                    <SiteArrow glyph="↗" />
+                </button>
                 <p
                     v-if="data.detail"
                     class="mt-[19px] text-[12px] leading-[17px] font-medium text-site-muted"

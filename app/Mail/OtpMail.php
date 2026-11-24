@@ -29,9 +29,11 @@ class OtpMail extends Mailable implements ShouldQueue
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: $this->purpose === Otp::PASSWORD_RESET
-            ? __('Your :site password reset code', ['site' => $this->siteName()])
-            : __('Your :site verification code', ['site' => $this->siteName()]));
+        return new Envelope(subject: match ($this->purpose) {
+            Otp::PASSWORD_RESET => __('Your :site password reset code', ['site' => $this->siteName()]),
+            Otp::BOOKING => __('Your :site booking verification code', ['site' => $this->siteName()]),
+            default => __('Your :site verification code', ['site' => $this->siteName()]),
+        });
     }
 
     public function content(): Content
@@ -43,6 +45,7 @@ class OtpMail extends Mailable implements ShouldQueue
             'site' => $this->siteName(),
             'colour' => preg_match('/^#[0-9a-f]{6}$/i', $colour) ? $colour : '#d71920',
             'reset' => $this->purpose === Otp::PASSWORD_RESET,
+            'booking' => $this->purpose === Otp::BOOKING,
             'minutes' => Otp::TTL_MINUTES,
         ]);
     }

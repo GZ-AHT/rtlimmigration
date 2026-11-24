@@ -17,6 +17,7 @@ use App\Support\Chat\Security\ChatActor;
 use App\Support\Chat\Security\ChatGuard;
 use App\Support\Chat\Security\ChatSecurityException;
 use App\Support\Chat\Security\Turnstile;
+use App\Support\Phone\PhoneNumbers;
 use App\Support\Presenters\ChatPresenter;
 use Closure;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -27,6 +28,7 @@ use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -102,6 +104,9 @@ class GuestChatController extends Controller
             'visitor' => $guest ? ['name' => $guest->name, 'suspended' => $guest->isSuspended(), 'linked' => $guest->linked_user_id !== null] : null,
             'thread' => $thread,
             'composer' => ChatPresenter::composer(guest: true),
+            // The country picker is only needed on the start form.
+            'countries' => $thread === null && $enabled ? PhoneNumbers::countries() : [],
+            'defaultCountry' => PhoneNumbers::DEFAULT_COUNTRY,
             'formToken' => Crypt::encryptString((string) time()),
             'captcha' => [
                 'siteKey' => $this->settings->captchaAvailable() ? $this->settings->turnstileSiteKey() : null,
@@ -130,14 +135,17 @@ class GuestChatController extends Controller
 
         $data = $request->validate([
             'name' => ['required', 'string', 'min:2', 'max:80', 'regex:/^[^<>{}\[\]\\\\\/@=;]+$/u'],
-            'email' => ['nullable', 'email:rfc', 'max:255'],
-            'body' => ['required', 'string', 'max:'.PortalMessaging::MAX_BODY],
+            'phone' => ['required', 'string', 'max:40'],
+            'country' => ['nullable', 'string', 'size:2'],
+            'body' => ['nullable', 'string', 'max:'.PortalMessaging::MAX_BODY],
             'captcha_token' => ['nullable', 'string', 'max:2048'],
             'client_id' => ['nullable', 'uuid'],
         ], [
             'name.regex' => __('Enter your name using letters only.'),
-            'body.required' => __('Write your question so we can help.'),
+            'phone.required' => __('Enter your phone number.'),
         ]);
+
+        $phone = $this->validPhone($data['phone'], (string) ($data['country'] ?? PhoneNumbers::DEFAULT_COUNTRY));
 
         $captchaPassed = false;
 
@@ -154,13 +162,13 @@ class GuestChatController extends Controller
 
         $token = Str::random(64);
 
-        [$conversation, $guest] = DB::transaction(function () use ($data, $request, $token) {
+        [$conversation, $guest] = DB::transaction(function () use ($data, $request, $token, $phone) {
             $conversation = ChatConversation::query()->create([
                 'kind' => ChatKind::Guest,
                 'external_id' => 'guest-'.Str::uuid(),
                 'status' => ChatStatus::Open,
                 'visitor_name' => trim($data['name']),
-                'visitor_email' => isset($data['email']) ? mb_strtolower(trim($data['email'])) : null,
+                'visitor_phone' => $phone,
                 'started_at' => now(),
             ]);
 
@@ -168,7 +176,6 @@ class GuestChatController extends Controller
                 'chat_conversation_id' => $conversation->id,
                 'token_hash' => ChatGuest::hashToken($token),
                 'name' => trim($data['name']),
-                'email' => $conversation->visitor_email,
                 'ip_address' => $request->ip(),
                 'user_agent' => mb_substr((string) $request->userAgent(), 0, 255),
                 'last_seen_at' => now(),
@@ -181,16 +188,47 @@ class GuestChatController extends Controller
             $this->guard->captchaPassed($guest);
         }
 
-        try {
-            $response = app(ChatMessageController::class)->send($request, $conversation, ChatMessage::VISITOR, ChatActor::guest($guest, $ip), self::viewer($conversation), self::attachmentUrl());
-        } catch (\Throwable $e) {
-            // No half-started chats: without its first message there is nothing to keep.
-            $conversation->delete();
+        // A chat starts from a name and a phone number alone; the assistant opens with a greeting.
+        // A first message is still accepted (older pages and API clients send one).
+        if (filled($data['body'] ?? null)) {
+            try {
+                $response = app(ChatMessageController::class)->send($request, $conversation, ChatMessage::VISITOR, ChatActor::guest($guest, $ip), self::viewer($conversation), self::attachmentUrl());
+            } catch (\Throwable $e) {
+                // No half-started chats: without its first message there is nothing to keep.
+                $conversation->delete();
 
-            throw $e;
+                throw $e;
+            }
+
+            $response = $this->withAutoReply($response, $conversation);
+        } else {
+            $response = response()->json(['message' => null]);
+            $welcome = $this->autoReply->welcome($conversation);
+
+            if ($welcome !== null) {
+                $response->setData(['message' => null, 'auto_reply' => $this->presentReply($welcome, $conversation)]);
+            }
         }
 
-        return $this->withAutoReply($response, $conversation)->setStatusCode(201)->withCookie($this->cookie($request, $token));
+        return $response->setStatusCode(201)->withCookie($this->cookie($request, $token));
+    }
+
+    /** The phone number in E.164, or a validation error that names the country and gives an example. */
+    private function validPhone(string $input, string $country): string
+    {
+        $country = PhoneNumbers::isCountry($country) ? strtoupper($country) : PhoneNumbers::DEFAULT_COUNTRY;
+        $phone = PhoneNumbers::normalize($input, $country);
+
+        if ($phone === null) {
+            $name = \Locale::getDisplayRegion("-{$country}", 'en') ?: $country;
+            $example = PhoneNumbers::example($country);
+
+            throw ValidationException::withMessages(['phone' => $example
+                ? __('Enter a valid :country phone number, for example :example.', ['country' => $name, 'example' => $example])
+                : __('Enter a valid phone number.')]);
+        }
+
+        return $phone;
     }
 
     public function messages(Request $request, ChatMessageController $controller): JsonResponse
@@ -235,12 +273,22 @@ class GuestChatController extends Controller
             return $response;
         }
 
-        $data['auto_reply'] = [
-            'message' => ChatPresenter::message($reply, self::attachmentUrl(), self::viewer($conversation)),
-            'typing_ms' => AutoReplyService::typingMs((string) $reply->body),
-        ];
+        $data['auto_reply'] = $this->presentReply($reply, $conversation);
 
         return $response->setData($data);
+    }
+
+    /** @return array{message: array<string, mixed>, typing_ms: int, handover: bool} */
+    private function presentReply(ChatMessage $reply, ChatConversation $conversation): array
+    {
+        // A person's welcome appears at once: no typing indicator for something nobody is typing.
+        $human = $reply->sender_type === ChatMessage::STAFF;
+
+        return [
+            'message' => ChatPresenter::message($reply, self::attachmentUrl(), self::viewer($conversation)),
+            'typing_ms' => $human ? 0 : AutoReplyService::typingMs((string) $reply->body),
+            'handover' => $human,
+        ];
     }
 
     public function attachment(Request $request, ChatMessageAttachment $attachment, ChatMessageController $controller): StreamedResponse

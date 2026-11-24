@@ -62,7 +62,7 @@ class ConversationController extends Controller
             ->with(['assignee:id,name', 'student:id,student_number,user_id,counselor_id', 'student.user:id,name'])
             ->when($filters['search'] ?? null, function (Builder $q, string $s) {
                 $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $s).'%';
-                $q->where(fn (Builder $q) => $q->where('visitor_name', 'like', $like)->orWhere('visitor_email', 'like', $like)
+                $q->where(fn (Builder $q) => $q->where('visitor_name', 'like', $like)->orWhere('visitor_email', 'like', $like)->orWhere('visitor_phone', 'like', $like)
                     ->orWhere('subject', 'like', $like)->orWhere('first_message', 'like', $like));
             })
             ->when($filters['status'] ?? null, fn (Builder $q, string $s) => $q->where('status', $s))
@@ -151,6 +151,7 @@ class ConversationController extends Controller
                 }),
                 'messages' => $this->areaRoute($request, 'chat.messages.index', $conversation),
                 'send' => $this->areaRoute($request, 'chat.messages.store', $conversation),
+                'typing' => $this->areaRoute($request, 'chat.typing', $conversation),
                 'update' => $this->areaRoute($request, 'chat.update', $conversation),
                 'lead' => $this->areaRoute($request, 'chat.lead', $conversation),
                 'student' => $conversation->student && $user->can('view', $conversation->student) ? $this->areaRoute($request, 'students.show', $conversation->student) : null,
