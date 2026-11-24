@@ -41,7 +41,8 @@ class WebsiteSeo
         $ogImage = ($own->ogImage ?? $image)?->url() ?? ($enabled ? self::globalImage() : null);
 
         $globalRobots = $enabled ? (string) self::setting('default_robots', 'index,follow') : 'index,follow';
-        $siteHidden = $enabled && (bool) self::setting('noindex_site', false);
+        // Hiding the site wins over everything, also when the other SEO features are off (robots.txt does the same).
+        $siteHidden = (bool) self::setting('noindex_site', false);
         $index = ! ($noindex || $siteHidden || $own?->noindex) && ! str_starts_with($globalRobots, 'noindex');
         $follow = ! ($siteHidden || $own?->nofollow) && ! str_ends_with($globalRobots, 'nofollow');
 

@@ -315,3 +315,11 @@ it('saves the SEO settings with comma-separated robots values and lets every tog
 
     $this->actingAs($this->admin)->put(route('admin.seo.settings.update'), ['default_robots' => 'bogus'])->assertSessionHasErrors('default_robots');
 });
+
+it('keeps a hidden site out of search engines even when the SEO features are turned off', function () {
+    seoSetting('enabled', false);
+    seoSetting('noindex_site', true);
+
+    $this->get('/')->assertInertia(fn (Assert $page) => $page->where('seo.robots', 'noindex, nofollow'));
+    $this->get('/robots.txt')->assertSee('Disallow: /');
+});

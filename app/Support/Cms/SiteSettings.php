@@ -76,8 +76,8 @@ class SiteSettings
             'seo' => [
                 'label' => 'SEO', 'description' => 'Search and sharing defaults, structured data, verification codes, sitemap and robots.txt (REQ §22). Pages, posts and universities can override these.',
                 'fields' => [
-                    'enabled' => ['type' => 'toggle', 'label' => 'Turn on SEO features (meta tags, social tags, structured data, analytics)'],
-                    'noindex_site' => ['type' => 'toggle', 'label' => 'Hide the whole website from search engines', 'hint' => 'Use on a test site. Adds noindex to every page and blocks crawlers in robots.txt.'],
+                    'enabled' => ['type' => 'toggle', 'label' => 'Turn on SEO features (meta tags, social tags, structured data, analytics)', 'hint' => 'Turning this off does not stop indexing. To keep search engines out, switch on “Hide the whole website” below.'],
+                    'noindex_site' => ['type' => 'toggle', 'label' => 'Hide the whole website from search engines', 'hint' => 'Switch ON to stop indexing. Adds noindex to every page, blocks crawlers in robots.txt and removes the sitemap. Works even when SEO features are off.'],
                     'default_title' => ['type' => 'text', 'label' => 'Default meta title', 'max' => 70, 'hint' => 'Used for the homepage when it has no title of its own.'],
                     'default_description' => ['type' => 'textarea', 'label' => 'Default meta description', 'max' => 170, 'hint' => 'Used when a page has none. Blank uses the general description.'],
                     'default_keywords' => ['type' => 'text', 'label' => 'Default meta keywords', 'max' => 255],
