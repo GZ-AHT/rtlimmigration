@@ -85,7 +85,12 @@ class Otp
             'expires_at' => now()->addMinutes(self::TTL_MINUTES),
         ]);
 
-        Mail::to($user->email ?? $email)->send(new OtpMail($user->name ?? (string) $name, $code, $purpose));
+        $mail = new OtpMail($user->name ?? (string) $name, $code, $purpose);
+        $recipient = Mail::to($user->email ?? $email);
+
+        // A booking code goes out now, not through the queue: nobody should wait for a queue worker
+        // to pick up a code they are waiting to type. Other codes keep using the queue.
+        $purpose === self::BOOKING ? $recipient->sendNow($mail) : $recipient->send($mail);
 
         return 0;
     }

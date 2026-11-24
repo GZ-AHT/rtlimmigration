@@ -15,11 +15,13 @@ use App\Support\Consultations\AvailableSlots;
 use App\Support\Consultations\ConsultationSchedule;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
 
 /**
  * Everything that happens to a video consultation booking. Each change is
@@ -76,8 +78,14 @@ class ConsultationBookings
             throw $taken;
         }
 
-        $this->mail($booking, $confirmed ? 'confirmed' : 'received');
-        Notification::send($this->staff(), new ConsultationBooked($booking));
+        // The booking is saved: a problem sending the emails is reported, but the visitor still gets their confirmation.
+        try {
+            $this->mail($booking, $confirmed ? 'confirmed' : 'received');
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        $this->notifyStaff(new ConsultationBooked($booking));
 
         return $booking;
     }
@@ -119,7 +127,7 @@ class ConsultationBookings
         $this->log($booking, 'cancelled', $by, $reason, ['by' => $by ? 'admin' : 'customer']);
 
         if ($by === null) {
-            Notification::send($this->staff(), new ConsultationCancelled($booking));
+            $this->notifyStaff(new ConsultationCancelled($booking));
         } else {
             $this->mail($booking, 'cancelled', ['reason' => $reason]);
         }
@@ -206,7 +214,7 @@ class ConsultationBookings
         $this->requireStatus($booking, [ConsultationStatus::Pending, ConsultationStatus::Confirmed], __('This appointment can no longer be changed.'));
 
         $this->log($booking, 'reschedule_requested', null, $request);
-        Notification::send($this->staff(), new ConsultationRescheduleRequested($booking, $request));
+        $this->notifyStaff(new ConsultationRescheduleRequested($booking, $request));
     }
 
     /** Sends the reminder for appointments starting within a day. Returns how many were sent. */
@@ -249,11 +257,34 @@ class ConsultationBookings
         }
     }
 
-    /** @return Collection<int, User> the people who manage consultations, plus Super Admins */
+    /**
+     * The people who manage consultations, plus Super Admins. Works before the permission has been
+     * added to the database (a site that has not run the seeder yet): then only Super Admins.
+     *
+     * @return Collection<int, User>
+     */
     private function staff(): Collection
     {
+        $permissionExists = Permission::query()->where('name', 'consultations.manage')->where('guard_name', 'web')->exists();
+
         return User::query()->where('status', UserStatus::Active->value)
-            ->where(fn ($q) => $q->permission('consultations.manage')->orWhereHas('roles', fn ($r) => $r->where('name', 'super-admin')))
+            ->where(function ($q) use ($permissionExists) {
+                $q->whereHas('roles', fn ($r) => $r->where('name', 'super-admin'));
+
+                if ($permissionExists) {
+                    $q->orWhere(fn ($with) => $with->permission('consultations.manage'));
+                }
+            })
             ->get();
+    }
+
+    /** Tells the team. A failure here is reported but never undoes or fails what already happened. */
+    private function notifyStaff(Notification $notification): void
+    {
+        try {
+            NotificationFacade::send($this->staff(), $notification);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 }

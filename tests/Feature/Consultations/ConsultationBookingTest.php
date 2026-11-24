@@ -7,6 +7,7 @@ use App\Mail\ConsultationMail;
 use App\Mail\OtpMail;
 use App\Models\ConsultationBooking;
 use App\Models\Lead;
+use App\Models\OtpCode;
 use App\Models\Service;
 use App\Models\User;
 use App\Notifications\ConsultationBooked;
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 
 uses(RefreshDatabase::class);
 
@@ -79,15 +82,17 @@ function cbBook($test, array $over = [], string $email = 'rafi@example.com')
 
 it('emails a code to any address and verifies it, with a limit on wrong guesses', function () {
     $this->postJson(route('consultation.code'), ['email' => 'new.person@example.com'])->assertOk()->assertJsonPath('sent', true);
-    Mail::assertQueued(OtpMail::class, fn (OtpMail $m) => $m->hasTo('new.person@example.com') && $m->purpose === Otp::BOOKING);
+    // Sent straight away (not queued), so the code never waits for a queue worker.
+    Mail::assertSent(OtpMail::class, fn (OtpMail $m) => $m->hasTo('new.person@example.com') && $m->purpose === Otp::BOOKING);
+    Mail::assertNotQueued(OtpMail::class);
 
     $this->postJson(route('consultation.code'), ['email' => 'bad'])->assertUnprocessable()->assertJsonValidationErrors('email');
     // A second code too soon is refused quietly, not sent.
     $this->postJson(route('consultation.code'), ['email' => 'new.person@example.com'])->assertOk()->assertJsonPath('sent', false);
-    Mail::assertQueuedCount(1);
+    Mail::assertSentCount(1);
 
     $code = null;
-    Mail::assertQueued(OtpMail::class, function (OtpMail $m) use (&$code) {
+    Mail::assertSent(OtpMail::class, function (OtpMail $m) use (&$code) {
         $code = $m->code;
 
         return true;
@@ -107,7 +112,7 @@ it('verifies the right code and prefills what we already know about the customer
     foreach (['known@example.com' => 'Known Student', 'lead@example.com' => 'Lead Person', 'nobody@example.com' => null] as $email => $name) {
         $this->postJson(route('consultation.code'), ['email' => $email])->assertOk();
         $code = null;
-        Mail::assertQueued(OtpMail::class, function (OtpMail $m) use ($email, &$code) {
+        Mail::assertSent(OtpMail::class, function (OtpMail $m) use ($email, &$code) {
             if ($m->hasTo($email)) {
                 $code = $m->code;
             }
@@ -510,4 +515,37 @@ it('rate limits booking attempts', function () {
     }
 
     cbBook($this, ['starts_at' => '2026-12-02T08:00:00Z'], 'p11@example.com')->assertStatus(429);
+});
+
+it('tells the visitor when the code email could not be sent, and lets them try again at once', function () {
+    Mail::shouldReceive('to')->once()->andThrow(new RuntimeException('SMTP down'));
+
+    $this->postJson(route('consultation.code'), ['email' => 'new.person@example.com'])->assertStatus(503)
+        ->assertJsonPath('message', 'We could not send the email right now. Please try again in a moment.');
+
+    // No code was kept and no waiting period started.
+    expect(OtpCode::where('purpose', Otp::BOOKING)->count())->toBe(0);
+    expect(app(Otp::class)->cooldownRemaining('new.person@example.com', Otp::BOOKING))->toBe(0);
+});
+
+it('still books when the consultation permissions are not in the database yet', function () {
+    // A site that has not run the permission seeder after this feature was added.
+    Permission::whereIn('name', ['consultations.view', 'consultations.manage'])->delete();
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    cbBook($this)->assertCreated()->assertJsonPath('booking.status', 'pending');
+
+    expect(ConsultationBooking::count())->toBe(1);
+    // Super Admins are still told; nobody crashes.
+    Notification::assertSentTo($this->admin, ConsultationBooked::class);
+    Notification::assertNotSentTo($this->manager, ConsultationBooked::class);
+});
+
+it('never fails a saved booking because the team notification or the email failed', function () {
+    Notification::shouldReceive('send')->andThrow(new RuntimeException('notifications down'));
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('mail down'));
+
+    cbBook($this)->assertCreated();
+
+    expect(ConsultationBooking::count())->toBe(1);
 });

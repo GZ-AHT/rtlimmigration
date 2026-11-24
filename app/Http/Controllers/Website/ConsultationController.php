@@ -51,7 +51,15 @@ class ConsultationController extends Controller
         $this->ensureOpen();
         $data = $request->validate(['email' => ['required', 'email:rfc', 'max:255']], ['email.required' => __('Enter your email address.')]);
 
-        $wait = $this->otp->send($data['email'], Otp::BOOKING, null, '');
+        try {
+            $wait = $this->otp->send($data['email'], Otp::BOOKING, null, '');
+        } catch (\Throwable $e) {
+            // The mail server refused or timed out: forget the code and the wait, so they can try again at once.
+            report($e);
+            $this->otp->forget($data['email'], Otp::BOOKING);
+
+            return response()->json(['message' => __('We could not send the email right now. Please try again in a moment.')], 503);
+        }
 
         return response()->json(['sent' => $wait === 0, 'resend_in' => $wait > 0 ? $wait : Otp::COOLDOWN_SECONDS]);
     }
