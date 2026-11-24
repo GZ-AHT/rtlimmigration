@@ -4,6 +4,7 @@ namespace App\Support\Cms;
 
 use App\Models\Media;
 use App\Support\Settings\SettingsRepository;
+use Illuminate\Validation\Rule;
 
 /**
  * Website settings edited at Website CMS → Site settings (REQ §21.1 General,
@@ -256,7 +257,7 @@ class SiteSettings
                 'url' => [...$base, 'url:https,http', 'max:255'],
                 'toggle' => ['boolean'],
                 'color' => [...$base, 'regex:/^#[0-9a-fA-F]{6}$/'],
-                'select' => [...$base, 'in:'.implode(',', array_map(fn ($k) => str_replace(',', '\,', (string) $k), array_keys($field['options'])))],
+                'select' => [...$base, Rule::in(array_map('strval', array_keys($field['options'])))],
                 'image' => ['nullable', 'integer', 'exists:media,id'],
                 'images' => ['array', 'max:'.($field['max'] ?? 10)],
                 'link' => ['nullable', 'array'],

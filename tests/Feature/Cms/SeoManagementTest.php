@@ -301,3 +301,17 @@ it('builds sitemap and robots.txt addresses from APP_URL when no canonical addre
     seoSetting('canonical_base', 'https://www.rtl.example');
     $this->get('/sitemap.xml')->assertSee('https://www.rtl.example/sitemap-pages.xml', false);
 });
+
+it('saves the SEO settings with comma-separated robots values and lets every toggle be switched off', function () {
+    $this->actingAs($this->admin)->put(route('admin.seo.settings.update'), [
+        'enabled' => false, 'noindex_site' => true, 'sitemap_enabled' => false, 'default_robots' => 'noindex,follow',
+    ])->assertSessionHasNoErrors();
+
+    $repo = app(SettingsRepository::class);
+    expect($repo->get('seo.enabled'))->toBeFalse()
+        ->and($repo->get('seo.noindex_site'))->toBeTrue()
+        ->and($repo->get('seo.sitemap_enabled'))->toBeFalse()
+        ->and($repo->get('seo.default_robots'))->toBe('noindex,follow');
+
+    $this->actingAs($this->admin)->put(route('admin.seo.settings.update'), ['default_robots' => 'bogus'])->assertSessionHasErrors('default_robots');
+});
