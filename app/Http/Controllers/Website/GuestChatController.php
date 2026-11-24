@@ -220,7 +220,7 @@ class GuestChatController extends Controller
         $phone = PhoneNumbers::normalize($input, $country);
 
         if ($phone === null) {
-            $name = \Locale::getDisplayRegion("-{$country}", 'en') ?: $country;
+            $name = PhoneNumbers::countryName($country);
             $example = PhoneNumbers::example($country);
 
             throw ValidationException::withMessages(['phone' => $example

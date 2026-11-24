@@ -2,6 +2,7 @@
 
 namespace App\Support\Phone;
 
+use Giggsey\Locale\Locale;
 use Illuminate\Support\Facades\Cache;
 use libphonenumber\NumberParseException;
 use libphonenumber\PhoneNumberFormat;
@@ -54,6 +55,23 @@ class PhoneNumbers
         return $sample ? $util->format($sample, PhoneNumberFormat::NATIONAL) : null;
     }
 
+    /**
+     * A country's English name. Uses the names bundled with libphonenumber, so it works on servers
+     * without PHP's intl extension.
+     */
+    public static function countryName(string $code): string
+    {
+        $code = strtoupper($code);
+
+        try {
+            $name = Locale::getDisplayRegion("-{$code}", 'en');
+        } catch (\Throwable) {
+            return $code;
+        }
+
+        return $name !== '' ? $name : $code;
+    }
+
     /** The country (ISO code) an E.164 number belongs to. */
     public static function regionOf(string $e164): ?string
     {
@@ -85,7 +103,7 @@ class PhoneNumbers
             $countries = [];
 
             foreach ($util->getSupportedRegions() as $code) {
-                $name = \Locale::getDisplayRegion("-{$code}", 'en') ?: $code;
+                $name = self::countryName($code);
 
                 $countries[] = [
                     'code' => $code,
