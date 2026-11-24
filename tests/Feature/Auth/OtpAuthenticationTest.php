@@ -307,6 +307,9 @@ class OtpAuthenticationTest extends TestCase
 
     public function test_unknown_and_known_emails_get_the_same_answers(): void
     {
+        // The resend countdown is read from the clock, so freeze it or a second can tick between the two requests.
+        $this->freezeTime();
+
         $known = User::factory()->create();
         Mail::fake();
 
