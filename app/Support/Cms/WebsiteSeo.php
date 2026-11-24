@@ -70,6 +70,18 @@ class WebsiteSeo
         return $seoData;
     }
 
+    /**
+     * Address of a path for the sitemap and robots.txt: the default site address, else APP_URL, never the
+     * host of the request (a crawler may reach the site through a proxy or a local address).
+     */
+    public static function sitemapUrl(string $path): string
+    {
+        $base = rtrim((string) (self::setting('canonical_base') ?: config('app.url')), '/');
+        $path = ltrim($path, '/');
+
+        return $base.($path === '' ? '' : '/'.$path);
+    }
+
     /** Canonical address: the default site address plus this page's path, without query strings. */
     public static function canonicalFor(?string $path = null): string
     {

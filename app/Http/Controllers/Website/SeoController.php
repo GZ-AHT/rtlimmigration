@@ -31,7 +31,7 @@ class SeoController extends Controller
             }
 
             $lastmod = $entries->pluck('lastmod')->filter()->max();
-            $xml .= '  <sitemap><loc>'.htmlspecialchars(WebsiteSeo::canonicalFor("sitemap-{$type}.xml"), ENT_XML1).'</loc>'
+            $xml .= '  <sitemap><loc>'.htmlspecialchars(WebsiteSeo::sitemapUrl("sitemap-{$type}.xml"), ENT_XML1).'</loc>'
                 .($lastmod ? '<lastmod>'.$lastmod.'</lastmod>' : '').'</sitemap>'."\n";
         }
 
@@ -72,7 +72,7 @@ class SeoController extends Controller
             $body = $custom."\n";
         } else {
             $body = "User-agent: *\nDisallow: /admin\nDisallow: /dashboard\nDisallow: /settings\nDisallow: /email\nDisallow: /chat\nDisallow: /payments\n";
-            $body .= WebsiteSeo::setting('sitemap_enabled', true) ? "\nSitemap: ".WebsiteSeo::canonicalFor('sitemap.xml')."\n" : '';
+            $body .= WebsiteSeo::setting('sitemap_enabled', true) ? "\nSitemap: ".WebsiteSeo::sitemapUrl('sitemap.xml')."\n" : '';
         }
 
         return response($body, 200, ['Content-Type' => 'text/plain; charset=UTF-8']);
@@ -86,7 +86,7 @@ class SeoController extends Controller
     private function groups(): array
     {
         $entry = fn (string $path, ?CarbonInterface $updated, string $freq, string $priority): array => [
-            'loc' => WebsiteSeo::canonicalFor($path),
+            'loc' => WebsiteSeo::sitemapUrl($path),
             'lastmod' => $updated?->toDateString(),
             'changefreq' => $freq,
             'priority' => $priority,

@@ -290,3 +290,14 @@ it('gives page two of a list its own canonical address', function () {
     $this->get('/blog?page=2')->assertOk()->assertInertia(fn (Assert $page) => $page->where('seo.canonical', url('/blog').'?page=2'));
     $this->get('/blog?page=1')->assertInertia(fn (Assert $page) => $page->where('seo.canonical', url('/blog')));
 });
+
+it('builds sitemap and robots.txt addresses from APP_URL when no canonical address is set', function () {
+    config(['app.url' => 'https://rtl.example']);
+
+    $this->get('/sitemap.xml')->assertOk()->assertSee('https://rtl.example/sitemap-pages.xml', false);
+    $this->get('/sitemap-pages.xml')->assertOk()->assertSee('<loc>https://rtl.example</loc>', false);
+    $this->get('/robots.txt')->assertSee('Sitemap: https://rtl.example/sitemap.xml');
+
+    seoSetting('canonical_base', 'https://www.rtl.example');
+    $this->get('/sitemap.xml')->assertSee('https://www.rtl.example/sitemap-pages.xml', false);
+});
