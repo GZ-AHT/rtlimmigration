@@ -35,6 +35,7 @@ use Throwable;
  * @property int $id
  * @property string $name
  * @property string $email
+ * @property-read string $contact_email the real address, also for deleted users
  * @property string|null $original_email the real address of a deleted user (`email` holds a placeholder)
  * @property CarbonInterface|null $email_verified_at
  * @property string $password
@@ -95,7 +96,11 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return "deleted-{$id}-".now()->timestamp.'@deleted.invalid';
     }
 
-    /** The person's real address, also for deleted users. */
+    /**
+     * The person's real address, also for deleted users.
+     *
+     * @return Attribute<string, never>
+     */
     protected function contactEmail(): Attribute
     {
         return Attribute::get(fn () => $this->original_email ?? $this->email);

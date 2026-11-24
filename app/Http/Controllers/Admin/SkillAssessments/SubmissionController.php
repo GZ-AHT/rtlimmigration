@@ -85,7 +85,6 @@ class SubmissionController extends Controller
         ]);
     }
 
-    /** @return array<string, mixed> */
     public function destroy(Request $request, SkillAssessmentSubmission $submission): RedirectResponse
     {
         Gate::authorize('assessments.manage');
@@ -98,6 +97,7 @@ class SubmissionController extends Controller
         return to_route('admin.skill-assessments.submissions.index');
     }
 
+    /** @return array<string, mixed> */
     private static function row(SkillAssessmentSubmission $s): array
     {
         return [
