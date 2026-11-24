@@ -115,6 +115,7 @@ return [
                     ['title' => 'Student messages', 'route' => 'admin.chat.portal', 'permission' => 'chat.access', 'phase' => 7],
                     ['title' => 'Website chats', 'route' => 'admin.chat.guest', 'permission' => 'chat.access', 'phase' => 7],
                     ['title' => 'Moderation', 'route' => 'admin.chat.moderation', 'permission' => 'chat.moderate', 'phase' => 7],
+                    ['title' => 'Auto-replies', 'route' => 'admin.chat.auto-replies', 'permission' => 'chat.manage', 'phase' => 7],
                     ['title' => 'Chat security', 'route' => 'admin.chat.security', 'permission' => 'security.manage', 'phase' => 7],
                     ...($tawk ? [['title' => 'Tawk.to settings', 'route' => 'admin.chat.settings', 'permission' => 'chat.manage', 'phase' => 7]] : []),
                 ]],

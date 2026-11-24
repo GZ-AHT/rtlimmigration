@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $chat_conversation_id
  * @property int $seq position in the conversation's change sequence (polling cursor)
  * @property int|null $user_id
- * @property string $sender_type student, visitor, staff or system
+ * @property string $sender_type student, visitor, staff, system or bot
  * @property string|null $body
  * @property string|null $client_id
  * @property ModerationStatus $moderation_status
@@ -40,6 +40,9 @@ class ChatMessage extends Model
     public const STAFF = 'staff';
 
     public const SYSTEM = 'system';
+
+    /** An automatic reply (predefined or, later, AI). Never shown as a person. */
+    public const BOT = 'bot';
 
     /** Senders whose messages go through the content checks and moderation. */
     public const MODERATED_SENDERS = [self::STUDENT, self::VISITOR];

@@ -207,6 +207,35 @@ class PortalMessaging
         ChatMessagePosted::dispatch($message);
     }
 
+    /**
+     * An automatic reply. Stored once per $clientId (a retry returns the first one), and it
+     * notifies no one, reopens nothing and is not moderated: it is our own text.
+     */
+    public function automated(ChatConversation $conversation, string $body, string $clientId): ChatMessage
+    {
+        if ($existing = $this->findByClientId($conversation, $clientId)) {
+            return $existing;
+        }
+
+        try {
+            $message = DB::transaction(function () use ($conversation, $body, $clientId) {
+                $locked = ChatConversation::query()->lockForUpdate()->findOrFail($conversation->id);
+                $message = $locked->chatMessages()->create(['seq' => ++$locked->last_seq, 'sender_type' => ChatMessage::BOT, 'body' => $body, 'client_id' => $clientId]);
+                $locked->forceFill(['last_message_id' => $message->id, 'last_message_at' => $message->created_at, 'message_count' => $locked->message_count + 1])->save();
+                $conversation->setRawAttributes($locked->getAttributes(), true);
+
+                return $message;
+            });
+        } catch (UniqueConstraintViolationException $e) {
+            return $this->findByClientId($conversation, $clientId) ?? throw $e;
+        }
+
+        $message->load(['attachments', 'user:id,name']);
+        ChatMessagePosted::dispatch($message);
+
+        return $message;
+    }
+
     /** A note from the system, such as a reassignment. Does not notify anyone. */
     public function note(ChatConversation $conversation, string $text): ChatMessage
     {

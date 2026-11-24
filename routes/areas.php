@@ -95,6 +95,9 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
         Route::get('chat/settings', [Admin\ChatSettingsController::class, 'edit'])->name('chat.settings');
         Route::put('chat/settings', [Admin\ChatSettingsController::class, 'update'])->name('chat.settings.update');
 
+        Route::get('chat/auto-replies', [Admin\ChatAutoReplyController::class, 'edit'])->name('chat.auto-replies');
+        Route::put('chat/auto-replies', [Admin\ChatAutoReplyController::class, 'update'])->name('chat.auto-replies.update');
+
         // REQ §11 chat security and moderation (Super Admin; moderation also chat.moderate)
         Route::get('chat/moderation', [Admin\ChatModerationController::class, 'index'])->name('chat.moderation');
         Route::post('chat/moderation/{message}', [Admin\ChatModerationController::class, 'decide'])->whereNumber('message')->middleware('throttle:120,1')->name('chat.moderation.decide');

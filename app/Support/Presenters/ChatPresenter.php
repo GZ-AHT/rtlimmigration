@@ -7,6 +7,7 @@ use App\Enums\ModerationStatus;
 use App\Models\ChatConversation;
 use App\Models\ChatMessage;
 use App\Models\ChatMessageAttachment;
+use App\Support\Chat\AutoReply\AutoReplySettings;
 use App\Support\Chat\ChatSecuritySettings;
 use App\Support\Chat\Security\ContentInspector;
 use Closure;
@@ -84,8 +85,10 @@ class ChatPresenter
             'id' => $m->id,
             'client_id' => $own ? $m->client_id : null,
             'sender_type' => $m->sender_type,
+            'automated' => $m->sender_type === ChatMessage::BOT,
             'sender_name' => match ($m->sender_type) {
                 ChatMessage::SYSTEM => null,
+                ChatMessage::BOT => app(AutoReplySettings::class)->assistantName(),
                 ChatMessage::VISITOR => $viewer['visitor_name'] ?? __('Visitor'),
                 default => $m->user->name ?? __('Former user'),
             },

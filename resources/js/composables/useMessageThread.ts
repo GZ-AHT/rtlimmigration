@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import type { PortalMessage, PortalThread } from '@/types';
 
 /**
@@ -24,6 +24,21 @@ export type ThreadMessage = PortalMessage & {
 };
 
 const POLL_MS = 5000;
+
+/**
+ * Automatic replies the server has already stored but the page has not shown
+ * yet (message ID → time to show it). While one is waiting, the thread shows
+ * the typing indicator; polling cannot reveal it early. Module-level so a
+ * reply to a visitor's first message survives the chat form being replaced
+ * by the thread.
+ */
+const waiting = reactive(new Map<number, number>());
+
+/** Hold an automatic reply back for `ms`, then show it. */
+export function holdReply(id: number, ms: number): void {
+    waiting.set(id, Date.now() + ms);
+    setTimeout(() => waiting.delete(id), ms);
+}
 
 export function uuid(): string {
     // crypto.randomUUID only exists in secure contexts (https, localhost).
@@ -54,6 +69,7 @@ export const headers = (): Record<string, string> => ({
 
 type ErrorBody = {
     message?: PortalMessage | string;
+    auto_reply?: { message: PortalMessage; typing_ms: number };
     errors?: Record<string, string[]>;
     captcha_required?: boolean;
 };
@@ -234,6 +250,15 @@ export function useMessageThread(options: {
             const data = (await response.json().catch(() => ({}))) as ErrorBody;
 
             if (response.ok && typeof data.message === 'object') {
+                if (data.auto_reply) {
+                    // Hold it before it can be merged, so a poll cannot show it early.
+                    holdReply(
+                        data.auto_reply.message.id,
+                        data.auto_reply.typing_ms,
+                    );
+                    merge([data.auto_reply.message]);
+                }
+
                 merge([data.message]);
 
                 return;
@@ -328,8 +353,19 @@ export function useMessageThread(options: {
         document.removeEventListener('visibilitychange', onVisibility);
     });
 
+    /** Messages to show: automatic replies still "being typed" are left out. */
+    const visible = computed(() =>
+        messages.value.filter((m) => !waiting.has(m.id)),
+    );
+    /** True while an automatic reply is on its way. */
+    const typing = computed(() =>
+        messages.value.some((m) => waiting.has(m.id)),
+    );
+
     return {
         messages,
+        visible,
+        typing,
         hasMore,
         loadingEarlier,
         offline,

@@ -351,7 +351,7 @@ export type ChatRow = {
 };
 
 /** A message in a student's portal thread (kept in this system, not Tawk.to). */
-export type ChatSenderType = 'student' | 'visitor' | 'staff' | 'system';
+export type ChatSenderType = 'student' | 'visitor' | 'staff' | 'system' | 'bot';
 
 /**
  * How a message's moderation looks to the person viewing it. "delivered"
@@ -372,6 +372,8 @@ export type PortalMessage = {
     id: number;
     client_id: string | null;
     sender_type: ChatSenderType;
+    /** An automatic reply, not a person. */
+    automated?: boolean;
     sender_name: string | null;
     body: string | null;
     attachments: {

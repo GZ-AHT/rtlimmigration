@@ -37,6 +37,8 @@ beforeEach(function () {
     $this->seed(ReferenceDataSeeder::class);
     Storage::fake(config('documents.disk'));
     Notification::fake();
+    // These tests count messages; automatic replies have their own tests (AutoReplyTest).
+    app(SettingsRepository::class)->set('chat_auto_reply.enabled', false);
     // JSON requests only carry cookies (the guest session) with credentials, like fetch(credentials: 'same-origin').
     $this->withCredentials();
 

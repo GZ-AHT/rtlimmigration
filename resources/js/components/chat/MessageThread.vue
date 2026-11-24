@@ -43,13 +43,22 @@ const thread = useMessageThread({
     onCaptchaRequired: props.onCaptchaRequired,
 });
 
-const { messages, hasMore, loadingEarlier, offline } = thread;
+const { visible, typing, hasMore, loadingEarlier, offline } = thread;
 
-function scrollToBottom(): void {
+// Messages already on screen when the thread opened do not animate in.
+const initialKeys = new Set(visible.value.map((m) => m.key));
+const isNew = (m: ThreadMessage) => !initialKeys.has(m.key);
+
+function scrollToBottom(smooth = false): void {
     void nextTick(() => {
-        if (scroller.value) {
-            scroller.value.scrollTop = scroller.value.scrollHeight;
-        }
+        scroller.value?.scrollTo({
+            top: scroller.value.scrollHeight,
+            behavior:
+                smooth &&
+                !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                    ? 'smooth'
+                    : 'auto',
+        });
     });
 }
 
@@ -64,10 +73,10 @@ function onScroll(): void {
 
 // Follow new messages only when the reader is already at the bottom.
 watch(
-    () => messages.value.length,
+    () => [visible.value.length, typing.value],
     () => {
         if (nearBottom.value) {
-            scrollToBottom();
+            scrollToBottom(true);
         }
     },
 );
@@ -148,7 +157,7 @@ function submit(): void {
     body.value = '';
     files.value = [];
     nearBottom.value = true;
-    scrollToBottom();
+    scrollToBottom(true);
 }
 
 function onKeydown(event: KeyboardEvent): void {
@@ -211,13 +220,13 @@ function size(bytes: number): string {
             </div>
 
             <p
-                v-if="!messages.length"
+                v-if="!visible.length && !typing"
                 class="m-auto max-w-xs text-center text-[13px] text-muted-foreground"
             >
                 {{ emptyText }}
             </p>
 
-            <template v-for="m in messages" :key="m.key">
+            <template v-for="m in visible" :key="m.key">
                 <p
                     v-if="m.sender_type === 'system'"
                     class="self-center px-3 text-center text-[11px] text-muted-foreground italic"
@@ -227,13 +236,25 @@ function size(bytes: number): string {
                 <div
                     v-else
                     class="flex max-w-[88%] flex-col sm:max-w-[75%]"
-                    :class="isMine(m) ? 'items-end self-end' : 'self-start'"
+                    :class="[
+                        isMine(m) ? 'items-end self-end' : 'self-start',
+                        isNew(m) ? 'chat-msg-in' : '',
+                    ]"
                 >
                     <span class="mb-0.5 px-1 text-[11px] text-muted-foreground">
                         <b class="font-semibold text-foreground">{{
                             isMine(m) ? 'You' : m.sender_name
                         }}</b>
                         · {{ formatDateTime(m.created_at) }}
+                        <span
+                            v-if="m.automated"
+                            class="ml-1 inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-px text-[10px] font-semibold text-muted-foreground"
+                            title="This is an automatic reply, not a person."
+                            ><AppIcon
+                                name="smart_toy"
+                                :size="11"
+                            />Automated</span
+                        >
                         <span
                             v-if="staffBadge(m)"
                             class="ml-1 inline-flex items-center gap-0.5 rounded bg-warning-soft px-1.5 py-px text-[10px] font-semibold text-warning"
@@ -344,6 +365,24 @@ function size(bytes: number): string {
                     </span>
                 </div>
             </template>
+
+            <div
+                v-if="typing"
+                class="chat-msg-in flex max-w-[88%] flex-col self-start sm:max-w-[75%]"
+                role="status"
+            >
+                <span class="mb-0.5 px-1 text-[11px] text-muted-foreground"
+                    >Automated assistant is typing…</span
+                >
+                <div
+                    class="flex items-center gap-1 rounded-2xl rounded-bl-md bg-muted px-4 py-3.5"
+                    aria-hidden="true"
+                >
+                    <span class="chat-dot" />
+                    <span class="chat-dot" style="animation-delay: 0.15s" />
+                    <span class="chat-dot" style="animation-delay: 0.3s" />
+                </div>
+            </div>
         </div>
 
         <p

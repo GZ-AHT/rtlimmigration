@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Enums\Role;
 use App\Models\User;
 use App\Policies\RolePolicy;
+use App\Support\Chat\AutoReply\KeywordReplyProvider;
+use App\Support\Chat\AutoReply\ReplyProvider;
 use App\Support\Chat\Security\ClamAvScanner;
 use App\Support\Chat\Security\MalwareScanner;
 use App\Support\Chat\Security\NullMalwareScanner;
@@ -30,6 +32,9 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(SettingsRepository::class);
+
+        // Automatic chat replies: swap this binding for an AI-powered provider later.
+        $this->app->bind(ReplyProvider::class, KeywordReplyProvider::class);
 
         // Chat attachment virus scanning (config/chat.php).
         $this->app->bind(MalwareScanner::class, fn () => config('chat.malware.driver') === 'clamav'

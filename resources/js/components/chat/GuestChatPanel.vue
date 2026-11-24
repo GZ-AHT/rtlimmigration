@@ -9,7 +9,7 @@ import {
     watch,
 } from 'vue';
 import MessageThread from '@/components/chat/MessageThread.vue';
-import { headers, uuid } from '@/composables/useMessageThread';
+import { headers, holdReply, uuid } from '@/composables/useMessageThread';
 import { renderTurnstile } from '@/lib/turnstile';
 import { contact } from '@/routes';
 import { link, start } from '@/routes/chat/guest';
@@ -114,6 +114,18 @@ async function startChat(): Promise<void> {
         });
 
         if (response.ok) {
+            const created = (await response.json().catch(() => ({}))) as {
+                auto_reply?: { message: { id: number }; typing_ms: number };
+            };
+
+            // Show the typing indicator before the automatic reply appears.
+            if (created.auto_reply) {
+                holdReply(
+                    created.auto_reply.message.id,
+                    created.auto_reply.typing_ms,
+                );
+            }
+
             emit('started');
 
             return;

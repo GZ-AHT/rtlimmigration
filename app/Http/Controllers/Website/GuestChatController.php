@@ -11,6 +11,7 @@ use App\Models\ChatConversation;
 use App\Models\ChatGuest;
 use App\Models\ChatMessage;
 use App\Models\ChatMessageAttachment;
+use App\Support\Chat\AutoReply\AutoReplyService;
 use App\Support\Chat\ChatSecuritySettings;
 use App\Support\Chat\Security\ChatActor;
 use App\Support\Chat\Security\ChatGuard;
@@ -58,6 +59,7 @@ class GuestChatController extends Controller
         private ChatGuard $guard,
         private PortalMessaging $messaging,
         private Turnstile $turnstile,
+        private AutoReplyService $autoReply,
     ) {}
 
     public function show(Request $request): Response
@@ -188,7 +190,7 @@ class GuestChatController extends Controller
             throw $e;
         }
 
-        return $response->setStatusCode(201)->withCookie($this->cookie($request, $token));
+        return $this->withAutoReply($response, $conversation)->setStatusCode(201)->withCookie($this->cookie($request, $token));
     }
 
     public function messages(Request $request, ChatMessageController $controller): JsonResponse
@@ -211,7 +213,34 @@ class GuestChatController extends Controller
             $this->guard->captchaPassed($guest);
         }
 
-        return $controller->send($request, $conversation, ChatMessage::VISITOR, $actor, self::viewer($conversation), self::attachmentUrl());
+        return $this->withAutoReply($controller->send($request, $conversation, ChatMessage::VISITOR, $actor, self::viewer($conversation), self::attachmentUrl()), $conversation);
+    }
+
+    /**
+     * Adds the automatic reply to the answer for a message that was just stored, so the
+     * page can show a typing indicator first and then the reply. Only for a new message:
+     * a retry of one already stored (status 200) never gets a second reply.
+     */
+    private function withAutoReply(JsonResponse $response, ChatConversation $conversation): JsonResponse
+    {
+        if ($response->getStatusCode() !== 201) {
+            return $response;
+        }
+
+        $data = $response->getData(true);
+        $message = isset($data['message']['id']) ? ChatMessage::query()->find((int) $data['message']['id']) : null;
+        $reply = $message ? $this->autoReply->respond($conversation, $message) : null;
+
+        if ($reply === null) {
+            return $response;
+        }
+
+        $data['auto_reply'] = [
+            'message' => ChatPresenter::message($reply, self::attachmentUrl(), self::viewer($conversation)),
+            'typing_ms' => AutoReplyService::typingMs((string) $reply->body),
+        ];
+
+        return $response->setData($data);
     }
 
     public function attachment(Request $request, ChatMessageAttachment $attachment, ChatMessageController $controller): StreamedResponse
