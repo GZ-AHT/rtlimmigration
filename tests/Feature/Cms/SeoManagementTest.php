@@ -173,13 +173,16 @@ it('puts verification tags and analytics in the page, but only when the codes ar
 });
 
 it('validates the SEO settings and the custom structured data', function () {
-    $this->actingAs($this->admin)->get(route('admin.cms.settings', ['tab' => 'seo']))->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->has('groups.seo.fields.sitemap_enabled')->where('values.seo.enabled', true));
+    $this->actingAs($this->admin)->get(route('admin.seo.settings'))->assertOk()
+        ->assertInertia(fn (Assert $page) => $page->has('group.fields.sitemap_enabled')->where('values.enabled', true));
 
-    $this->actingAs($this->admin)->put(route('admin.cms.settings.update', 'seo'), ['ga_id' => 'UA-1', 'gtm_id' => '<b>', 'google_verification' => 'a b'])
+    $this->actingAs($this->admin)->get(route('admin.cms.settings'))->assertInertia(fn (Assert $page) => $page->missing('groups.seo'));
+    $this->actingAs($this->admin)->put(route('admin.cms.settings.update', 'seo'), ['enabled' => false])->assertNotFound();
+
+    $this->actingAs($this->admin)->put(route('admin.seo.settings.update'), ['ga_id' => 'UA-1', 'gtm_id' => '<b>', 'google_verification' => 'a b'])
         ->assertSessionHasErrors(['ga_id', 'gtm_id', 'google_verification']);
 
-    $this->actingAs($this->admin)->put(route('admin.cms.settings.update', 'seo'), ['enabled' => true, 'ga_id' => 'G-ABC12345', 'robots_txt' => "User-agent: *\nDisallow:"])
+    $this->actingAs($this->admin)->put(route('admin.seo.settings.update'), ['enabled' => true, 'ga_id' => 'G-ABC12345', 'robots_txt' => "User-agent: *\nDisallow:"])
         ->assertSessionHasNoErrors();
     expect(app(SettingsRepository::class)->get('seo.ga_id'))->toBe('G-ABC12345');
 

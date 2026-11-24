@@ -234,6 +234,8 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
 
         // REQ §22.3 Technical SEO
         Route::prefix('seo')->name('seo.')->group(function () {
+            Route::get('settings', [Admin\Cms\SeoSettingsController::class, 'edit'])->name('settings');
+            Route::put('settings', [Admin\Cms\SeoSettingsController::class, 'update'])->name('settings.update');
             Route::get('redirects', [Admin\Cms\RedirectController::class, 'index'])->name('redirects.index');
             Route::post('redirects', [Admin\Cms\RedirectController::class, 'store'])->name('redirects.store');
             Route::put('redirects/{redirect}', [Admin\Cms\RedirectController::class, 'update'])->name('redirects.update');

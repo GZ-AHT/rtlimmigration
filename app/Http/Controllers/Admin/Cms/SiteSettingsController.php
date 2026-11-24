@@ -19,7 +19,7 @@ class SiteSettingsController extends Controller
 
         $withCode = $request->user()->can('cms.custom-code');
         $groups = collect(SiteSettings::groups())
-            ->reject(fn ($g, $key) => $key === 'code' && ! $withCode)
+            ->reject(fn ($g, $key) => $key === 'seo' || ($key === 'code' && ! $withCode))
             ->map(fn ($g) => collect($g)->except('permission')->all());
 
         return Inertia::render('admin/cms/SiteSettings', [
@@ -32,7 +32,7 @@ class SiteSettingsController extends Controller
     public function update(Request $request, SiteSettings $settings, string $group): RedirectResponse
     {
         Gate::authorize('cms.manage');
-        abort_unless(array_key_exists($group, SiteSettings::groups()), 404);
+        abort_unless(array_key_exists($group, SiteSettings::groups()) && $group !== 'seo', 404);
 
         if ($group === 'code') {
             Gate::authorize('cms.custom-code');
