@@ -107,7 +107,7 @@ function size(bytes: number): string {
 </script>
 
 <template>
-    <div class="flex flex-col gap-2">
+    <div class="flex min-w-0 flex-col gap-2">
         <label
             :for="inputId"
             class="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed px-4 py-6 text-center transition-colors"
@@ -153,7 +153,7 @@ function size(bytes: number): string {
             <li
                 v-for="(file, index) in files"
                 :key="`${file.name}-${index}`"
-                class="flex items-center gap-2.5 rounded-lg border bg-card px-3 py-2 text-[13px]"
+                class="flex min-w-0 items-center gap-2.5 rounded-lg border bg-card px-3 py-2 text-[13px]"
             >
                 <AppIcon
                     name="description"
@@ -161,7 +161,7 @@ function size(bytes: number): string {
                     class="text-muted-foreground"
                 />
                 <span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
-                <span class="text-[11px] text-muted-foreground">{{
+                <span class="shrink-0 text-[11px] text-muted-foreground">{{
                     size(file.size)
                 }}</span>
                 <button

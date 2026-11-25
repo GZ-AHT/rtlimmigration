@@ -87,7 +87,10 @@ function submit(): void {
                     }}
                 </DialogDescription>
             </DialogHeader>
-            <form class="flex flex-col gap-3.5" @submit.prevent="submit">
+            <form
+                class="flex min-w-0 flex-col gap-3.5"
+                @submit.prevent="submit"
+            >
                 <FileUpload
                     v-model="form.file"
                     label="Choose a file"
