@@ -44,10 +44,16 @@ class PaymentDocumentController extends Controller
             ->download($payment->receipt_number.'.pdf');
     }
 
-    /** The student gets the applicant's copy; staff (counselor, Accounts, admin) get the file copy. */
+    /** The student gets the applicant's copy, the Super Admin the office copy, other staff (counselor, Accounts) the file copy. */
     private static function copyLabel(Student $student): string
     {
-        return StudentPolicy::isOwner(auth()->user(), $student) ? 'APPLICANT’S COPY' : 'FILE COPY';
+        $user = auth()->user();
+
+        return match (true) {
+            StudentPolicy::isOwner($user, $student) => 'APPLICANT’S COPY',
+            $user->isSuperAdmin() => 'OFFICE COPY',
+            default => 'FILE COPY',
+        };
     }
 
     /** @return array{name: string, tagline: string|null, address: string|null, phone: string|null, email: string|null} */
