@@ -21,6 +21,7 @@ use Database\Seeders\ReferenceDataSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
@@ -413,4 +414,23 @@ it('lets Accounts record a bank transfer as received without uploading proof', f
     $this->actingAs($this->student->user)->post(route('portal.payments.store', $second), [
         'payment_method_id' => $this->bank->id, 'amount' => '20000', 'transaction_reference' => 'BANK-56', 'paid_on' => now()->toDateString(),
     ])->assertSessionHasErrors('evidence');
+});
+
+describe('internal note', function () {
+    it('lets Accounts save a private note that the student cannot see or set', function () {
+        $payment = pay($this, raise($this), '20000', 'TX-NOTE');
+
+        $this->actingAs($this->accounts)
+            ->patch(route('accounts.payments.internal-note', $payment), ['internal_note' => 'Matches bank statement'])
+            ->assertSessionHasNoErrors();
+
+        expect($payment->fresh()->internal_note)->toBe('Matches bank statement');
+
+        $this->actingAs($this->accounts)->get(route('accounts.payments.show', $payment))
+            ->assertInertia(fn ($page) => $page->where('payment.internal_note', 'Matches bank statement'));
+
+        $this->actingAs($this->student->user)->get(route('portal.payments.history'))
+            ->assertDontSee('Matches bank statement');
+        expect(Route::has('portal.payments.internal-note'))->toBeFalse();
+    });
 });

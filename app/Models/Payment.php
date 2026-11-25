@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * @property string|null $rejection_reason
  * @property string|null $receipt_number
  * @property string|null $notes
+ * @property string|null $internal_note
  * @property CarbonInterface|null $created_at
  * @property-read PaymentRequest $request
  * @property-read Student $student
@@ -48,7 +49,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 #[Fillable([
     'payment_request_id', 'student_id', 'payment_method_id', 'amount', 'amount_refunded', 'currency', 'transaction_reference', 'paid_on',
     'evidence_disk', 'evidence_path', 'evidence_original_name', 'evidence_mime_type', 'status', 'submitted_by',
-    'verified_by', 'verified_at', 'confirmed_by', 'confirmed_at', 'rejection_reason', 'receipt_number', 'notes',
+    'verified_by', 'verified_at', 'confirmed_by', 'confirmed_at', 'rejection_reason', 'receipt_number', 'notes', 'internal_note',
 ])]
 class Payment extends Model
 {

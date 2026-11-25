@@ -168,6 +168,7 @@ class AreaRoutes
             Route::get('payments-queue/rejected', [Payments\PaymentController::class, 'index'])->defaults('status', 'rejected')->name('payments.rejected');
             Route::patch('payments/{payment}/verify', [Payments\PaymentController::class, 'verify'])->name('payments.verify');
             Route::patch('payments/{payment}/confirm', [Payments\PaymentController::class, 'confirm'])->name('payments.confirm');
+            Route::patch('payments/{payment}/internal-note', [Payments\PaymentController::class, 'internalNote'])->name('payments.internal-note');
             Route::patch('payments/{payment}/reject', [Payments\PaymentController::class, 'reject'])->name('payments.reject');
 
             // REQ §9.1 menus 8, 10, 12 and 14–20

@@ -23,6 +23,7 @@ const props = defineProps<{
         request: PaymentRequestRow & { url: string };
         evidence_url: string | null;
         evidence_is_image: boolean;
+        internal_note: string | null;
     };
     history: HistoryEntry[];
     refunds: RefundRow[];
@@ -39,6 +40,7 @@ const props = defineProps<{
         verify: string | null;
         confirm: string | null;
         reject: string | null;
+        internal_note: string | null;
         receipt: string | null;
         refund: string | null;
     };
@@ -51,6 +53,26 @@ setLayoutProps({
 const dialog = ref<null | 'confirm' | 'reject'>(null);
 const reason = ref('');
 const busy = ref(false);
+const internalNote = ref(props.payment.internal_note ?? '');
+const savingNote = ref(false);
+
+function saveNote(): void {
+    if (!props.urls.internal_note) {
+        return;
+    }
+
+    router.patch(
+        props.urls.internal_note,
+        { internal_note: internalNote.value },
+        {
+            preserveScroll: true,
+            onStart: () => (savingNote.value = true),
+            onError: (e) =>
+                toast.error(Object.values(e)[0] ?? 'Could not save.'),
+            onFinish: () => (savingNote.value = false),
+        },
+    );
+}
 const refunding = ref(false);
 
 function act(url: string | null, data: Record<string, string> = {}): void {
@@ -188,6 +210,32 @@ function act(url: string | null, data: Record<string, string> = {}): void {
                 >
                     <b>Rejected:</b> {{ payment.rejection_reason }}
                 </p>
+            </PanelCard>
+
+            <PanelCard
+                v-if="urls.internal_note"
+                title="Internal note"
+                description="Only Accounts and admins can see this. The student never does."
+            >
+                <textarea
+                    v-model="internalNote"
+                    rows="3"
+                    maxlength="2000"
+                    aria-label="Internal note"
+                    class="w-full rounded-lg border bg-background p-3 text-[13px]"
+                    placeholder="e.g. Receipt matches the bank statement of 24 Nov."
+                />
+                <div class="mt-2 flex justify-end">
+                    <Button
+                        size="sm"
+                        :disabled="
+                            savingNote ||
+                            internalNote === (payment.internal_note ?? '')
+                        "
+                        @click="saveNote"
+                        >Save note</Button
+                    >
+                </div>
             </PanelCard>
 
             <PanelCard

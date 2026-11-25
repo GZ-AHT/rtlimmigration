@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
 use App\Models\PaymentRequest;
+use App\Models\PaymentStatusHistory;
 use App\Models\Refund;
 use App\Support\Money;
 use App\Support\Presenters\PaymentPresenter;
@@ -111,6 +112,8 @@ class PaymentController extends Controller
                 ],
                 'evidence_url' => $payment->evidence_path ? $this->areaRoute($request, 'payments.evidence', $payment) : null,
                 'evidence_is_image' => str_starts_with((string) $payment->evidence_mime_type, 'image/'),
+                // Staff only: the presenter is shared with the student portal, so it is added here.
+                'internal_note' => $user->can('confirm', $payment) ? $payment->internal_note : null,
             ],
             'history' => $payment->statusHistory->map(fn ($h) => PaymentPresenter::history($h, 'payment'))->values(),
             'refunds' => $payment->refunds->map(fn (Refund $r) => [...PaymentPresenter::refund($r), 'url' => $this->areaHas($request, 'refunds.show') ? $this->areaRoute($request, 'refunds.show', $r) : null])->values(),
@@ -127,6 +130,7 @@ class PaymentController extends Controller
                 'verify' => $this->areaHas($request, 'payments.verify') ? $this->areaRoute($request, 'payments.verify', $payment) : null,
                 'confirm' => $this->areaHas($request, 'payments.confirm') ? $this->areaRoute($request, 'payments.confirm', $payment) : null,
                 'reject' => $this->areaHas($request, 'payments.reject') ? $this->areaRoute($request, 'payments.reject', $payment) : null,
+                'internal_note' => $this->areaHas($request, 'payments.internal-note') && $user->can('confirm', $payment) ? $this->areaRoute($request, 'payments.internal-note', $payment) : null,
                 'receipt' => $payment->receipt_number !== null ? $this->areaRoute($request, 'payments.receipt', $payment) : null,
                 'refund' => $this->areaHas($request, 'payments.refunds.store') ? $this->areaRoute($request, 'payments.refunds.store', $payment) : null,
             ],
@@ -226,6 +230,29 @@ class PaymentController extends Controller
         $ledger->reject($payment, $request->user(), $data['reason']);
 
         $this->toast(['type' => 'success', 'message' => __('Payment rejected. The student and counselor have been told why.')]);
+
+        return back();
+    }
+
+    /** Accounts' private remark on a payment. Allowed at any status, and kept out of the student's view. */
+    public function internalNote(Request $request, Payment $payment): RedirectResponse
+    {
+        Gate::authorize('confirm', $payment);
+
+        $data = $request->validate(['internal_note' => ['nullable', 'string', 'max:2000']]);
+        $note = filled($data['internal_note'] ?? null) ? trim($data['internal_note']) : null;
+
+        if ($note !== $payment->internal_note) {
+            $payment->update(['internal_note' => $note]);
+            $payment->morphMany(PaymentStatusHistory::class, 'subject')->create([
+                'from_status' => $payment->status->value,
+                'to_status' => $payment->status->value,
+                'changed_by' => $request->user()->id,
+                'note' => $note === null ? __('Internal note removed.') : __('Internal note updated.'),
+            ]);
+        }
+
+        $this->toast(['type' => 'success', 'message' => __('Internal note saved.')]);
 
         return back();
     }
