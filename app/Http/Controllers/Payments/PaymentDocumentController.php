@@ -35,7 +35,7 @@ class PaymentDocumentController extends Controller
         // A receipt exists only once the money is confirmed.
         abort_unless($payment->status === PaymentStatus::Confirmed && $payment->receipt_number !== null, 404);
 
-        $payment->load(['request.type', 'request.file', 'student.user', 'method', 'confirmer']);
+        $payment->load(['request.type', 'request.file.country', 'student.user', 'student.profile', 'method', 'confirmer']);
 
         return Pdf::loadView('pdf.receipt', ['payment' => $payment, 'company' => self::company($settings)])
             ->setPaper('a4')

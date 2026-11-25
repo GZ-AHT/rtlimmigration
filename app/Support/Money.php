@@ -47,4 +47,47 @@ class Money
     {
         return $currency.' '.number_format($minor / 100, 2);
     }
+
+    /** 500050 → "Five Thousand Taka and Fifty Paisa Only" (South Asian lakh/crore grouping). */
+    public static function words(int $minor, string $currency = 'BDT'): string
+    {
+        $major = intdiv($minor, 100);
+        $minorPart = $minor % 100;
+        $unit = $currency === 'BDT' ? ['Taka', 'Paisa'] : [$currency, 'Cents'];
+
+        $text = self::spell($major).' '.$unit[0];
+
+        if ($minorPart > 0) {
+            $text .= ' and '.self::spell($minorPart).' '.$unit[1];
+        }
+
+        return $text.' Only';
+    }
+
+    private static function spell(int $n): string
+    {
+        if ($n === 0) {
+            return 'Zero';
+        }
+
+        $small = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+        $tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+        $below100 = fn (int $x): string => $x < 20 ? $small[$x] : trim($tens[intdiv($x, 10)].' '.$small[$x % 10]);
+
+        $parts = [];
+
+        foreach ([10000000 => 'Crore', 100000 => 'Lakh', 1000 => 'Thousand', 100 => 'Hundred'] as $size => $name) {
+            if ($n >= $size) {
+                $count = intdiv($n, $size);
+                $parts[] = self::spell($count).' '.$name;
+                $n %= $size;
+            }
+        }
+
+        if ($n > 0) {
+            $parts[] = $below100($n);
+        }
+
+        return implode(' ', $parts);
+    }
 }
