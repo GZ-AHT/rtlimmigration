@@ -107,6 +107,10 @@ class GatewayPayments
             return null;
         }
 
+        // The signature covers every field the gateway sent, including empty
+        // ones that Laravel turns into null. Verify against those, and keep
+        // only the scrubbed copy for storage.
+        $signed = array_map(fn ($value) => $value ?? '', $payload);
         $payload = self::scrub($payload);
         $event = $this->recordEvent($gateway, $tranId, $payload, $source);
         $transaction = GatewayTransaction::where('gateway', $gateway->key())->where('tran_id', $tranId)->first();
@@ -125,7 +129,7 @@ class GatewayPayments
         }
 
         // Ask the gateway before taking any lock: this is a network call.
-        $verification = $gateway->verify($transaction, $payload);
+        $verification = $gateway->verify($transaction, $signed);
 
         if ($verification->status === GatewayTransactionStatus::Initiated) {
             $event->update(['result' => 'unverified']);

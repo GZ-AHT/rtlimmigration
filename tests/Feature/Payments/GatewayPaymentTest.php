@@ -202,6 +202,25 @@ describe('gateway callbacks', function () {
         Notification::assertSentTo($this->counselor, PaymentDecided::class);
     });
 
+    it('settles a real-shaped signed success callback that has empty fields', function () {
+        Notification::fake();
+        $transaction = startOnline($this);
+        fakeValidation($transaction);
+
+        $payload = ['tran_id' => $transaction->tran_id, 'val_id' => 'VAL123', 'status' => 'VALID', 'amount' => '20000.00', 'currency' => 'BDT', 'store_id' => 'teststore', 'error' => '', 'value_a' => '', 'value_b' => '', 'card_type' => 'VISA-Dutch Bangla'];
+        $keys = array_keys($payload);
+        $data = $payload + ['store_passwd' => md5('secret-pass')];
+        ksort($data);
+        $hash = implode('&', array_map(fn ($k, $v) => $k.'='.$v, array_keys($data), $data));
+        $payload['verify_key'] = implode(',', $keys);
+        $payload['verify_sign'] = md5($hash);
+
+        $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'success', 't' => $transaction->tran_id]), $payload)
+            ->assertDontSee('Payment not completed');
+
+        expect($transaction->fresh()->status)->toBe(GatewayTransactionStatus::Paid);
+    });
+
     it('does not mark anything paid because the browser returned to the success page', function () {
         $transaction = startOnline($this);
         // The payer's browser claims success, but the gateway does not agree.
@@ -253,7 +272,7 @@ describe('gateway callbacks', function () {
         $this->post(route('gateway.ipn', 'sslcommerz'), $payload)->assertOk();
         $this->post(route('gateway.ipn', 'sslcommerz'), $payload)->assertOk();
         // The browser return for the same payment arrives as well.
-        $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'success']), $payload)->assertOk()->assertSee('Payment received');
+        $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'success']), $payload)->assertOk()->assertDontSee('Payment not completed');
 
         expect(Payment::count())->toBe(1)
             ->and($this->invoice->fresh()->amount_paid)->toBe(2000000)
@@ -317,7 +336,7 @@ describe('gateway callbacks', function () {
 
         // e.g. the Easy Checkout popup closed after the payer had paid.
         $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'cancel']), ['tran_id' => $transaction->tran_id, 'status' => 'CANCELLED'])
-            ->assertOk()->assertSee('Payment received');
+            ->assertOk()->assertDontSee('Payment not completed');
 
         expect($transaction->fresh()->status)->toBe(GatewayTransactionStatus::Paid)
             ->and(Payment::sole()->transaction_reference)->toBe('BANK888')
@@ -353,7 +372,7 @@ describe('gateway callbacks', function () {
 
         // Easy Checkout brings the page back with a plain GET.
         $this->get(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'success', 't' => $transaction->tran_id]))
-            ->assertOk()->assertSee('Payment received');
+            ->assertOk()->assertDontSee('Payment not completed');
 
         expect(Payment::sole()->transaction_reference)->toBe('BANK777')
             ->and($transaction->fresh()->validation_id)->toBe('VAL777')
