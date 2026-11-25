@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Payments;
 
 use App\Enums\PaymentStatus;
+use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\PaymentRequest;
@@ -44,14 +45,14 @@ class PaymentDocumentController extends Controller
             ->download($payment->receipt_number.'.pdf');
     }
 
-    /** The student gets the applicant's copy, the Super Admin the office copy, other staff (counselor, Accounts) the file copy. */
+    /** The student gets the applicant's copy, the Super Admin and Accounts the office copy, other staff (counselor) the file copy. */
     private static function copyLabel(Student $student): string
     {
         $user = auth()->user();
 
         return match (true) {
             StudentPolicy::isOwner($user, $student) => 'APPLICANT’S COPY',
-            $user->isSuperAdmin() => 'OFFICE COPY',
+            $user->isSuperAdmin() || $user->hasRole(Role::Accounts->value) => 'OFFICE COPY',
             default => 'FILE COPY',
         };
     }

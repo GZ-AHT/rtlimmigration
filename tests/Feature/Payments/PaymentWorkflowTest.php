@@ -448,6 +448,9 @@ describe('document copy label', function () {
 
         $this->actingAs($this->userWithRole(Role::SuperAdmin));
         expect($label->invoke(null, $this->student))->toBe('OFFICE COPY');
+
+        $this->actingAs($this->accounts);
+        expect($label->invoke(null, $this->student))->toBe('OFFICE COPY');
     });
 
     it('prints the label on the invoice page', function () {
