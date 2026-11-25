@@ -221,6 +221,16 @@ describe('gateway callbacks', function () {
         expect($transaction->fresh()->status)->toBe(GatewayTransactionStatus::Paid);
     });
 
+    it('never sets a session cookie on the gateway return, so the student stays signed in', function () {
+        $transaction = startOnline($this);
+        fakeLookup();
+
+        $response = $this->post(route('gateway.return', ['gateway' => 'sslcommerz', 'outcome' => 'fail', 't' => $transaction->tran_id]));
+
+        $response->assertOk();
+        expect($response->headers->getCookies())->toBeEmpty();
+    });
+
     it('does not mark anything paid because the browser returned to the success page', function () {
         $transaction = startOnline($this);
         // The payer's browser claims success, but the gateway does not agree.

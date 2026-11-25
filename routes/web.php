@@ -23,7 +23,11 @@ use App\Http\Controllers\Website\SkillMigrationController;
 use App\Http\Controllers\Website\UniversityController;
 use App\Http\Middleware\ShareWebsiteData;
 use App\Http\Middleware\TrackPageView;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 // Public website (REQ §21, Figma RTLIMMIG). Pages are built in the CMS; a
 // catch-all for custom page slugs is registered last, at the end of this file.
@@ -64,6 +68,9 @@ Route::post('payments/gateway/{gateway}/ipn', [GatewayController::class, 'ipn'])
 Route::match(['get', 'post'], 'payments/gateway/{gateway}/return/{outcome}', [GatewayController::class, 'return'])
     ->whereIn('outcome', ['success', 'fail', 'cancel'])
     ->middleware('throttle:60,1')
+    // The gateway sends the payer's browser here cross-site, so there is no session to use. Starting
+    // one would set a new guest cookie that replaces the student's real login cookie.
+    ->withoutMiddleware([StartSession::class, AddQueuedCookiesToResponse::class, ShareErrorsFromSession::class, PreventRequestForgery::class])
     ->name('gateway.return');
 
 // REQ §18 Tawk.to webhooks. Public and CSRF-exempt (bootstrap/app.php);
