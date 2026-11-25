@@ -6,6 +6,8 @@ use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\PaymentRequest;
+use App\Models\Student;
+use App\Policies\StudentPolicy;
 use App\Support\Settings\SettingsRepository;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Gate;
@@ -22,9 +24,9 @@ class PaymentDocumentController extends Controller
     {
         Gate::authorize('view', $paymentRequest);
 
-        $paymentRequest->load(['student.user', 'type', 'file', 'requester', 'payments' => fn ($q) => $q->where('status', PaymentStatus::Confirmed->value)->with('method')]);
+        $paymentRequest->load(['student.user', 'student.profile', 'type', 'file.country', 'requester', 'payments' => fn ($q) => $q->where('status', PaymentStatus::Confirmed->value)->with('method')]);
 
-        return Pdf::loadView('pdf.invoice', ['invoice' => $paymentRequest, 'company' => self::company($settings)])
+        return Pdf::loadView('pdf.invoice', ['invoice' => $paymentRequest, 'company' => self::company($settings), 'copy' => self::copyLabel($paymentRequest->student)])
             ->setPaper('a4')
             ->download($paymentRequest->invoice_number.'.pdf');
     }
@@ -37,9 +39,15 @@ class PaymentDocumentController extends Controller
 
         $payment->load(['request.type', 'request.file.country', 'student.user', 'student.profile', 'method', 'confirmer']);
 
-        return Pdf::loadView('pdf.receipt', ['payment' => $payment, 'company' => self::company($settings)])
+        return Pdf::loadView('pdf.receipt', ['payment' => $payment, 'company' => self::company($settings), 'copy' => self::copyLabel($payment->student)])
             ->setPaper('a4')
             ->download($payment->receipt_number.'.pdf');
+    }
+
+    /** The student gets the applicant's copy; staff (counselor, Accounts, admin) get the file copy. */
+    private static function copyLabel(Student $student): string
+    {
+        return StudentPolicy::isOwner(auth()->user(), $student) ? 'APPLICANT’S COPY' : 'FILE COPY';
     }
 
     /** @return array{name: string, tagline: string|null, address: string|null, phone: string|null, email: string|null} */

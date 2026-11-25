@@ -29,27 +29,7 @@
 <head>
 <meta charset="utf-8">
 <title>Money Receipt {{ $payment->receipt_number }}</title>
-<style>
-    @page { margin: 0; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: "Times-Roman", "Times New Roman", serif; font-size: 11pt; color: #111; }
-    .page { position: relative; width: 595pt; height: 838pt; page-break-after: always; overflow: hidden; }
-    .page:last-child { page-break-after: auto; }
-    .side { position: absolute; left: 0; top: 0; width: 41pt; height: 838pt; }
-    .body { position: absolute; left: 50pt; top: 22pt; width: 523pt; }
-    table { width: 100%; border-collapse: collapse; }
-    .blue { color: #fff; background: #2e3192; font-weight: bold; }
-    .pill { background: #e31e24; color: #fff; font-weight: bold; text-align: center; border-radius: 12pt; }
-    .box { border: 0.75pt solid #2e3192; height: 18pt; padding: 2pt 6pt; }
-    .lbl { padding: 3pt 7pt; height: 20pt; font-size: 9.5pt; }
-    .field td { padding: 4pt 0 2pt; font-size: 11.5pt; }
-    .field .v { border-bottom: 1pt dotted #444; padding-left: 6pt; }
-    .lines td, .lines th { border: 0.75pt solid #2e3192; padding: 0 6pt; font-size: 11pt; height: 21pt; line-height: 1.1; }
-    .lines th { background: #2e3192; color: #fff; text-align: center; font-size: 10pt; }
-    .r { text-align: right; }
-    .c { text-align: center; }
-    .sub td { background: #fdf0f3; font-weight: bold; }
-</style>
+@include('pdf._money-styles')
 </head>
 <body>
 <div class="page">
@@ -65,7 +45,7 @@
                         {{ implode(', ', array_filter([$company['email'] ? 'E-mail: '.$company['email'] : null, $company['phone'] ? 'Tel: '.$company['phone'] : null])) }}
                     </div>
                 </td>
-                <td style="width:100pt;vertical-align:top;"><div class="pill" style="padding:6pt 4pt;font-size:8.5pt;">APPLICANT’S COPY</div></td>
+                <td style="width:100pt;vertical-align:top;"><div class="pill" style="padding:6pt 4pt;font-size:8.5pt;">{{ $copy }}</div></td>
             </tr>
         </table>
 
@@ -137,9 +117,9 @@
 
         <table style="margin-top:26pt;">
             <tr>
-                <td class="c" style="width:240pt;"><div style="border-top:1pt solid #333;padding-top:3pt;font-weight:bold;">Applicant / Guardian's Signature</div><div style="color:#e31e24;font-weight:bold;font-size:9pt;">(NID / Passport)</div></td>
+                <td class="c" style="width:240pt;vertical-align:top;"><div style="border-top:1pt solid #333;padding-top:3pt;font-weight:bold;">Applicant / Guardian's Signature</div><div style="color:#e31e24;font-weight:bold;font-size:9pt;">(NID / Passport)</div></td>
                 <td class="c" style="width:60pt;"><img src="{{ $img('stamp.png') }}" style="width:58pt;" alt=""></td>
-                <td class="c"><div style="border-top:1pt solid #333;padding-top:3pt;font-weight:bold;">Asst. Manager / Manager (Accounts)</div>@if ($payment->confirmer)<div style="font-size:8.5pt;color:#444;">{{ $payment->confirmer->name }}</div>@endif</td>
+                <td class="c" style="vertical-align:top;"><div style="border-top:1pt solid #333;padding-top:3pt;font-weight:bold;">Asst. Manager / Manager (Accounts)</div>@if ($payment->confirmer)<div style="font-size:8.5pt;color:#444;">{{ $payment->confirmer->name }}</div>@endif</td>
             </tr>
         </table>
     </div>

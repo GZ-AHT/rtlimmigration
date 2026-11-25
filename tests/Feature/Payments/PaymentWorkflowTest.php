@@ -4,6 +4,7 @@ use App\Actions\Payments\PaymentLedger;
 use App\Enums\PaymentRequestStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\Role;
+use App\Http\Controllers\Payments\PaymentDocumentController;
 use App\Models\Counselor;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
@@ -432,5 +433,24 @@ describe('internal note', function () {
         $this->actingAs($this->student->user)->get(route('portal.payments.history'))
             ->assertDontSee('Matches bank statement');
         expect(Route::has('portal.payments.internal-note'))->toBeFalse();
+    });
+});
+
+describe('document copy label', function () {
+    it('gives the student the applicant copy and staff the file copy', function () {
+        $label = new ReflectionMethod(PaymentDocumentController::class, 'copyLabel');
+
+        $this->actingAs($this->student->user);
+        expect($label->invoke(null, $this->student))->toBe('APPLICANT’S COPY');
+
+        $this->actingAs($this->counselor);
+        expect($label->invoke(null, $this->student))->toBe('FILE COPY');
+    });
+
+    it('prints the label on the invoice page', function () {
+        $invoice = raise($this)->load(['student.user', 'student.profile', 'type', 'file.country', 'payments']);
+        $company = ['name' => 'RTL', 'tagline' => null, 'address' => null, 'phone' => null, 'email' => null];
+
+        expect(view('pdf.invoice', ['invoice' => $invoice, 'company' => $company, 'copy' => 'FILE COPY'])->render())->toContain('FILE COPY');
     });
 });
