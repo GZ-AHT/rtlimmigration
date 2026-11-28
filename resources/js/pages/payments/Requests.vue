@@ -96,7 +96,7 @@ const columns: TableColumn<PaymentRequestRow>[] = [
         />
     </div>
 
-    <PanelCard flush>
+    <PanelCard flush class="invoice-sheet">
         <TableToolbar
             v-model:search="filters.search"
             search-placeholder="Invoice no., student name or number…"
@@ -177,3 +177,29 @@ const columns: TableColumn<PaymentRequestRow>[] = [
         <TablePagination :meta="requests" />
     </PanelCard>
 </template>
+
+<style scoped>
+/* The look of the printed money receipt: blue header band, thin blue grid lines. */
+.invoice-sheet :deep(thead th) {
+    background: #2e3192;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.invoice-sheet :deep(thead th button) {
+    color: inherit;
+}
+
+.invoice-sheet :deep(tbody td) {
+    border-top-color: rgb(46 49 146 / 0.25);
+}
+
+.invoice-sheet :deep(tbody tr:nth-child(even) td) {
+    background: rgb(232 0 0 / 0.025);
+}
+
+.invoice-sheet :deep(tbody tr:hover td) {
+    background: rgb(46 49 146 / 0.06);
+}
+</style>

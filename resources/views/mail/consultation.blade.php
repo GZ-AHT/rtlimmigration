@@ -25,13 +25,18 @@
                     <tr><td style="padding:12px 16px;color:#6b7280">{{ __('Timezone') }}</td><td style="padding:12px 16px">{{ $booking->timezone }}</td></tr>
                     <tr><td style="padding:12px 16px;color:#6b7280">{{ __('Duration') }}</td><td style="padding:12px 16px">{{ __(':n minutes', ['n' => $booking->duration_minutes]) }}</td></tr>
                     <tr><td style="padding:12px 16px;color:#6b7280">{{ __('Subject') }}</td><td style="padding:12px 16px">{{ $booking->subject }}</td></tr>
+                    @if ($showLink)
+                        <tr><td style="padding:12px 16px;color:#6b7280">{{ __('Platform') }}</td><td style="padding:12px 16px">{{ $provider }}</td></tr>
+                    @endif
+                    @if ($counselor)
+                        <tr><td style="padding:12px 16px;color:#6b7280;vertical-align:top">{{ __('Counselor') }}</td><td style="padding:12px 16px"><strong>{{ $counselor['name'] }}</strong>@if ($counselor['designation'])<br>{{ $counselor['designation'] }}@endif<br><a href="mailto:{{ $counselor['email'] }}" style="color:{{ $colour }};word-break:break-all">{{ $counselor['email'] }}</a></td></tr>
+                    @endif
                     @if ($previous)
                         <tr><td style="padding:12px 16px;color:#6b7280">{{ __('Previous time') }}</td><td style="padding:12px 16px;text-decoration:line-through;color:#6b7280">{{ $previous }}</td></tr>
                     @endif
                 </table>
 
                 @if ($showLink)
-                    <p style="margin:0 0 6px;font-size:14px;color:#6b7280">{{ $provider }}</p>
                     <p style="margin:0 0 20px;text-align:center">
                         <a href="{{ $booking->meeting_url }}" style="display:inline-block;background:{{ $colour }};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 26px;border-radius:12px">{{ __('Join the video consultation') }}</a>
                     </p>

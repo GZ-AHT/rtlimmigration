@@ -28,6 +28,8 @@ class ConsultationPresenter
             'timezone' => $b->timezone,
             'meeting_url' => $b->meeting_url,
             'meeting_provider' => $b->meeting_provider,
+            'counselor_id' => $b->counselor_id,
+            'counselor_name' => $b->counselor?->name,
             'has_user' => $b->user_id !== null,
             'has_lead' => $b->lead_id !== null,
         ];
@@ -36,11 +38,12 @@ class ConsultationPresenter
     /** @return array<string, mixed> */
     public static function detail(ConsultationBooking $b): array
     {
-        $b->loadMissing('events.user:id,name');
+        $b->loadMissing('events.user:id,name', 'counselor:id,name');
 
         return [
             ...self::row($b),
             'message' => $b->message,
+            'meeting_is_default' => $b->meeting_is_default,
             'meeting_sent_at' => $b->meeting_sent_at?->format(self::ISO),
             'confirmed_at' => $b->confirmed_at?->format(self::ISO),
             'cancelled_at' => $b->cancelled_at?->format(self::ISO),

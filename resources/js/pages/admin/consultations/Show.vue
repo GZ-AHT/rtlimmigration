@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import FormField from '@/components/panel/FormField.vue';
 import PageHeader from '@/components/panel/PageHeader.vue';
@@ -15,6 +15,7 @@ import {
     approve,
     cancel,
     complete,
+    counselor,
     index,
     meeting,
     reject,
@@ -51,6 +52,9 @@ type Booking = {
     meeting_url: string | null;
     meeting_provider: string | null;
     meeting_sent_at: string | null;
+    meeting_is_default: boolean;
+    counselor_id: number | null;
+    counselor_name: string | null;
     has_user: boolean;
     has_lead: boolean;
     events: Event[];
@@ -61,6 +65,7 @@ const props = defineProps<{
     suggested: string[];
     businessTimezone: string;
     providers: Record<string, string>;
+    counselors: { value: string; label: string }[];
     can: { manage: boolean };
 }>();
 
@@ -82,7 +87,41 @@ const link = reactive({
     provider: props.booking.meeting_provider ?? 'google_meet',
     url: props.booking.meeting_url ?? '',
 });
-const linkExample = 'meet.google.com/abc-defg-hij';
+const linkExample = 'https://meet.google.com/abc-defg-hij';
+// Approving can fill in the default link while this page stays open.
+watch(
+    () => [props.booking.meeting_provider, props.booking.meeting_url],
+    ([provider, url]) => {
+        link.provider = provider ?? 'google_meet';
+        link.url = url ?? '';
+    },
+);
+const linkAlreadyEmailed = computed(
+    () =>
+        props.booking.meeting_sent_at !== null &&
+        link.url === props.booking.meeting_url &&
+        link.provider === props.booking.meeting_provider,
+);
+
+const counselorChoice = ref(String(props.booking.counselor_id ?? ''));
+watch(
+    () => props.booking.counselor_id,
+    (id) => (counselorChoice.value = String(id ?? '')),
+);
+// The current counselor stays listed even if they are no longer active.
+const counselorOptions = computed(() => {
+    const current = String(props.booking.counselor_id ?? '');
+
+    return !current || props.counselors.some((c) => c.value === current)
+        ? props.counselors
+        : [
+              {
+                  value: current,
+                  label: `${props.booking.counselor_name} (inactive)`,
+              },
+              ...props.counselors,
+          ];
+});
 const reason = ref('');
 const note = ref('');
 const move = reactive({ slot: '', custom: '', note: '' });
@@ -137,6 +176,12 @@ const saveLink = (sendIt: boolean) =>
         'put',
     );
 const resend = () => post(send(id).url);
+const saveCounselor = () =>
+    post(
+        counselor(id).url,
+        { counselor_id: counselorChoice.value || null },
+        'put',
+    );
 const rejectNow = () => post(reject(id).url, { reason: reason.value });
 const cancelNow = () => {
     if (window.confirm('Cancel this appointment and tell the customer?')) {
@@ -175,6 +220,8 @@ const labels: Record<string, string> = {
     meeting_link: 'Meeting link saved',
     meeting_sent: 'Meeting link emailed',
     meeting_resent: 'Meeting invitation sent again',
+    confirmation_sent: 'Confirmation emailed',
+    counselor: 'Counselor changed',
     reminder_sent: 'Reminder emailed',
     reschedule_requested: 'Customer asked for another time',
     note: 'Internal note',
@@ -238,13 +285,15 @@ const labels: Record<string, string> = {
                     <dd>{{ booking.customer_time }}</dd>
                     <dt class="text-muted-foreground">Type</dt>
                     <dd>Video Consultation</dd>
+                    <dt class="text-muted-foreground">Counselor</dt>
+                    <dd>{{ booking.counselor_name ?? 'Not assigned' }}</dd>
                 </dl>
             </PanelCard>
 
             <PanelCard
                 v-if="can.manage && active"
                 title="Meeting link"
-                description="Links are entered by hand. Nothing here creates a Google Meet or Zoom meeting for you."
+                description="Optional: the confirmation email already includes the link. Nothing here creates a Google Meet or Zoom meeting for you."
             >
                 <div class="flex flex-col gap-3">
                     <div class="grid gap-3 sm:grid-cols-[170px_1fr]">
@@ -273,6 +322,16 @@ const labels: Record<string, string> = {
                         </FormField>
                     </div>
                     <p
+                        v-if="
+                            booking.meeting_is_default &&
+                            link.url === booking.meeting_url
+                        "
+                        class="text-[12px] text-muted-foreground"
+                    >
+                        This is the default meeting link. Replace it to use a
+                        different one for this booking.
+                    </p>
+                    <p
                         v-if="errors.status"
                         class="text-xs text-danger"
                         role="alert"
@@ -281,7 +340,7 @@ const labels: Record<string, string> = {
                     </p>
                     <div class="flex flex-wrap items-center gap-2">
                         <Button
-                            v-if="confirmed"
+                            v-if="confirmed && !linkAlreadyEmailed"
                             :disabled="busy || !link.url"
                             @click="saveLink(true)"
                             >Save and email to customer</Button
@@ -312,7 +371,7 @@ const labels: Record<string, string> = {
                         v-if="!confirmed"
                         class="text-[12px] text-muted-foreground"
                     >
-                        Approve the booking first to email the link.
+                        Approving emails the confirmation with this link.
                     </p>
                 </div>
             </PanelCard>
@@ -359,6 +418,13 @@ const labels: Record<string, string> = {
                             >
                                 {{ e.data.url }}
                             </p>
+                            <p
+                                v-if="e.type === 'counselor' && e.data"
+                                class="text-muted-foreground"
+                            >
+                                {{ e.data.from ?? 'Not assigned' }} →
+                                {{ e.data.to ?? 'Not assigned' }}
+                            </p>
                             <p class="text-[11px] text-muted-foreground">
                                 {{ formatDateTime(e.at) }}
                             </p>
@@ -369,16 +435,64 @@ const labels: Record<string, string> = {
         </div>
 
         <div v-if="can.manage" class="flex flex-col gap-4">
+            <PanelCard v-if="active" title="Assign counselor">
+                <div class="flex flex-col gap-3">
+                    <FormField label="Counselor" :error="errors.counselor_id">
+                        <template #default="{ id: fid }"
+                            ><SelectInput
+                                :id="fid"
+                                v-model="counselorChoice"
+                                :options="counselorOptions"
+                                placeholder="Not assigned"
+                        /></template>
+                    </FormField>
+                    <Button
+                        variant="outline"
+                        :disabled="
+                            busy ||
+                            counselorChoice ===
+                                String(booking.counselor_id ?? '')
+                        "
+                        @click="saveCounselor"
+                        >Save counselor</Button
+                    >
+                    <p class="text-[12px] text-muted-foreground">
+                        {{
+                            confirmed
+                                ? 'Changing the counselor sends no email. Use "Resend invitation" to tell the customer.'
+                                : 'Save before approving to include the counselor in the confirmation email.'
+                        }}
+                    </p>
+                </div>
+            </PanelCard>
+
             <PanelCard
                 v-if="booking.status === 'pending'"
                 title="Review request"
             >
                 <div class="flex flex-col gap-3">
                     <p class="text-[12px] text-muted-foreground">
-                        Add the meeting link now to approve and email it in one
-                        step, or approve first.
+                        Approving emails the customer the confirmation, with the
+                        meeting link and counselor. If the link field is empty,
+                        the default link is used.
                     </p>
-                    <Button :disabled="busy" @click="approveNow"
+                    <p
+                        v-if="
+                            counselorChoice !==
+                            String(booking.counselor_id ?? '')
+                        "
+                        class="text-xs text-warning"
+                        role="alert"
+                    >
+                        Save the counselor first.
+                    </p>
+                    <Button
+                        :disabled="
+                            busy ||
+                            counselorChoice !==
+                                String(booking.counselor_id ?? '')
+                        "
+                        @click="approveNow"
                         ><AppIcon name="check_circle" :size="16" />
                         Approve</Button
                     >

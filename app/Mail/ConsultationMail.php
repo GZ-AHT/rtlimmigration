@@ -66,6 +66,8 @@ class ConsultationMail extends Mailable implements ShouldQueue
         };
 
         $active = ! in_array($this->kind, ['cancelled', 'declined'], true);
+        $showLink = $active && $b->meeting_url !== null && in_array($this->kind, ['confirmed', 'meeting', 'rescheduled', 'reminder'], true);
+        $counselor = $active && $this->kind !== 'received' && $b->counselor?->isActive() ? $b->counselor : null;
 
         return new Content(view: 'mail.consultation', with: [
             'site' => $this->site(),
@@ -76,9 +78,10 @@ class ConsultationMail extends Mailable implements ShouldQueue
             'when' => $b->starts_at->setTimezone($b->timezone)->format('l, j F Y'),
             'time' => $b->starts_at->setTimezone($b->timezone)->format('g:i A').' – '.$b->ends_at->setTimezone($b->timezone)->format('g:i A'),
             'previous' => isset($this->extra['previous']) ? (string) $this->extra['previous'] : null,
-            'showLink' => $active && $b->meeting_url !== null && in_array($this->kind, ['confirmed', 'meeting', 'rescheduled', 'reminder'], true),
+            'showLink' => $showLink,
+            'counselor' => $counselor ? ['name' => $counselor->name, 'email' => $counselor->email, 'designation' => $counselor->counselorProfile?->designation] : null,
             'manageUrl' => $active ? URL::signedRoute('consultation.manage', ['reference' => $b->reference]) : null,
-            'provider' => ConsultationBooking::PROVIDERS[$b->meeting_provider ?? ''] ?? __('Video call'),
+            'provider' => in_array($b->meeting_provider, ['google_meet', 'zoom'], true) ? ConsultationBooking::PROVIDERS[$b->meeting_provider] : __('Video call'),
         ]);
     }
 

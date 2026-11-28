@@ -8,6 +8,7 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
+import { digitsOnly } from '@/lib/otp';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 import { useCountdown } from '@/composables/useCountdown';
 
@@ -84,6 +85,7 @@ function resend(): void {
                 id="otp-code"
                 v-model="form.code"
                 :maxlength="6"
+                :paste-transformer="digitsOnly"
                 :disabled="form.processing"
                 inputmode="numeric"
                 pattern="^\d*$"

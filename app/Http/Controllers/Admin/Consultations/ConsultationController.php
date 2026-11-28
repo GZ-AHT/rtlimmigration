@@ -6,15 +6,17 @@ use App\Actions\Consultations\ConsultationBookings;
 use App\Enums\ConsultationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ConsultationBooking;
+use App\Models\User;
 use App\Support\Consultations\AvailableSlots;
 use App\Support\Consultations\ConsultationSchedule;
+use App\Support\Consultations\MeetingLinkRules;
+use App\Support\CounselorDirectory;
 use App\Support\Presenters\ConsultationPresenter;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -32,7 +34,7 @@ class ConsultationController extends Controller
             'search' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $rows = ConsultationBooking::query()
+        $rows = ConsultationBooking::query()->with('counselor:id,name')
             ->when($filters['status'] ?? null, fn ($q, $s) => $q->where('status', $s))
             ->when($filters['search'] ?? null, function ($q, string $s) {
                 $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $s).'%';
@@ -52,7 +54,7 @@ class ConsultationController extends Controller
         ]);
     }
 
-    public function show(Request $request, ConsultationBooking $booking, AvailableSlots $slots, ConsultationSchedule $schedule): Response
+    public function show(Request $request, ConsultationBooking $booking, AvailableSlots $slots, ConsultationSchedule $schedule, CounselorDirectory $counselors): Response
     {
         Gate::authorize('consultations.view');
 
@@ -63,6 +65,9 @@ class ConsultationController extends Controller
             'suggested' => array_map(fn (CarbonImmutable $s) => $s->format('Y-m-d\TH:i:s\Z'), array_slice($upcoming, 0, 60)),
             'businessTimezone' => $schedule->timezone(),
             'providers' => ConsultationBooking::PROVIDERS,
+            'counselors' => $request->user()->can('consultations.manage')
+                ? array_map(fn (array $o) => ['value' => $o['value'], 'label' => $o['label']], $counselors->options())
+                : [],
             'can' => ['manage' => $request->user()->can('consultations.manage')],
         ]);
     }
@@ -70,11 +75,30 @@ class ConsultationController extends Controller
     public function approve(Request $request, ConsultationBooking $booking): RedirectResponse
     {
         Gate::authorize('consultations.manage');
-        $data = $this->meetingRules($request, required: false);
+        $data = MeetingLinkRules::validate($request, required: false);
 
-        $this->bookings->approve($booking, $request->user(), $data['meeting_provider'] ?? null, $data['meeting_url'] ?? null);
+        $emailed = $this->bookings->approve($booking, $request->user(), $data['meeting_provider'] ?? null, $data['meeting_url'] ?? null);
 
-        return $this->done(isset($data['meeting_url']) ? __('Booking approved and the meeting link was emailed to the customer.') : __('Booking approved. Add a meeting link, then send it to the customer.'));
+        if (! $emailed) {
+            $this->toast(['type' => 'warning', 'message' => __('Booking approved, but the confirmation email could not be sent. Check the email settings, then use "Resend invitation" or contact the customer.')]);
+
+            return back();
+        }
+
+        return $this->done($booking->meeting_url !== null
+            ? __('Booking approved. The customer was emailed the confirmation with the meeting link.')
+            : __('Booking approved and the customer was emailed. There is no meeting link yet: add one and send it.'));
+    }
+
+    public function counselor(Request $request, ConsultationBooking $booking): RedirectResponse
+    {
+        Gate::authorize('consultations.manage');
+        $data = $request->validate(['counselor_id' => ['nullable', 'integer', Rule::exists('users', 'id')->whereNull('deleted_at')]]);
+        $counselor = isset($data['counselor_id']) ? User::query()->whereKey($data['counselor_id'])->firstOrFail() : null;
+
+        $this->bookings->assignCounselor($booking, $request->user(), $counselor);
+
+        return $this->done($counselor ? __('Counselor assigned.') : __('Counselor removed.'));
     }
 
     public function reject(Request $request, ConsultationBooking $booking): RedirectResponse
@@ -119,14 +143,14 @@ class ConsultationController extends Controller
     public function meeting(Request $request, ConsultationBooking $booking): RedirectResponse
     {
         Gate::authorize('consultations.manage');
-        $data = $this->meetingRules($request, required: true);
+        $data = MeetingLinkRules::validate($request, required: true);
 
         $this->bookings->setMeeting($booking, $request->user(), $data['meeting_provider'], $data['meeting_url']);
 
         if ($request->boolean('send')) {
-            $this->bookings->sendMeeting($booking->refresh(), $request->user(), resend: false);
-
-            return $this->done(__('Meeting link saved and emailed to the customer.'));
+            return $this->done($this->bookings->sendMeeting($booking->refresh(), $request->user(), resend: false)
+                ? __('Meeting link saved and emailed to the customer.')
+                : __('This link was already emailed to the customer. Use "Resend invitation" to send it again.'));
         }
 
         return $this->done(__('Meeting link saved.'));
@@ -148,37 +172,6 @@ class ConsultationController extends Controller
         $this->bookings->note($booking, $request->user(), $data['note']);
 
         return $this->done(__('Note added.'));
-    }
-
-    /**
-     * A meeting link must be a real https address, and a Google Meet or Zoom link must be on
-     * that service's own domain. Links are entered by hand: nothing here creates a meeting.
-     *
-     * @return array<string, mixed>
-     */
-    private function meetingRules(Request $request, bool $required): array
-    {
-        $data = $request->validate([
-            'meeting_provider' => [$required ? 'required' : 'nullable', Rule::in(array_keys(ConsultationBooking::PROVIDERS))],
-            'meeting_url' => [$required ? 'required' : 'nullable', 'string', 'url:https', 'max:500'],
-        ]);
-
-        if (filled($data['meeting_url'] ?? null)) {
-            $host = strtolower((string) parse_url($data['meeting_url'], PHP_URL_HOST));
-            $provider = $data['meeting_provider'] ?? 'other';
-
-            $valid = match ($provider) {
-                'google_meet' => $host === 'meet.google.com',
-                'zoom' => $host === 'zoom.us' || str_ends_with($host, '.zoom.us'),
-                default => true,
-            };
-
-            if (! $valid) {
-                throw ValidationException::withMessages(['meeting_url' => $provider === 'zoom' ? __('A Zoom link must be on zoom.us.') : __('A Google Meet link must be on meet.google.com.')]);
-            }
-        }
-
-        return $data;
     }
 
     private function done(string $message): RedirectResponse

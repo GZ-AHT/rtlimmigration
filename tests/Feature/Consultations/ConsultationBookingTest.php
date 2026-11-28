@@ -364,7 +364,9 @@ it('approves with a meeting link in one step and cannot send a link before appro
     Mail::assertNothingQueued();
 
     $this->actingAs($this->admin)->post(route('admin.consultations.approve', $booking), ['meeting_provider' => 'zoom', 'meeting_url' => 'https://zoom.us/j/1'])->assertSessionHasNoErrors();
-    Mail::assertQueued(ConsultationMail::class, fn (ConsultationMail $m) => $m->kind === 'meeting');
+    // One email only: the confirmation carries the link.
+    Mail::assertQueued(ConsultationMail::class, fn (ConsultationMail $m) => $m->kind === 'confirmed' && $m->booking->meeting_url === 'https://zoom.us/j/1');
+    Mail::assertQueuedCount(1);
     expect($booking->fresh())->status->toBe(ConsultationStatus::Confirmed)->meeting_provider->toBe('zoom');
 });
 
@@ -559,4 +561,124 @@ it('words the confirmation by whether a meeting link exists yet', function () {
     $booking->forceFill(['meeting_provider' => 'zoom', 'meeting_url' => 'https://zoom.us/j/1'])->save();
     $with = (new ConsultationMail($booking->fresh(), 'confirmed'))->render();
     expect($with)->toContain('Your meeting link is below.')->toContain('https://zoom.us/j/1')->toContain('Join the video consultation');
+});
+
+/* ------------------------------------------------------------ default link and counselor */
+
+function cbDefault(string $url = 'https://meet.google.com/def-ault-lnk', string $provider = 'google_meet'): void
+{
+    test()->actingAs(test()->admin)->put(route('admin.consultations.meeting-default.update'), ['meeting_provider' => $provider, 'meeting_url' => $url])->assertSessionHasNoErrors();
+    auth()->logout();
+}
+
+it('saves a default meeting link that new bookings use, with the platform checked', function () {
+    $save = fn (array $data) => $this->actingAs($this->admin)->put(route('admin.consultations.meeting-default.update'), $data);
+
+    $this->actingAs($this->counselor)->put(route('admin.consultations.meeting-default.update'), ['meeting_provider' => 'zoom', 'meeting_url' => 'https://zoom.us/j/1'])->assertForbidden();
+    $save(['meeting_provider' => 'zoom', 'meeting_url' => 'https://meet.google.com/abc'])->assertSessionHasErrors('meeting_url');
+    $save(['meeting_provider' => 'other', 'meeting_url' => 'http://example.com/room'])->assertSessionHasErrors('meeting_url');
+    $save(['meeting_provider' => 'other', 'meeting_url' => 'https://example.com/room'])->assertSessionHasNoErrors();
+    expect(app(ConsultationSchedule::class)->defaultMeeting())->toBe(['provider' => 'other', 'url' => 'https://example.com/room']);
+    $this->actingAs($this->admin)->get(route('admin.consultations.availability'))
+        ->assertInertia(fn (Assert $p) => $p->where('defaultMeeting.url', 'https://example.com/room')->where('providers.zoom', 'Zoom'));
+    auth()->logout();
+
+    $booking = cbPending();
+    expect($booking)->meeting_url->toBe('https://example.com/room')->meeting_provider->toBe('other')->meeting_is_default->toBeTrue()->meeting_sent_at->toBeNull();
+});
+
+it('keeps requests waiting for approval in step with the default, but never a custom or confirmed link', function () {
+    cbDefault('https://meet.google.com/old-link-one');
+    $waiting = cbPending('a@example.com', 0);
+    $custom = cbPending('b@example.com', 1);
+    $confirmed = cbPending('c@example.com', 2);
+    app(ConsultationBookings::class)->setMeeting($custom, $this->admin, 'zoom', 'https://zoom.us/j/7');
+    app(ConsultationBookings::class)->approve($confirmed, $this->admin);
+
+    cbDefault('https://meet.google.com/new-link-two');
+    expect($waiting->fresh()->meeting_url)->toBe('https://meet.google.com/new-link-two')
+        ->and($custom->fresh()->meeting_url)->toBe('https://zoom.us/j/7')
+        ->and($confirmed->fresh()->meeting_url)->toBe('https://meet.google.com/old-link-one');
+
+    cbDefault('');
+    expect($waiting->fresh()->meeting_url)->toBeNull()->and($custom->fresh()->meeting_url)->toBe('https://zoom.us/j/7');
+});
+
+it('sends exactly one confirmation on approval, with the default link and the counselor, without any manual email', function () {
+    $booking = cbPending();
+    // Saved after the request came in: still used.
+    cbDefault();
+    Mail::fake();
+
+    $this->actingAs($this->admin)->put(route('admin.consultations.counselor', $booking), ['counselor_id' => $this->counselor->id])->assertSessionHasNoErrors();
+    Mail::assertNothingQueued();
+
+    $this->actingAs($this->admin)->post(route('admin.consultations.approve', $booking))->assertSessionHasNoErrors();
+    Mail::assertQueued(ConsultationMail::class, fn (ConsultationMail $m) => $m->kind === 'confirmed' && $m->hasTo('rafi@example.com'));
+    expect($booking->fresh()->meeting_sent_at)->not->toBeNull();
+
+    $html = (new ConsultationMail($booking->fresh(), 'confirmed'))->render();
+    expect($html)->toContain('Your video consultation is confirmed')->toContain('10:00 AM')->toContain('Platform')->toContain('Google Meet')
+        ->toContain('https://meet.google.com/def-ault-lnk')->toContain(e($this->counselor->name))->toContain($this->counselor->email);
+
+    // Approving again, or "Save and email" with the same link, sends nothing more.
+    $this->actingAs($this->admin)->post(route('admin.consultations.approve', $booking))->assertSessionHasErrors('status');
+    $same = ['meeting_provider' => 'google_meet', 'meeting_url' => 'https://meet.google.com/def-ault-lnk', 'send' => true];
+    $this->actingAs($this->admin)->put(route('admin.consultations.meeting', $booking), $same)->assertSessionHasNoErrors();
+    Mail::assertQueuedCount(1);
+
+    // A new link can be emailed once; "Resend invitation" is the deliberate repeat.
+    $new = [...$same, 'meeting_url' => 'https://meet.google.com/new-link-abc'];
+    $this->actingAs($this->admin)->put(route('admin.consultations.meeting', $booking), $new);
+    $this->actingAs($this->admin)->put(route('admin.consultations.meeting', $booking), $new);
+    Mail::assertQueuedCount(2);
+    $this->actingAs($this->admin)->post(route('admin.consultations.meeting.send', $booking));
+    Mail::assertQueuedCount(3);
+});
+
+it('includes the default link in an automatic confirmation', function () {
+    cbDefault();
+    app(ConsultationSchedule::class)->save(['auto_confirm' => true]);
+    Mail::fake();
+
+    cbBook($this)->assertCreated()->assertJsonPath('booking.meeting_url', 'https://meet.google.com/def-ault-lnk');
+
+    Mail::assertQueued(ConsultationMail::class, fn (ConsultationMail $m) => $m->kind === 'confirmed');
+    Mail::assertQueuedCount(1);
+    expect(ConsultationBooking::sole()->meeting_sent_at)->not->toBeNull();
+});
+
+it('keeps the approval when the confirmation email fails', function () {
+    cbDefault();
+    $booking = cbPending();
+    Mail::shouldReceive('to')->andThrow(new RuntimeException('mail down'));
+
+    $this->actingAs($this->admin)->post(route('admin.consultations.approve', $booking))->assertSessionHasNoErrors()->assertRedirect();
+
+    expect($booking->fresh())->status->toBe(ConsultationStatus::Confirmed)->meeting_sent_at->toBeNull();
+});
+
+it('assigns, changes and removes the counselor, and shows them in the list and details', function () {
+    $booking = cbPending();
+    $other = $this->userWithRole(Role::Counselor);
+    $assign = fn (?int $id) => $this->actingAs($this->admin)->put(route('admin.consultations.counselor', $booking), ['counselor_id' => $id]);
+
+    $this->actingAs($this->counselor)->put(route('admin.consultations.counselor', $booking), ['counselor_id' => $this->counselor->id])->assertForbidden();
+    // Only an active counselor can be chosen.
+    $assign($this->manager->id)->assertSessionHasErrors('counselor_id');
+
+    $assign($this->counselor->id)->assertSessionHasNoErrors();
+    $assign($other->id)->assertSessionHasNoErrors();
+
+    $this->actingAs($this->admin)->get(route('admin.consultations.index'))->assertInertia(fn (Assert $p) => $p->where('bookings.data.0.counselor_name', $other->name));
+    $this->actingAs($this->admin)->get(route('admin.consultations.show', $booking))
+        ->assertInertia(fn (Assert $p) => $p->where('booking.counselor_id', $other->id)->where('booking.counselor_name', $other->name)->has('counselors', 2));
+    expect($booking->fresh()->events->where('type', 'counselor'))->toHaveCount(2);
+
+    $assign(null)->assertSessionHasNoErrors();
+    expect($booking->fresh()->counselor_id)->toBeNull();
+    expect((new ConsultationMail($booking->fresh(), 'confirmed'))->render())->not->toContain($other->email);
+
+    app(ConsultationBookings::class)->cancel($booking->fresh(), $this->admin, null);
+    $assign($other->id)->assertSessionHasErrors('status');
 });

@@ -3,6 +3,7 @@
 namespace App\Actions\Consultations;
 
 use App\Enums\ConsultationStatus;
+use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Mail\ConsultationMail;
 use App\Models\ConsultationBooking;
@@ -47,9 +48,10 @@ class ConsultationBookings
         $buffer = $this->schedule->buffer();
         $confirmed = $this->schedule->autoConfirm();
         $taken = ValidationException::withMessages(['starts_at' => __('Sorry, that time was just taken. Please pick another.')]);
+        $meeting = $this->schedule->defaultMeeting();
 
         try {
-            $booking = DB::transaction(function () use ($details, $start, $end, $buffer, $confirmed, $customer, $taken) {
+            $booking = DB::transaction(function () use ($details, $start, $end, $buffer, $confirmed, $customer, $taken, $meeting) {
                 ConsultationBooking::query()->whereIn('status', ConsultationStatus::holding())
                     ->where('starts_at', '<', $end->addMinutes($buffer))->where('ends_at', '>', $start->subMinutes($buffer))
                     ->lockForUpdate()->get();
@@ -68,6 +70,9 @@ class ConsultationBookings
                     'status' => $confirmed ? ConsultationStatus::Confirmed : ConsultationStatus::Pending,
                     'active_slot' => $start,
                     'confirmed_at' => $confirmed ? now() : null,
+                    'meeting_provider' => $meeting['provider'] ?? null,
+                    'meeting_url' => $meeting['url'] ?? null,
+                    'meeting_is_default' => $meeting !== null,
                 ]);
 
                 $this->log($booking, 'created', null, null, ['auto_confirmed' => $confirmed]);
@@ -79,10 +84,14 @@ class ConsultationBookings
         }
 
         // The booking is saved: a problem sending the emails is reported, but the visitor still gets their confirmation.
-        try {
-            $this->mail($booking, $confirmed ? 'confirmed' : 'received');
-        } catch (\Throwable $e) {
-            report($e);
+        if ($confirmed) {
+            $this->sendConfirmation($booking);
+        } else {
+            try {
+                $this->mail($booking, 'received');
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         $this->notifyStaff(new ConsultationBooked($booking));
@@ -90,22 +99,73 @@ class ConsultationBookings
         return $booking;
     }
 
-    /** Approves a pending request, optionally with the meeting link, and tells the customer. */
-    public function approve(ConsultationBooking $booking, User $by, ?string $provider = null, ?string $url = null): void
+    /**
+     * Approves a pending request and sends the one confirmation email, which carries the
+     * meeting link when there is one: the link entered now, else the booking's own, else
+     * the saved default. Returns false when the email could not be sent (the approval stands).
+     */
+    public function approve(ConsultationBooking $booking, User $by, ?string $provider = null, ?string $url = null): bool
     {
-        $this->requireStatus($booking, [ConsultationStatus::Pending], __('Only a pending request can be approved.'));
+        $message = __('Only a pending request can be approved.');
+        $this->requireStatus($booking, [ConsultationStatus::Pending], $message);
 
-        $booking->forceFill(['status' => ConsultationStatus::Confirmed, 'confirmed_at' => now()])->save();
+        // Only one of two simultaneous approvals gets through, so the customer is emailed once.
+        $claimed = ConsultationBooking::query()->whereKey($booking->id)->where('status', ConsultationStatus::Pending->value)
+            ->update(['status' => ConsultationStatus::Confirmed->value, 'confirmed_at' => now()]);
+
+        if ($claimed === 0) {
+            throw ValidationException::withMessages(['status' => $message]);
+        }
+
+        $booking->refresh();
         $this->log($booking, 'approved', $by);
 
         if ($url !== null) {
             $this->setMeeting($booking, $by, $provider, $url);
-            $this->sendMeeting($booking, $by, resend: false);
+        } elseif ($booking->meeting_url === null && ($default = $this->schedule->defaultMeeting()) !== null) {
+            $this->setMeeting($booking, $by, $default['provider'], $default['url'], isDefault: true);
+        }
 
+        return $this->sendConfirmation($booking, $by);
+    }
+
+    /** Gives a booking its counselor, changes them, or (null) removes them. No email is sent. */
+    public function assignCounselor(ConsultationBooking $booking, User $by, ?User $counselor): void
+    {
+        $this->requireStatus($booking, [ConsultationStatus::Pending, ConsultationStatus::Confirmed], __('The counselor can no longer be changed.'));
+
+        if ($counselor && (! $counselor->hasRole(Role::Counselor->value) || ! $counselor->isActive())) {
+            throw ValidationException::withMessages(['counselor_id' => __('Only an active counselor can be assigned.')]);
+        }
+
+        if ($booking->counselor_id === $counselor?->id) {
             return;
         }
 
-        $this->mail($booking, 'confirmed');
+        $previous = $booking->counselor?->name;
+        $booking->forceFill(['counselor_id' => $counselor?->id])->save();
+        $booking->unsetRelation('counselor');
+        $this->log($booking, 'counselor', $by, null, ['from' => $previous, 'to' => $counselor?->name]);
+    }
+
+    /**
+     * Saves the default meeting link. Requests still waiting for approval follow it, unless
+     * a link was entered for them; confirmed bookings keep what the customer was told.
+     */
+    public function saveDefaultMeeting(User $by, string $provider, ?string $url): void
+    {
+        $this->schedule->saveDefaultMeeting($provider, $url);
+
+        $waiting = ConsultationBooking::query()->where('status', ConsultationStatus::Pending->value)
+            ->where(fn ($q) => $q->whereNull('meeting_url')->orWhere('meeting_is_default', true))->get();
+
+        foreach ($waiting as $booking) {
+            if ($url !== null) {
+                $this->setMeeting($booking, $by, $provider, $url, isDefault: true);
+            } elseif ($booking->meeting_url !== null) {
+                $booking->forceFill(['meeting_provider' => null, 'meeting_url' => null, 'meeting_is_default' => false, 'meeting_sent_at' => null])->save();
+            }
+        }
     }
 
     /** Declines a pending request: the slot is freed. */
@@ -180,17 +240,26 @@ class ConsultationBookings
         $this->mail($booking, 'rescheduled', ['previous' => $previous]);
     }
 
-    public function setMeeting(ConsultationBooking $booking, User $by, ?string $provider, string $url): void
+    /** Saving the link a booking already has changes nothing, so it is not seen as unsent again. */
+    public function setMeeting(ConsultationBooking $booking, User $by, ?string $provider, string $url, bool $isDefault = false): void
     {
-        $provider = array_key_exists((string) $provider, ConsultationBooking::PROVIDERS) ? $provider : 'other';
+        $provider = array_key_exists((string) $provider, ConsultationBooking::PROVIDERS) ? (string) $provider : 'other';
+
+        if ($booking->meeting_url === $url && $booking->meeting_provider === $provider) {
+            return;
+        }
+
         $replaced = $booking->meeting_url !== null;
 
-        $booking->forceFill(['meeting_provider' => $provider, 'meeting_url' => $url, 'meeting_sent_at' => null])->save();
-        $this->log($booking, 'meeting_link', $by, null, ['provider' => $provider, 'url' => $url, 'replaced' => $replaced]);
+        $booking->forceFill(['meeting_provider' => $provider, 'meeting_url' => $url, 'meeting_is_default' => $isDefault, 'meeting_sent_at' => null])->save();
+        $this->log($booking, 'meeting_link', $by, null, ['provider' => $provider, 'url' => $url, 'replaced' => $replaced, 'default' => $isDefault]);
     }
 
-    /** Emails the meeting link and appointment details to the customer's verified address. */
-    public function sendMeeting(ConsultationBooking $booking, User $by, bool $resend = true): void
+    /**
+     * Emails the meeting link and appointment details to the customer's verified address.
+     * Without `$resend`, a link that was already emailed is not sent again (returns false).
+     */
+    public function sendMeeting(ConsultationBooking $booking, User $by, bool $resend = true): bool
     {
         if ($booking->meeting_url === null) {
             throw ValidationException::withMessages(['meeting_url' => __('Add a meeting link first.')]);
@@ -198,9 +267,18 @@ class ConsultationBookings
 
         $this->requireStatus($booking, [ConsultationStatus::Confirmed], __('Approve the booking before sending the meeting link.'));
 
-        $booking->forceFill(['meeting_sent_at' => now()])->save();
+        // The first send is claimed in the database, so two quick clicks send one email.
+        if ($resend) {
+            $booking->forceFill(['meeting_sent_at' => now()])->save();
+        } elseif (ConsultationBooking::query()->whereKey($booking->id)->whereNull('meeting_sent_at')->update(['meeting_sent_at' => now()]) === 0) {
+            return false;
+        }
+
+        $booking->refresh();
         $this->log($booking, $resend ? 'meeting_resent' : 'meeting_sent', $by);
         $this->mail($booking, 'meeting');
+
+        return true;
     }
 
     public function note(ConsultationBooking $booking, User $by, string $note): void
@@ -236,6 +314,27 @@ class ConsultationBookings
     public function log(ConsultationBooking $booking, string $type, ?User $by = null, ?string $note = null, ?array $data = null): ConsultationBookingEvent
     {
         return $booking->events()->create(['user_id' => $by?->id, 'type' => $type, 'note' => $note, 'data' => $data]);
+    }
+
+    /** A problem sending the email is reported and never undoes the confirmation. */
+    private function sendConfirmation(ConsultationBooking $booking, ?User $by = null): bool
+    {
+        try {
+            if ($booking->meeting_url !== null) {
+                $booking->forceFill(['meeting_sent_at' => now()])->save();
+            }
+
+            $this->mail($booking, 'confirmed');
+        } catch (\Throwable $e) {
+            report($e);
+            $booking->forceFill(['meeting_sent_at' => null])->save();
+
+            return false;
+        }
+
+        $this->log($booking, 'confirmation_sent', $by);
+
+        return true;
     }
 
     /** @param  array<string, mixed>  $extra */

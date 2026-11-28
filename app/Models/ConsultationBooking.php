@@ -25,6 +25,7 @@ use Illuminate\Support\Str;
  * @property string|null $message
  * @property int|null $user_id
  * @property int|null $lead_id
+ * @property int|null $counselor_id
  * @property CarbonImmutable $starts_at
  * @property CarbonImmutable $ends_at
  * @property int $duration_minutes
@@ -33,16 +34,18 @@ use Illuminate\Support\Str;
  * @property CarbonInterface|null $active_slot
  * @property string|null $meeting_provider google_meet, zoom or other
  * @property string|null $meeting_url
+ * @property bool $meeting_is_default the link is the saved default, not one entered for this booking
  * @property CarbonInterface|null $meeting_sent_at
  * @property CarbonInterface|null $reminder_sent_at
  * @property CarbonInterface|null $confirmed_at
  * @property CarbonInterface|null $cancelled_at
  * @property-read Collection<int, ConsultationBookingEvent> $events
+ * @property-read User|null $counselor
  */
-#[Fillable(['reference', 'name', 'email', 'phone', 'subject', 'message', 'user_id', 'lead_id', 'starts_at', 'ends_at', 'duration_minutes', 'timezone', 'status', 'active_slot', 'meeting_provider', 'meeting_url', 'meeting_sent_at', 'reminder_sent_at', 'confirmed_at', 'cancelled_at'])]
+#[Fillable(['reference', 'name', 'email', 'phone', 'subject', 'message', 'user_id', 'lead_id', 'counselor_id', 'starts_at', 'ends_at', 'duration_minutes', 'timezone', 'status', 'active_slot', 'meeting_provider', 'meeting_url', 'meeting_is_default', 'meeting_sent_at', 'reminder_sent_at', 'confirmed_at', 'cancelled_at'])]
 class ConsultationBooking extends Model
 {
-    public const PROVIDERS = ['google_meet' => 'Google Meet', 'zoom' => 'Zoom', 'other' => 'Other'];
+    public const PROVIDERS = ['google_meet' => 'Google Meet', 'zoom' => 'Zoom', 'other' => 'Custom link'];
 
     protected function casts(): array
     {
@@ -51,6 +54,7 @@ class ConsultationBooking extends Model
             'ends_at' => 'immutable_datetime',
             'status' => ConsultationStatus::class,
             'active_slot' => 'datetime',
+            'meeting_is_default' => 'boolean',
             'meeting_sent_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
             'confirmed_at' => 'datetime',
@@ -68,6 +72,12 @@ class ConsultationBooking extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class)->withTrashed();
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function counselor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'counselor_id');
     }
 
     public static function newReference(): string

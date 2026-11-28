@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, useForm } from '@inertiajs/vue3';
 import { reactive, ref } from 'vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
 import FormField from '@/components/panel/FormField.vue';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { clone } from '@/lib/clone';
 import { availability } from '@/routes/admin/consultations';
 import { update } from '@/routes/admin/consultations/availability';
+import { update as updateMeeting } from '@/routes/admin/consultations/meeting-default';
 
 /** The schedule customers can book from. Only what is set here is ever shown to them. */
 type Schedule = {
@@ -37,6 +38,8 @@ const props = defineProps<{
     days: Record<string, string>;
     durations: number[];
     timezones: string[];
+    defaultMeeting: { provider: string; url: string } | null;
+    providers: Record<string, string>;
 }>();
 
 defineOptions({
@@ -46,6 +49,22 @@ defineOptions({
 const form = reactive(clone(props.schedule) as Schedule);
 const saving = ref(false);
 const errors = ref<Record<string, string>>({});
+
+const providerOptions = Object.entries(props.providers).map(
+    ([value, label]) => ({ value, label }),
+);
+const meetingForm = useForm({
+    meeting_provider: props.defaultMeeting?.provider ?? 'google_meet',
+    meeting_url: props.defaultMeeting?.url ?? '',
+});
+const meetingExample = 'https://meet.google.com/abc-defg-hij';
+const saveMeeting = () =>
+    meetingForm
+        .transform((data) => ({
+            ...data,
+            meeting_url: data.meeting_url || null,
+        }))
+        .put(updateMeeting().url, { preserveScroll: true });
 
 const durationOptions = props.durations.map((d) => ({
     value: String(d),
@@ -92,6 +111,46 @@ function save(): void {
         title="Availability"
         description="Set when customers can book a video consultation. Changes apply to the website straight away; existing bookings are not moved."
     />
+
+    <form class="mb-4 max-w-3xl" @submit.prevent="saveMeeting">
+        <PanelCard
+            title="Default meeting link"
+            description="Used for every video consultation unless another link is entered on the booking. Requests waiting for approval follow changes made here; confirmed bookings keep their link."
+        >
+            <div class="grid gap-3 sm:grid-cols-[170px_1fr]">
+                <FormField
+                    label="Platform"
+                    :error="meetingForm.errors.meeting_provider"
+                >
+                    <template #default="{ id }"
+                        ><SelectInput
+                            :id="id"
+                            v-model="meetingForm.meeting_provider"
+                            :options="providerOptions"
+                    /></template>
+                </FormField>
+                <FormField
+                    label="Meeting link (https)"
+                    hint="Leave empty to use no default link."
+                    :error="meetingForm.errors.meeting_url"
+                >
+                    <template #default="{ id }"
+                        ><Input
+                            :id="id"
+                            v-model="meetingForm.meeting_url"
+                            type="url"
+                            :placeholder="meetingExample"
+                    /></template>
+                </FormField>
+            </div>
+            <Button
+                type="submit"
+                class="mt-3"
+                :disabled="meetingForm.processing"
+                >Save meeting link</Button
+            >
+        </PanelCard>
+    </form>
 
     <form class="flex max-w-3xl flex-col gap-4" @submit.prevent="save">
         <PanelCard title="Booking rules">

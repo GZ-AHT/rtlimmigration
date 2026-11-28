@@ -3,6 +3,7 @@ import { Form, Head, setLayoutProps } from '@inertiajs/vue3';
 import { computed, ref, watchEffect } from 'vue';
 import InputError from '@/components/InputError.vue';
 import AppIcon from '@/components/panel/AppIcon.vue';
+import { digitsOnly } from '@/lib/otp';
 import SiteArrow from '@/components/website/SiteArrow.vue';
 import { fieldClass } from '@/components/website/form';
 import {
@@ -69,6 +70,7 @@ const toggleRecoveryMode = (clearErrors: () => void): void => {
                             id="otp"
                             v-model="code"
                             :maxlength="6"
+                            :paste-transformer="digitsOnly"
                             :disabled="processing"
                             autofocus
                         >

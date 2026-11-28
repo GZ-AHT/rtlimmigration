@@ -36,7 +36,7 @@ class CalendarController extends Controller
             default => [$date->startOfMonth()->startOfWeek(), $date->endOfMonth()->startOfDay()->endOfWeek()->startOfDay()],
         };
 
-        $bookings = ConsultationBooking::query()
+        $bookings = ConsultationBooking::query()->with('counselor:id,name')
             ->where('starts_at', '<', $to->addDay()->utc())->where('ends_at', '>', $from->utc())
             ->orderBy('starts_at')->get();
 

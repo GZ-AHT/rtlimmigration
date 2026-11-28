@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers\Admin\Consultations;
 
+use App\Actions\Consultations\ConsultationBookings;
 use App\Http\Controllers\Controller;
+use App\Models\ConsultationBooking;
 use App\Support\Consultations\ConsultationSchedule;
+use App\Support\Consultations\MeetingLinkRules;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -23,10 +26,28 @@ class AvailabilityController extends Controller
 
         return Inertia::render('admin/consultations/Availability', [
             'schedule' => $schedule->forAdmin(),
+            'defaultMeeting' => $schedule->defaultMeeting(),
+            'providers' => ConsultationBooking::PROVIDERS,
             'days' => ConsultationSchedule::DAYS,
             'durations' => ConsultationSchedule::DURATIONS,
             'timezones' => timezone_identifiers_list(),
         ]);
+    }
+
+    /** The link every video consultation starts with. An empty link removes it. */
+    public function updateMeeting(Request $request, ConsultationBookings $bookings): RedirectResponse
+    {
+        Gate::authorize('consultations.manage');
+        $request->validate(['meeting_provider' => ['required']]);
+        $data = MeetingLinkRules::validate($request, required: false);
+
+        $bookings->saveDefaultMeeting($request->user(), $data['meeting_provider'], $data['meeting_url'] ?? null);
+
+        activity('consultations')->causedBy($request->user())->log('Default consultation meeting link updated');
+
+        $this->toast(['type' => 'success', 'message' => isset($data['meeting_url']) ? __('Default meeting link saved.') : __('Default meeting link removed.')]);
+
+        return back();
     }
 
     public function update(Request $request, ConsultationSchedule $schedule): RedirectResponse

@@ -256,7 +256,9 @@ Route::middleware(['auth', 'verified', 'can:'.Area::Admin->accessPermission()])
             Route::get('calendar', [Admin\Consultations\CalendarController::class, 'index'])->name('calendar');
             Route::get('availability', [Admin\Consultations\AvailabilityController::class, 'edit'])->name('availability');
             Route::put('availability', [Admin\Consultations\AvailabilityController::class, 'update'])->name('availability.update');
+            Route::put('meeting-default', [Admin\Consultations\AvailabilityController::class, 'updateMeeting'])->name('meeting-default.update');
             Route::get('{booking}', [Admin\Consultations\ConsultationController::class, 'show'])->whereNumber('booking')->name('show');
+            Route::put('{booking}/counselor', [Admin\Consultations\ConsultationController::class, 'counselor'])->whereNumber('booking')->name('counselor');
             Route::post('{booking}/approve', [Admin\Consultations\ConsultationController::class, 'approve'])->whereNumber('booking')->name('approve');
             Route::post('{booking}/reject', [Admin\Consultations\ConsultationController::class, 'reject'])->whereNumber('booking')->name('reject');
             Route::post('{booking}/cancel', [Admin\Consultations\ConsultationController::class, 'cancel'])->whereNumber('booking')->name('cancel');

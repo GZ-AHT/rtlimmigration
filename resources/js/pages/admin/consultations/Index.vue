@@ -32,6 +32,7 @@ type Row = {
     starts_at: string;
     duration_minutes: number;
     meeting_url: string | null;
+    counselor_name: string | null;
 };
 
 const props = defineProps<{
@@ -82,7 +83,7 @@ const tabs = [
     <PageHeader
         eyebrow="Video consultations"
         title="Bookings"
-        description="Requests from the website. Approve a request, add the meeting link, and the customer is emailed."
+        description="Requests from the website. Approving a request emails the customer the confirmation and meeting link."
     >
         <template #actions>
             <Button as-child variant="outline">
@@ -116,13 +117,14 @@ const tabs = [
         />
 
         <div v-else class="overflow-x-auto">
-            <table class="w-full min-w-[820px] text-left text-[13px]">
+            <table class="w-full min-w-[940px] text-left text-[13px]">
                 <thead class="text-[11px] text-muted-foreground uppercase">
                     <tr>
                         <th class="px-3 py-2 font-bold">Reference</th>
                         <th class="px-3 py-2 font-bold">Customer</th>
                         <th class="px-3 py-2 font-bold">Subject</th>
                         <th class="px-3 py-2 font-bold">When</th>
+                        <th class="px-3 py-2 font-bold">Counselor</th>
                         <th class="px-3 py-2 font-bold">Status</th>
                     </tr>
                 </thead>
@@ -154,6 +156,14 @@ const tabs = [
                             <span
                                 class="block text-[12px] text-muted-foreground"
                                 >{{ b.duration_minutes }} min</span
+                            >
+                        </td>
+                        <td class="px-3 py-3">
+                            <span v-if="b.counselor_name">{{
+                                b.counselor_name
+                            }}</span>
+                            <span v-else class="text-muted-foreground"
+                                >Not assigned</span
                             >
                         </td>
                         <td class="px-3 py-3">

@@ -2,6 +2,7 @@
 
 namespace App\Support\Consultations;
 
+use App\Models\ConsultationBooking;
 use App\Support\Settings\SettingsRepository;
 
 /**
@@ -64,6 +65,27 @@ class ConsultationSchedule
     public function autoConfirm(): bool
     {
         return (bool) $this->settings->get('consultation.auto_confirm', false);
+    }
+
+    /**
+     * The link every new booking starts with, if one is saved.
+     *
+     * @return array{provider: string, url: string}|null
+     */
+    public function defaultMeeting(): ?array
+    {
+        $url = $this->settings->get('consultation.default_meeting_url');
+        $provider = (string) $this->settings->get('consultation.default_meeting_provider', 'google_meet');
+
+        return is_string($url) && $url !== ''
+            ? ['provider' => array_key_exists($provider, ConsultationBooking::PROVIDERS) ? $provider : 'other', 'url' => $url]
+            : null;
+    }
+
+    public function saveDefaultMeeting(string $provider, ?string $url): void
+    {
+        $this->settings->set('consultation.default_meeting_provider', $provider);
+        $this->settings->set('consultation.default_meeting_url', $url);
     }
 
     /** @return array<string, array{enabled: bool, start: string, end: string}> */

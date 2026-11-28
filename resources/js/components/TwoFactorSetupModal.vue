@@ -19,6 +19,7 @@ import {
     InputOTPSlot,
 } from '@/components/ui/input-otp';
 import { Spinner } from '@/components/ui/spinner';
+import { digitsOnly } from '@/lib/otp';
 import { useAppearance } from '@/composables/useAppearance';
 import { useTwoFactorAuth } from '@/composables/useTwoFactorAuth';
 import { confirm } from '@/routes/two-factor';
@@ -257,6 +258,7 @@ watch(
                                     id="otp"
                                     v-model="code"
                                     :maxlength="6"
+                                    :paste-transformer="digitsOnly"
                                     :disabled="processing"
                                     autofocus
                                 >
